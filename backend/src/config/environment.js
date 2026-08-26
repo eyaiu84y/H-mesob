@@ -1,0 +1,43 @@
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+export const config = {
+  // Server
+  port: process.env.PORT || 5000,
+  nodeEnv: process.env.NODE_ENV || 'development',
+  
+  // Frontend
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  
+  // Supabase
+  supabase: {
+    url: process.env.SUPABASE_URL,
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
+  },
+  
+  // Telegram (to be configured later)
+  telegram: {
+    botToken: process.env.TELEGRAM_BOT_TOKEN,
+    chatId: process.env.TELEGRAM_CHAT_ID
+  }
+};
+
+// Validate required environment variables
+export const validateConfig = () => {
+  const required = [
+    'SUPABASE_URL',
+    'SUPABASE_SERVICE_ROLE_KEY'
+  ];
+  
+  const missing = required.filter(key => !process.env[key]);
+  
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variables: ${missing.join(', ')}\n` +
+      'Please check your .env file.'
+    );
+  }
+};
+
+export default config;
