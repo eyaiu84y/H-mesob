@@ -11,8 +11,7 @@ import { supabase } from '../config/supabase.js';
 export async function getDatabaseTables() {
   try {
     const { data, error } = await supabase
-      .rpc('get_table_names')
-      .catch(() => null);
+      .rpc('get_table_names');
 
     // Fallback: Try to query each expected table
     if (!data || error) {
@@ -22,13 +21,15 @@ export async function getDatabaseTables() {
         'services',
         'service_requirements',
         'applications',
-        'queue_entries',
+        'queues',
         'maintenance_reports',
         'maintenance_attachments',
         'maintenance_tasks',
         'announcements',
         'notifications',
-        'telegram_users'
+        'audit_logs',
+        'failed_login_attempts',
+        'user_sessions'
       ];
 
       const tableChecks = await Promise.all(
@@ -100,13 +101,15 @@ export async function verifyDatabaseSchema() {
     'services',
     'service_requirements',
     'applications',
-    'queue_entries',
+    'queues',
     'maintenance_reports',
     'maintenance_attachments',
     'maintenance_tasks',
     'announcements',
     'notifications',
-    'telegram_users'
+    'audit_logs',
+    'failed_login_attempts',
+    'user_sessions'
   ];
 
   const expectedInstitutionCount = 12;

@@ -1,0 +1,99 @@
+{
+  "timestamp": "2026-08-29T10:26:36.572Z",
+  "passed": 18,
+  "failed": 0,
+  "total": 18,
+  "successRate": 100,
+  "results": [
+    {
+      "test": "1.1: Admin login",
+      "status": "PASS",
+      "message": "Successfully authenticated"
+    },
+    {
+      "test": "2.1: Services table exists",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "test": "2.2: All required columns exist",
+      "status": "PASS",
+      "message": "Verified: id, institution_id, title_en, title_am, processing_time, service_fee, service_url, is_active"
+    },
+    {
+      "test": "2.3: Service requirements table exists",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "test": "3.1: Institution count",
+      "status": "PASS",
+      "message": "Expected 12, found 12"
+    },
+    {
+      "test": "3.2: All required institutions present",
+      "status": "PASS",
+      "message": "12/12 institutions found"
+    },
+    {
+      "test": "4.1: Minimum service count",
+      "status": "PASS",
+      "message": "Expected ≥37, found 41"
+    },
+    {
+      "test": "4.2: Service distribution by institution",
+      "status": "PASS",
+      "message": "All institutions have minimum required services"
+    },
+    {
+      "test": "5.1: GET /api/services",
+      "status": "PASS",
+      "message": "Retrieved 41 services"
+    },
+    {
+      "test": "5.2: API response structure",
+      "status": "PASS",
+      "message": "All required fields present"
+    },
+    {
+      "test": "5.3: GET /api/institutions",
+      "status": "PASS",
+      "message": "Retrieved all 12 institutions"
+    },
+    {
+      "test": "5.4: GET /api/services/:id",
+      "status": "PASS",
+      "message": "Single service retrieval works"
+    },
+    {
+      "test": "6.1: Database to API field mapping",
+      "status": "PASS",
+      "message": "All mappings correct"
+    },
+    {
+      "test": "7.1: All services have names",
+      "status": "PASS",
+      "message": "41/41 services"
+    },
+    {
+      "test": "7.2: All services have fees",
+      "status": "PASS",
+      "message": "41/41 services"
+    },
+    {
+      "test": "7.3: All services have processing times",
+      "status": "PASS",
+      "message": "41/41 services"
+    },
+    {
+      "test": "7.4: Most services have URLs",
+      "status": "PASS",
+      "message": "36/41 services (>88%)"
+    },
+    {
+      "test": "8.1: Key services verification",
+      "status": "PASS",
+      "message": "5/5 key services found"
+    }
+  ]
+}

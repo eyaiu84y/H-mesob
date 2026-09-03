@@ -16,6 +16,11 @@ export const config = {
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
   },
   
+  // JWT
+  jwtSecret: process.env.JWT_SECRET,
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
+  jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+  
   // Telegram (to be configured later)
   telegram: {
     botToken: process.env.TELEGRAM_BOT_TOKEN,
@@ -27,7 +32,8 @@ export const config = {
 export const validateConfig = () => {
   const required = [
     'SUPABASE_URL',
-    'SUPABASE_SERVICE_ROLE_KEY'
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'JWT_SECRET'
   ];
   
   const missing = required.filter(key => !process.env[key]);

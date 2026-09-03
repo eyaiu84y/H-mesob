@@ -1,23 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { organizationsData } from '../data/organizations';
+import { useServices } from '../context/ServiceContext';
 import { useApp } from '../context/AppContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
-function ServiceItem({ svc }) {
+function ServiceItem({ svc, institutionWebsite }) {
   const [open, setOpen] = useState(false);
   const { t, lang } = useApp();
   
   // Ensure we have valid service data
   if (!svc) return null;
   
-  const title = lang === 'am' ? (svc.title_am || svc.title_en || '') : (svc.title_en || svc.title_am || '');
-  const description = lang === 'am' ? (svc.description_am || '') : (svc.description_en || '');
-  const docs  = lang === 'am' ? (svc.docs_am || []) : (svc.docs_en || []);
+  const title = lang === 'am' ? (svc.name_am || svc.name || '') : (svc.name || svc.name_am || '');
+  const description = lang === 'am' ? (svc.description_am || svc.description || '') : (svc.description || svc.description_am || '');
   
   // Don't render if no title
   if (!title) return null;
+
+  // Backend provides processing_time and fee_amount
+  const processingTime = svc.processing_time || 'Not specified';
+  const fee = svc.fee_amount || 'Not specified';
+
+  // Service official URL or fallback to institution website
+  const officialUrl = svc.website_url || institutionWebsite;
 
   return (
     <div className={`svc-item${open ? ' open' : ''}`}>
@@ -35,15 +41,15 @@ function ServiceItem({ svc }) {
           </p>
         )}
         <div className="svc-meta">
-          <div><span>{t.org_time_label}</span><br /><strong>{svc.time}</strong></div>
-          <div><span>{t.org_fee_label}</span><br /><strong>{svc.fee}</strong></div>
+          <div><span>{t.org_time_label}</span><br /><strong>{processingTime}</strong></div>
+          <div><span>{t.org_fee_label}</span><br /><strong>{fee}</strong></div>
         </div>
+        {/* Requirements are not yet available from backend */}
         <div className="svc-docs-title">{t.org_docs_label}</div>
-        <ul className="svc-docs">
-          {Array.isArray(docs) && docs.map((doc, i) => <li key={i}>{doc}</li>)}
-        </ul>
-        {svc.officialUrl && svc.officialUrl !== '#' && (
-          <a className="svc-link" href={svc.officialUrl} target="_blank" rel="noopener noreferrer">
+        <p className="text-sm text-gray-500 italic">Requirements information will be available soon.</p>
+        
+        {officialUrl && officialUrl !== '' && officialUrl !== '#' && (
+          <a className="svc-link" href={officialUrl} target="_blank" rel="noopener noreferrer">
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
@@ -57,9 +63,20 @@ function ServiceItem({ svc }) {
 
 export default function ServiceCataloguePage() {
   const { t, lang } = useApp();
+  const { loading, error, searchLoading, searchServicesAndInstitutions } = useServices();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get('search') || '';
   const [expandedOrg, setExpandedOrg] = useState(null);
+  const [filtered, setFiltered] = useState([]);
+
+  // Perform search when search parameter changes
+  useEffect(() => {
+    async function performSearch() {
+      const results = await searchServicesAndInstitutions(search);
+      setFiltered(results);
+    }
+    performSearch();
+  }, [search, searchServicesAndInstitutions]);
 
   // Update URL when search input changes
   const handleSearchChange = (value) => {
@@ -70,20 +87,41 @@ export default function ServiceCataloguePage() {
     }
   };
 
-  const filtered = organizationsData.filter((org) => {
-    const q = search.toLowerCase();
-    return (
-      org.name_en.toLowerCase().includes(q) ||
-      org.name_am.toLowerCase().includes(q) ||
-      org.services.some((s) => 
-        s.title_en.toLowerCase().includes(q) || 
-        s.title_am.toLowerCase().includes(q)
-      )
-    );
-  });
-
   const displayName = (org) => lang === 'am' ? org.name_am : org.name_en;
   const svcCount = (n) => `${n} ${n === 1 ? (lang === 'am' ? 'አገልግሎት' : 'service') : (lang === 'am' ? 'አገልግሎቶች' : 'services')}`;
+
+  // Show loading state
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <main className="pt-20 min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading services...</p>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <>
+        <Header />
+        <main className="pt-20 min-h-screen bg-gray-50 dark:bg-gray-900">
+          <div className="max-w-4xl mx-auto px-6 py-12">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+              <p className="text-red-600">{error}</p>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
@@ -114,33 +152,40 @@ export default function ServiceCataloguePage() {
 
         {/* Org + Services List */}
         <div className="max-w-4xl mx-auto px-6 py-12 space-y-6">
-          {filtered.length === 0 && (
-            <div className="text-center text-gray-500 dark:text-gray-400 py-16 text-lg">
-              {t.cat_no_results || 'No results found for'} &ldquo;{search}&rdquo;
+          {searchLoading && search.trim() && (
+            <div className="text-center py-8">
+              <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="mt-2 text-gray-500">Searching...</p>
             </div>
           )}
 
-          {filtered.map((org) => {
-            const isExpanded = expandedOrg === org.id;
+          {!searchLoading && filtered.length === 0 && (
+            <div className="text-center text-gray-500 dark:text-gray-400 py-16 text-lg">
+              {search.trim() ? (t.cat_no_results || 'No results found for') + ` "${search}"` : 'No services available'}
+            </div>
+          )}
+
+          {!searchLoading && filtered.map(({ institution, services }) => {
+            const isExpanded = expandedOrg === institution.id;
             return (
-              <div key={org.id}
+              <div key={institution.id}
                 className="bg-white dark:bg-gray-800 rounded-2xl shadow-md overflow-hidden border border-gray-100 dark:border-gray-700">
                 <button
                   className="w-full flex items-center gap-4 px-6 py-5 hover:bg-gray-50 dark:hover:bg-gray-700 transition text-left"
-                  onClick={() => setExpandedOrg(isExpanded ? null : org.id)}
+                  onClick={() => setExpandedOrg(isExpanded ? null : institution.id)}
                 >
                   <img
-                    src={org.image}
-                    alt={displayName(org)}
+                    src={institution.logo_url}
+                    alt={displayName(institution)}
                     className="w-14 h-14 object-contain rounded-xl flex-shrink-0 bg-gray-50 dark:bg-gray-700 p-1"
                     onError={(e) => { e.target.src = '/image/icon.png'; }}
                   />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-gray-900 dark:text-white text-lg leading-snug">
-                      {displayName(org)}
+                      {displayName(institution)}
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                      {svcCount(org.services.length)}
+                      {svcCount(services.length)}
                     </p>
                   </div>
                   <svg
@@ -152,10 +197,10 @@ export default function ServiceCataloguePage() {
 
                 {isExpanded && (
                   <div className="px-6 pb-6 space-y-3 border-t border-gray-100 dark:border-gray-700 pt-4">
-                    {org.officialUrl && org.officialUrl !== '#' && (
+                    {institution.website_url && institution.website_url !== '#' && institution.website_url !== '' && (
                       <div className="mb-4 pb-4 border-b border-gray-100 dark:border-gray-700">
                         <a 
-                          href={org.officialUrl} 
+                          href={institution.website_url} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
@@ -167,8 +212,8 @@ export default function ServiceCataloguePage() {
                         </a>
                       </div>
                     )}
-                    {org.services.map((svc, i) => (
-                      <ServiceItem key={i} svc={svc} />
+                    {services.map((svc) => (
+                      <ServiceItem key={svc.id} svc={svc} institutionWebsite={institution.website_url} />
                     ))}
                   </div>
                 )}

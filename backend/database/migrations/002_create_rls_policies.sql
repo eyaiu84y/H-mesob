@@ -244,7 +244,7 @@ DROP POLICY IF EXISTS "employee_create_maintenance_reports" ON maintenance_repor
 CREATE POLICY "employee_create_maintenance_reports" ON maintenance_reports
   FOR INSERT
   WITH CHECK (
-    public.current_user_role() IN ('EMPLOYEE', 'INSTITUTION_MANAGER') 
+    public.current_user_role() IN ('EMPLOYEE', 'INSTITUTION_MANAGER', 'ICT_STAFF') 
     AND institution_id = public.current_user_institution()
   );
 

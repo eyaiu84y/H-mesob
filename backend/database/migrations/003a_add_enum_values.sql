@@ -1,0 +1,30 @@
+-- Migration 003A: Add required enum values
+
+DO $$
+BEGIN
+  ALTER TYPE queue_status ADD VALUE IF NOT EXISTS 'WAITING';
+  ALTER TYPE queue_status ADD VALUE IF NOT EXISTS 'CALLED';
+  ALTER TYPE queue_status ADD VALUE IF NOT EXISTS 'NO_SHOW';
+END
+$$;
+
+DO $$
+BEGIN
+  ALTER TYPE maintenance_status ADD VALUE IF NOT EXISTS 'PENDING';
+  ALTER TYPE maintenance_status ADD VALUE IF NOT EXISTS 'ACKNOWLEDGED';
+  ALTER TYPE maintenance_status ADD VALUE IF NOT EXISTS 'ON_HOLD';
+  ALTER TYPE maintenance_status ADD VALUE IF NOT EXISTS 'REJECTED';
+END
+$$;
+
+DO $$
+BEGIN
+  ALTER TYPE application_status ADD VALUE IF NOT EXISTS 'PENDING';
+END
+$$;
+
+DO $$
+BEGIN
+  ALTER TYPE announcement_scope ADD VALUE IF NOT EXISTS 'INTERNAL';
+END
+$$;

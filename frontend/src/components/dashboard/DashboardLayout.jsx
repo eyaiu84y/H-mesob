@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth, ROLE_LABELS, ROLE_BADGE } from '../../context/AuthContext';
+import LanguageSwitcher from '../LanguageSwitcher';
 
 const ACCENT_BG = {
   purple: 'bg-purple-700',
@@ -96,6 +97,7 @@ export default function DashboardLayout({ title, navLinks = [], accentColor = 'b
 
             {/* Right: badge + user info */}
             <div className="flex items-center gap-3">
+              <LanguageSwitcher />
               <span className={`badge ${badgeClass}`}>{roleLabel}</span>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-gray-900">{user?.name}</p>

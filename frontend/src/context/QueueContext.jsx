@@ -1,104 +1,205 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import api from '../utils/api';
 
 const QueueContext = createContext(null);
 
-// ─── Token prefix mapping from organization id ────────────────────
-const TOKEN_PREFIXES = {
-  electric: 'EEU',
-  revenue: 'REV',
-  justice: 'MOJ',
-  cbe: 'CBE',
-  ethiotel: 'ETL',
-  ethiopost: 'EPS',
-  investment: 'INV',
-  labor: 'LAB',
-  trade: 'TRD',
-  construction: 'CON',
-  fayda: 'NID',
-  'sidama-bank': 'SDB',
-};
-
-function getPrefix(institutionId) {
-  return TOKEN_PREFIXES[institutionId] || institutionId.slice(0, 3).toUpperCase();
+// ─── Status mapping: Backend → Frontend ───────────────────────────
+function mapBackendStatusToFrontend(backendStatus) {
+  const mapping = {
+    'PENDING': 'waiting',
+    'IN_PROGRESS': 'called',
+    'COMPLETED': 'completed',
+    'CANCELLED': 'cancelled',
+  };
+  return mapping[backendStatus] || 'waiting';
 }
 
-// ─── localStorage helpers ─────────────────────────────────────────
-const STORAGE_KEY = 'mesob_queue';
-
-function loadFromStorage() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {
-    // ignore
-  }
-  return { myTickets: [], tokenCounters: {} };
-}
-
-function saveToStorage(state) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // ignore
-  }
+// ─── Transform backend queue to frontend format ───────────────────
+function transformQueueEntry(backendQueue) {
+  const status = mapBackendStatusToFrontend(backendQueue.status);
+  
+  return {
+    id: backendQueue.id,
+    institutionId: backendQueue.institution_id,
+    institutionName: backendQueue.institutions?.name_en || 'Unknown Institution',
+    serviceName: backendQueue.services?.title_en || backendQueue.services?.name || 'Unknown Service',
+    token: backendQueue.queue_number,
+    status,
+    currentServing: 'N/A', // Will be calculated from backend data
+    peopleAhead: 0, // Will be calculated from backend data
+    createdAt: backendQueue.created_at,
+    calledAt: backendQueue.started_at,
+    completedAt: backendQueue.completed_at,
+    priority: backendQueue.priority,
+    assignedTo: backendQueue.assigned_to,
+  };
 }
 
 // ─── Provider ─────────────────────────────────────────────────────
 export function QueueProvider({ children }) {
-  const [myTickets, setMyTickets] = useState(() => loadFromStorage().myTickets);
-  const [tokenCounters, setTokenCounters] = useState(() => loadFromStorage().tokenCounters);
+  const [myTickets, setMyTickets] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Persist state changes
+  // ── Fetch queues from backend ──────────────────────────────────
+  const fetchQueues = useCallback(async (filters = {}) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('=== FETCHING QUEUES ===');
+      console.log('Filters:', filters);
+      
+      const params = new URLSearchParams();
+      if (filters.status) params.append('status', filters.status);
+      if (filters.institutionId) params.append('institutionId', filters.institutionId);
+      if (filters.date) params.append('date', filters.date);
+      
+      const queryString = params.toString();
+      const url = queryString ? `/queues?${queryString}` : '/queues';
+      
+      console.log('Fetching from:', url);
+      
+      const response = await api.get(url);
+      
+      console.log('=== FETCH QUEUES RESPONSE ===');
+      console.log('Response:', response);
+      console.log('Response.success:', response.success);
+      console.log('Response.data:', response.data);
+      
+      if (response.success && response.data) {
+        const transformed = response.data.map(transformQueueEntry);
+        console.log('Transformed queues:', transformed);
+        setMyTickets(transformed);
+      } else {
+        console.log('No queues or failed response');
+        setMyTickets([]);
+      }
+    } catch (err) {
+      console.error('=== FETCH QUEUES ERROR ===');
+      console.error('Error:', err);
+      setError(err.response?.data?.message || 'Failed to fetch queues');
+      setMyTickets([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ── Auto-fetch queues on mount ─────────────────────────────────
   useEffect(() => {
-    saveToStorage({ myTickets, tokenCounters });
-  }, [myTickets, tokenCounters]);
-
-  // ── Queue updates are manual through employee actions ──
-  // Automatic advancement removed - employees control queue progression
-  // Citizens see real-time status through manual callNextToken updates
+    // Fetch queues on mount
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchQueues();
+  }, [fetchQueues]);
 
   // ── Register for a queue ───────────────────────────────────────
-  const registerForQueue = useCallback((institutionId, institutionName, serviceName) => {
-    const prefix = getPrefix(institutionId);
+  const registerForQueue = useCallback(async (institutionUUID, serviceUUID, priority = 'NORMAL') => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    // Get next token number for this institution
-    const currentCount = tokenCounters[institutionId] || 0;
-    const nextNumber = currentCount + 1;
+      console.log('=== JOIN QUEUE REQUEST ===');
+      console.log('Institution ID:', institutionUUID);
+      console.log('Service ID:', serviceUUID);
+      console.log('Priority:', priority);
+      console.log('Token:', localStorage.getItem('mesob_token') ? 'EXISTS' : 'MISSING');
 
-    // Simulate a "currently serving" number (some tickets before ours)
-    const peopleAhead = Math.floor(Math.random() * 8) + 3; // 3–10 people ahead
-    const servingNumber = Math.max(1, nextNumber - peopleAhead);
+      const response = await api.post('/queues/join', {
+        institutionId: institutionUUID,
+        serviceId: serviceUUID,
+        priority,
+      });
 
-    const ticket = {
-      id: `${institutionId}-${Date.now()}`,
-      institutionId,
-      institutionName,
-      serviceName,
-      token: `${prefix}-${String(nextNumber).padStart(3, '0')}`,
-      status: 'waiting',
-      currentServing: `${prefix}-${String(servingNumber).padStart(3, '0')}`,
-      peopleAhead,
-      createdAt: new Date().toISOString(),
-      calledAt: null,
-      completedAt: null,
-    };
+      console.log('=== JOIN QUEUE RESPONSE ===');
+      console.log('Full response:', response);
+      console.log('Response success:', response?.success);
+      console.log('Response data:', response?.data);
+      console.log('Response message:', response?.message);
 
-    setMyTickets(prev => [ticket, ...prev]);
-    setTokenCounters(prev => ({ ...prev, [institutionId]: nextNumber }));
+      // api.post() returns { success, data, message } directly (not wrapped in response.data)
+      if (response.success && response.data) {
+        const newTicket = transformQueueEntry(response.data);
 
-    return ticket;
-  }, [tokenCounters]);
+        // Add to local state
+        setMyTickets(prev => [newTicket, ...prev]);
+
+        // Refresh from backend to get updated queue position
+        await fetchQueues();
+
+        return newTicket;
+      }
+
+      const errorMsg = response.message || 'Failed to join queue';
+      console.error('❌ Queue registration failed:', errorMsg);
+      throw new Error(errorMsg);
+    } catch (err) {
+      console.error('=== JOIN QUEUE ERROR ===');
+      console.error('Error object:', err);
+      console.error('Error response:', err.response);
+      console.error('Error response data:', err.response?.data);
+
+      const errorMessage =
+        err.response?.data?.message || err.message || 'Failed to join queue. Please check your connection and try again.';
+
+      setError(errorMessage);
+      throw new Error(errorMessage, { cause: err });
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchQueues]);
 
   // ── Cancel / leave queue ───────────────────────────────────────
-  const cancelTicket = useCallback((ticketId) => {
-    setMyTickets(prev =>
-      prev.map(t =>
-        t.id === ticketId && (t.status === 'waiting' || t.status === 'called')
-          ? { ...t, status: 'cancelled', completedAt: new Date().toISOString() }
-          : t
-      )
-    );
+  const cancelTicket = useCallback(async (ticketId) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.patch(`/queues/${ticketId}/status`, {
+        status: 'CANCELLED',
+      });
+
+      if (response.success) {
+        // Update local state
+        setMyTickets(prev =>
+          prev.map(t =>
+            t.id === ticketId
+              ? { ...t, status: 'cancelled', completedAt: new Date().toISOString() }
+              : t
+          )
+        );
+        
+        // Refresh from backend
+        await fetchQueues();
+      } else {
+        throw new Error(response.message || 'Failed to cancel queue entry');
+      }
+    } catch (err) {
+      console.error('Failed to cancel queue:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to cancel queue';
+      setError(errorMessage);
+      throw new Error(errorMessage, { cause: err });
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchQueues]);
+
+  // ── Get queue status (public endpoint) ─────────────────────────
+  const getQueueStatus = useCallback(async (queueId) => {
+    try {
+      const response = await api.get(`/queues/${queueId}/status`);
+      
+      if (response.success && response.data) {
+        return {
+          ...transformQueueEntry(response.data),
+          position: response.data.position,
+        };
+      }
+      return null;
+    } catch (err) {
+      console.error('Failed to get queue status:', err);
+      return null;
+    }
   }, []);
 
   // ── Derived helpers ────────────────────────────────────────────
@@ -111,82 +212,85 @@ export function QueueProvider({ children }) {
   }, [myTickets]);
 
   // ── Employee queue operations ───────────────────────────────────
-  const getInstitutionQueue = useCallback((institutionId) => {
-    return myTickets.filter(t => 
-      t.institutionId === institutionId && 
-      (t.status === 'waiting' || t.status === 'called')
-    ).sort((a, b) => {
-      // Sort by token number to maintain queue order
-      const aNum = parseInt(a.token.split('-')[1], 10);
-      const bNum = parseInt(b.token.split('-')[1], 10);
-      return aNum - bNum;
-    });
+  const getInstitutionQueue = useCallback((institutionUUID) => {
+    return myTickets
+      .filter(t => t.institutionId === institutionUUID)
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   }, [myTickets]);
 
-  const getCurrentServing = useCallback((institutionId) => {
+  const getCurrentServing = useCallback((institutionUUID) => {
     return myTickets.find(t => 
-      t.institutionId === institutionId && 
+      t.institutionId === institutionUUID && 
       t.status === 'called'
     );
   }, [myTickets]);
 
-  const callNextToken = useCallback((institutionId) => {
-    setMyTickets(prev => {
-      // Find the current serving token and complete it
-      const currentServing = prev.find(t => 
-        t.institutionId === institutionId && 
+  const callNextToken = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Backend automatically selects next pending queue entry
+      const response = await api.post('/queues/call-next');
+
+      if (response.success) {
+        // Refresh queues from backend
+        await fetchQueues();
+        return response.data;
+      } else {
+        throw new Error(response.message || 'Failed to call next person');
+      }
+    } catch (err) {
+      console.error('Failed to call next:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to call next person';
+      setError(errorMessage);
+      throw new Error(errorMessage, { cause: err });
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchQueues]);
+
+  const completeCurrentToken = useCallback(async (institutionUUID) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Find the current serving ticket
+      const currentTicket = myTickets.find(t => 
+        t.institutionId === institutionUUID && 
         t.status === 'called'
       );
 
-      // Find the next waiting token
-      const waitingTokens = prev
-        .filter(t => t.institutionId === institutionId && t.status === 'waiting')
-        .sort((a, b) => {
-          const aNum = parseInt(a.token.split('-')[1], 10);
-          const bNum = parseInt(b.token.split('-')[1], 10);
-          return aNum - bNum;
-        });
+      if (!currentTicket) {
+        throw new Error('No customer currently being served');
+      }
 
-      const nextToken = waitingTokens[0]; // Get the first in line
-
-      return prev.map(ticket => {
-        // Complete the current serving token
-        if (currentServing && ticket.id === currentServing.id) {
-          return {
-            ...ticket,
-            status: 'completed',
-            completedAt: new Date().toISOString(),
-          };
-        }
-        
-        // Call the next token
-        if (nextToken && ticket.id === nextToken.id) {
-          return {
-            ...ticket,
-            status: 'called',
-            calledAt: new Date().toISOString(),
-          };
-        }
-
-        return ticket;
+      const response = await api.patch(`/queues/${currentTicket.id}/status`, {
+        status: 'COMPLETED',
       });
-    });
-  }, []);
 
-  const completeCurrentToken = useCallback((institutionId) => {
-    setMyTickets(prev => 
-      prev.map(t => 
-        t.institutionId === institutionId && t.status === 'called'
-          ? { ...t, status: 'completed', completedAt: new Date().toISOString() }
-          : t
-      )
-    );
-  }, []);
+      if (response.success) {
+        // Refresh queues from backend
+        await fetchQueues();
+      } else {
+        throw new Error(response.message || 'Failed to complete service');
+      }
+    } catch (err) {
+      console.error('Failed to complete service:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to complete service';
+      setError(errorMessage);
+      throw new Error(errorMessage, { cause: err });
+    } finally {
+      setLoading(false);
+    }
+  }, [myTickets, fetchQueues]);
 
   return (
     <QueueContext.Provider
       value={{
         myTickets,
+        loading,
+        error,
         registerForQueue,
         cancelTicket,
         getActiveTickets,
@@ -195,6 +299,8 @@ export function QueueProvider({ children }) {
         getCurrentServing,
         callNextToken,
         completeCurrentToken,
+        getQueueStatus,
+        refreshQueues: fetchQueues,
       }}
     >
       {children}

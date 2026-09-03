@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
-import { useNotifications } from '../../context/NotificationContext';
-import { getMaintenanceTasks, updateMaintenanceTask, getAnnouncements, createTaskCompletionNotification } from '../../utils/sharedData';
+import { useAnnouncements } from '../../context/AnnouncementContext';
+import { useMaintenance } from '../../context/MaintenanceContext';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
 
 // ─── Navigation sections ─────────────────────────────────────────
 const SECTIONS = [
@@ -36,10 +38,9 @@ function StatusBadge({ status }) {
 }
 
 // ─── SECTION: Dashboard Overview ─────────────────────────────────
-function SectionDashboard({ setActiveSection, user }) {
-  const tasks = getMaintenanceTasks({ assignedTo: user?.name });
+function SectionDashboard({ setActiveSection, tasks }) {
+  const { announcements } = useAnnouncements();
   const pending = tasks.filter(t => t.status !== 'Completed').length;
-  const announcements = getAnnouncements({ institution: 'MESOB Center' });
 
   return (
     <>
@@ -59,7 +60,7 @@ function SectionDashboard({ setActiveSection, user }) {
         </div>
         <div className="stat-card">
           <p className="text-sm text-gray-500 mb-1">Announcements</p>
-          <p className="text-2xl font-bold">{announcements.filter(a => !a.read).length}</p>
+          <p className="text-2xl font-bold">{announcements.filter(a => !a.is_read).length}</p>
           <p className="text-xs text-gray-500 mt-1">Unread</p>
         </div>
       </div>
@@ -118,45 +119,68 @@ function SectionDashboard({ setActiveSection, user }) {
 }
 
 // ─── SECTION: My Tasks ────────────────────────────────────────────
-function SectionMyTasks({ user }) {
-  const { getUsers } = useAuth();
-  const { createNotification } = useNotifications();
-  const [tasks, setTasks] = useState(() => getMaintenanceTasks({ assignedTo: user?.name }));
+function SectionMyTasks({ tasks, setTasks, loadingTasks, reloadTasks }) {
   const [selectedTask, setSelectedTask] = useState(null);
   const [showResolutionModal, setShowResolutionModal] = useState(false);
   const [resolution, setResolution] = useState('');
   const [resolutionError, setResolutionError] = useState('');
 
-  function advanceStatus(id) {
+  // Update selectedTask when tasks change (after reload)
+  useEffect(() => {
+    if (selectedTask) {
+      const updatedTask = tasks.find(t => t.id === selectedTask.id);
+      if (updatedTask) {
+        setSelectedTask(updatedTask);
+      }
+    }
+  }, [tasks, selectedTask?.id]);
+
+  async function advanceStatus(id) {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
 
-    // If task is "In Progress", show resolution form instead of completing directly
-    if (task.status === 'In Progress') {
+    if (task.backendStatus === 'IN_PROGRESS') {
+      setSelectedTask(task);
       setShowResolutionModal(true);
       setResolution('');
       setResolutionError('');
       return;
     }
 
-    // For "Assigned" → "In Progress", proceed directly
-    if (task.status === 'Assigned') {
-      const result = updateMaintenanceTask(id, { status: 'In Progress' });
-      if (result.success) {
-        setTasks(prev => prev.map(t => t.id === id ? { ...t, status: 'In Progress' } : t));
-        if (selectedTask?.id === id) {
-          setSelectedTask(prev => ({ ...prev, status: 'In Progress' }));
+    if (task.backendStatus === 'PENDING') {
+      try {
+        const response = await api.patch(
+          `/maintenance/tasks/${task.id}/status`,
+          { status: 'IN_PROGRESS' }
+        );
+
+        if (!response.success) {
+          alert(response.message || 'Failed to start task.');
+          return;
         }
+
+        await reloadTasks();
+
+        setSelectedTask(prev =>
+          prev && prev.id === task.id
+            ? { ...prev, status: 'In Progress', backendStatus: 'IN_PROGRESS' }
+            : prev
+        );
+
+        alert('Task started successfully.');
+      } catch (error) {
+        console.error('Failed to start maintenance task:', error);
+        alert(error.message || 'Failed to start task.');
       }
     }
   }
 
-  function handleCompleteTask() {
-    // Validate resolution
+  async function handleCompleteTask() {
     if (!resolution.trim()) {
       setResolutionError('Resolution is required');
       return;
     }
+
     if (resolution.trim().length < 20) {
       setResolutionError('Resolution must be at least 20 characters');
       return;
@@ -165,281 +189,264 @@ function SectionMyTasks({ user }) {
     const task = selectedTask;
     if (!task) return;
 
-    const completedDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const result = updateMaintenanceTask(task.id, {
-      status: 'Completed',
-      resolution: resolution.trim(),
-      completedDate: completedDate,
-      completedBy: user?.name,
-    });
+    try {
+      setResolutionError('');
 
-    if (result.success) {
-      // Create notification for Institution Manager
-      const allUsers = getUsers ? getUsers() : [];
-      const institutionManager = allUsers.find(u => 
-        u.role === 'manager' && u.institution === task.institution
+      const response = await api.patch(
+        `/maintenance/tasks/${task.id}/resolve`,
+        {
+          resolutionNotes: resolution.trim()
+        }
       );
 
-      if (institutionManager) {
-        const completedTask = { ...task, status: 'Completed', resolution: resolution.trim() };
-        const notificationData = createTaskCompletionNotification(completedTask, institutionManager.email);
-        createNotification(notificationData);
+      if (!response.success) {
+        setResolutionError(
+          response.message || 'Failed to complete task.'
+        );
+        return;
       }
 
-      setTasks(prev => prev.map(t => t.id === task.id ? {
-        ...t,
-        status: 'Completed',
-        resolution: resolution.trim(),
-        completedDate: completedDate,
-        completedBy: user?.name,
-      } : t));
-      setSelectedTask(prev => ({
-        ...prev,
-        status: 'Completed',
-        resolution: resolution.trim(),
-        completedDate: completedDate,
-        completedBy: user?.name,
-      }));
+      await reloadTasks();
+
       setShowResolutionModal(false);
       setResolution('');
       setResolutionError('');
-      alert('Task completed successfully!\n\nYour Institution Manager has been notified.');
+
+      const completedTask = {
+        ...task,
+        status: 'Completed',
+        backendStatus: 'COMPLETED',
+        resolution: resolution.trim()
+      };
+
+      setSelectedTask(completedTask);
+
+      alert(
+        'Task completed successfully!\\n\\n' +
+        'The maintenance report has been resolved.'
+      );
+    } catch (error) {
+      console.error('Failed to complete maintenance task:', error);
+      setResolutionError(
+        error.message || 'Failed to complete task.'
+      );
     }
   }
 
-  function actionLabel(status) {
-    return { Assigned: 'Start', 'In Progress': 'Complete' }[status] || null;
-  }
+  const actionLabel = status => {
+    return {
+      Assigned: 'Start',
+      'In Progress': 'Complete'
+    }[status] || null;
+  };
 
-  // ── Task detail view with comprehensive employee report fields ──
   if (selectedTask) {
     const live = tasks.find(t => t.id === selectedTask.id) || selectedTask;
+    const label = actionLabel(live.status);
+
     return (
       <>
-        <div className="mb-6">
-          <button
-            onClick={() => setSelectedTask(null)}
-            className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to My Tasks
-          </button>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6 max-w-4xl">
-          {/* Task header */}
-          <div className="flex flex-wrap items-start justify-between gap-4 mb-6 pb-6 border-b border-gray-100">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-400 mb-1">{live.id}</p>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">{live.title}</h2>
-              <div className="flex flex-wrap items-center gap-2">
-                <PriorityBadge priority={live.priority} />
-                <StatusBadge status={live.status} />
-              </div>
+              <h2 className="text-2xl font-bold text-gray-900">Task Details</h2>
+              <p className="text-gray-500">Maintenance task information</p>
             </div>
-            {actionLabel(live.status) && (
-              <button
-                onClick={() => advanceStatus(live.id)}
-                className="px-5 py-2.5 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition"
-              >
-                {actionLabel(live.status)} Task
-              </button>
-            )}
+
+            <button
+              onClick={() => setSelectedTask(null)}
+              className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+            >
+              Back to My Tasks
+            </button>
           </div>
 
-          {/* Comprehensive details grid showing ALL employee report fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 text-sm">
-            <div className="space-y-4">
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-2">Task Information</p>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Task ID:</span>
-                    <span className="font-medium text-gray-900">{live.id}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Institution:</span>
-                    <span className="font-medium text-gray-900">{live.institution}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Assigned Date:</span>
-                    <span className="font-medium text-gray-900">{live.assignedDate}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Status:</span>
-                    <StatusBadge status={live.status} />
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Priority:</span>
-                    <PriorityBadge priority={live.priority} />
-                  </div>
-                  {live.reportId && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Related Report:</span>
-                      <span className="font-medium text-gray-900">{live.reportId}</span>
-                    </div>
-                  )}
-                </div>
+                <h3 className="text-xl font-semibold">{live.title}</h3>
+                <p className="text-sm text-gray-500">
+                  Task ID: {live.id}
+                </p>
               </div>
 
-              {(live.employeeName || live.employeeId) && (
-                <div>
-                  <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-2">Reported By</p>
-                  <div className="space-y-2">
-                    {live.employeeName && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Employee Name:</span>
-                        <span className="font-medium text-gray-900">{live.employeeName}</span>
-                      </div>
-                    )}
-                    {live.employeeId && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Employee ID:</span>
-                        <span className="font-medium text-gray-900">{live.employeeId}</span>
-                      </div>
-                    )}
-                  </div>
+              <StatusBadge status={live.status} />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm text-gray-500">Institution</p>
+                <p className="font-medium">{live.institution}</p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500">Priority</p>
+                <PriorityBadge priority={live.priority} />
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500">Location</p>
+                <p className="font-medium">{live.location || 'N/A'}</p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500">Assigned Date</p>
+                <p className="font-medium">{live.assignedDate}</p>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <p className="text-sm text-gray-500">Description</p>
+              <p className="mt-1 text-gray-800 whitespace-pre-wrap">
+                {live.description || 'No description provided.'}
+              </p>
+            </div>
+
+            {live.equipmentInfo && (
+              <div className="mt-6">
+                <p className="text-sm text-gray-500">Equipment / Office</p>
+                <p className="mt-1 text-gray-800">
+                  {live.equipmentInfo}
+                </p>
+              </div>
+            )}
+
+            {live.photo && (
+              <div className="mt-6">
+                <p className="text-sm text-gray-500 mb-2">Problem Photo</p>
+                <div className="border rounded-lg overflow-hidden bg-gray-50">
+                  <img 
+                    src={live.photo} 
+                    alt={live.photoName || 'Problem photo'} 
+                    className="w-full max-w-2xl h-auto"
+                    style={{ maxHeight: '500px', objectFit: 'contain' }}
+                  />
                 </div>
+                {live.photoName && (
+                  <p className="text-xs text-gray-500 mt-1">{live.photoName}</p>
+                )}
+              </div>
+            )}
+
+            {live.attachments && live.attachments.length > 0 && (
+              <div className="mt-6">
+                <p className="text-sm text-gray-500 mb-2">Attachments ({live.attachments.length})</p>
+                <div className="space-y-2">
+                  {live.attachments.map((attachment, i) => (
+                    <a
+                      key={i}
+                      href={attachment.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 transition"
+                    >
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{attachment.file_name}</p>
+                        <p className="text-xs text-gray-500">
+                          {attachment.file_type} · {(attachment.file_size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {live.status === 'Completed' && live.resolution && (
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm font-medium text-gray-700">
+                  Resolution
+                </p>
+                <p className="mt-1 text-gray-800 whitespace-pre-wrap">
+                  {live.resolution}
+                </p>
+              </div>
+            )}
+
+            <div className="mt-8 flex items-center gap-3">
+              {label && (
+                <button
+                  onClick={() => advanceStatus(live.id)}
+                  className="px-5 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  {label} Task
+                </button>
+              )}
+
+              {live.status === 'Completed' && (
+                <span className="text-green-600 font-medium">
+                  Task Completed
+                </span>
               )}
             </div>
 
-            <div className="space-y-4">
-              {(live.problemType || live.location || live.officeNumber) && (
-                <div>
-                  <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-2">Problem Location</p>
-                  <div className="space-y-2">
-                    {live.problemType && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Problem Type:</span>
-                        <span className="font-medium text-gray-900">{live.problemType}</span>
-                      </div>
-                    )}
-                    {live.location && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Location:</span>
-                        <span className="font-medium text-gray-900">{live.location}</span>
-                      </div>
-                    )}
-                    {live.officeNumber && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Office Number:</span>
-                        <span className="font-medium text-gray-900">{live.officeNumber}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+            <div className="mt-8">
+              <div className="flex items-center gap-2 text-sm">
+                <span className={live.status === 'Assigned' || live.status === 'In Progress' || live.status === 'Completed' ? 'font-medium' : ''}>
+                  Assigned
+                </span>
+                <span>→</span>
+                <span className={live.status === 'In Progress' || live.status === 'Completed' ? 'font-medium' : ''}>
+                  In Progress
+                </span>
+                <span>→</span>
+                <span className={live.status === 'Completed' ? 'font-medium' : ''}>
+                  Completed
+                </span>
+              </div>
             </div>
           </div>
-
-          {/* Problem Description */}
-          {live.description && (
-            <div className="mb-6">
-              <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-2">Problem Description</p>
-              <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-4">{live.description}</p>
-            </div>
-          )}
-
-          {/* Problem Photo from employee report */}
-          {live.photoPreview && (
-            <div className="mb-6">
-              <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-2">Problem Photo</p>
-              <img
-                src={live.photoPreview}
-                alt="Problem photo"
-                className="max-w-lg w-full rounded-xl border border-gray-200 shadow-sm"
-              />
-            </div>
-          )}
-
-          {/* Resolution (shown after completion) */}
-          {live.status === 'Completed' && live.resolution && (
-            <div className="mb-6">
-              <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-2">Resolution / Work Performed</p>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-sm text-gray-700 leading-relaxed mb-3">{live.resolution}</p>
-                <div className="text-xs text-gray-500 flex flex-wrap gap-4">
-                  {live.completedDate && (
-                    <span>
-                      <strong>Completed:</strong> {live.completedDate}
-                    </span>
-                  )}
-                  {live.completedBy && (
-                    <span>
-                      <strong>By:</strong> {live.completedBy}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
-        <div className="p-4 bg-cyan-50 border border-cyan-100 rounded-xl text-sm text-cyan-900 max-w-4xl">
-          <strong>Status Flow:</strong> Assigned → In Progress → Completed. Use the action button to advance task status. All details from the employee maintenance report are shown above including location, problem type, and photo.
-        </div>
-
-        {/* Resolution Modal */}
         {showResolutionModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-900">Complete Task</h3>
-                <p className="text-sm text-gray-500 mt-1">Record the resolution and work performed for this task</p>
-              </div>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Complete Task
+              </h3>
 
-              <div className="p-6 space-y-4">
-                {/* Task Summary */}
-                <div className="bg-gray-50 rounded-lg p-4 text-sm">
-                  <p className="font-semibold text-gray-900 mb-2">{live.title}</p>
-                  <div className="text-xs text-gray-600 space-y-1">
-                    <p><strong>Task ID:</strong> {live.id}</p>
-                    <p><strong>Institution:</strong> {live.institution}</p>
-                    {live.employeeName && <p><strong>Reported by:</strong> {live.employeeName}</p>}
-                    {live.problemType && <p><strong>Problem Type:</strong> {live.problemType}</p>}
-                  </div>
-                </div>
+              <p className="mt-2 text-sm text-gray-500">
+                Enter the resolution details for this maintenance task.
+              </p>
 
-                {/* Resolution Input */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Resolution / Work Performed <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    value={resolution}
-                    onChange={(e) => {
-                      setResolution(e.target.value);
-                      setResolutionError('');
-                    }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:border-transparent text-sm resize-y"
-                    rows="6"
-                    placeholder="Describe the work performed, parts replaced, or how the problem was resolved. Be specific and detailed. (Minimum 20 characters)"
-                  />
-                  {resolutionError && (
-                    <p className="text-red-600 text-xs mt-2">{resolutionError}</p>
-                  )}
-                  <p className="text-xs text-gray-500 mt-2">
-                    {resolution.trim().length} / 20 characters minimum
-                  </p>
-                </div>
-              </div>
+              <textarea
+                value={resolution}
+                onChange={e => {
+                  setResolution(e.target.value);
+                  setResolutionError('');
+                }}
+                rows={6}
+                className="mt-4 w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
+                placeholder="Describe how the maintenance issue was resolved..."
+              />
 
-              <div className="p-6 border-t border-gray-100 flex items-center justify-end gap-3">
+              {resolutionError && (
+                <p className="mt-2 text-sm text-red-600">
+                  {resolutionError}
+                </p>
+              )}
+
+              <div className="mt-5 flex justify-end gap-3">
                 <button
                   onClick={() => {
                     setShowResolutionModal(false);
                     setResolution('');
                     setResolutionError('');
                   }}
-                  className="px-5 py-2.5 text-gray-700 hover:bg-gray-100 rounded-xl text-sm font-semibold transition"
+                  className="px-4 py-2 rounded-lg border hover:bg-gray-50"
                 >
                   Cancel
                 </button>
+
                 <button
                   onClick={handleCompleteTask}
-                  className="px-5 py-2.5 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition"
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
                 >
                   Submit & Complete Task
                 </button>
@@ -451,70 +458,72 @@ function SectionMyTasks({ user }) {
     );
   }
 
-  // ── Task list view ──
   return (
-    <>
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">My Tasks</h2>
-        <p className="text-sm text-gray-500">Technical tasks assigned to you. Click a task to view details and update status.</p>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">My Tasks</h2>
+        <p className="text-gray-500">
+          Maintenance tasks assigned to you
+        </p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">Assigned Tasks</h3>
-          <span className="text-sm text-gray-500">
-            {tasks.filter(t => t.status !== 'Completed').length} pending
-          </span>
+      {loadingTasks ? (
+        <div className="bg-white rounded-xl border p-8 text-center text-gray-500">
+          Loading tasks...
         </div>
-        <div className="table-container border-0 rounded-none">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Task ID</th>
-                <th>Task</th>
-                <th>Institution</th>
-                <th>Priority</th>
-                <th>Assigned</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tasks.length === 0 ? (
-                <tr><td colSpan={7} className="text-center text-gray-400 py-6">No tasks assigned yet.</td></tr>
-              ) : tasks.map(task => (
-                <tr key={task.id}>
-                  <td className="font-medium">{task.id}</td>
-                  <td>{task.title}</td>
-                  <td>{task.institution}</td>
-                  <td><PriorityBadge priority={task.priority} /></td>
-                  <td>{task.assignedDate}</td>
-                  <td><StatusBadge status={task.status} /></td>
-                  <td>
-                    <button
-                      onClick={() => setSelectedTask(task)}
-                      className="text-blue-600 hover:underline text-sm font-medium"
-                    >
-                      {task.status === 'Completed' ? 'View' : 'Open'}
-                    </button>
-                  </td>
+      ) : tasks.length === 0 ? (
+        <div className="bg-white rounded-xl border p-8 text-center text-gray-500">
+          No maintenance tasks assigned to you.
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-gray-50">
+                  <th className="text-left p-4">Task ID</th>
+                  <th className="text-left p-4">Task</th>
+                  <th className="text-left p-4">Institution</th>
+                  <th className="text-left p-4">Priority</th>
+                  <th className="text-left p-4">Assigned Date</th>
+                  <th className="text-left p-4">Status</th>
+                  <th className="text-left p-4">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+              </thead>
 
-      <div className="p-4 bg-cyan-50 border border-cyan-100 rounded-xl text-sm text-cyan-900">
-        <strong>Task Assignment:</strong> Tasks are assigned to you by the Institution Manager. You cannot assign tasks to other staff.
-      </div>
-    </>
+              <tbody>
+                {tasks.map(task => (
+                  <tr key={task.id} className="border-b last:border-0">
+                    <td className="p-4 text-sm">{task.id}</td>
+                    <td className="p-4 font-medium">{task.title}</td>
+                    <td className="p-4">{task.institution}</td>
+                    <td className="p-4">
+                      <PriorityBadge priority={task.priority} />
+                    </td>
+                    <td className="p-4">{task.assignedDate}</td>
+                    <td className="p-4">
+                      <StatusBadge status={task.status} />
+                    </td>
+                    <td className="p-4">
+                      <button
+                        onClick={() => setSelectedTask(task)}
+                        className="px-3 py-1.5 rounded-lg border hover:bg-gray-50"
+                      >
+                        {task.status === 'Completed' ? 'View' : 'Open'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
-// ─── SECTION: Maintenance Reports ────────────────────────────────
-function SectionMaintenanceReports({ user }) {
-  const tasks = getMaintenanceTasks({ assignedTo: user?.name });
+function SectionMaintenanceReports({ tasks }) {
   const completedTasks = tasks.filter(t => t.status === 'Completed');
 
   return (
@@ -555,7 +564,7 @@ function SectionMaintenanceReports({ user }) {
                   <td>{task.reportId || <span className="text-gray-400">—</span>}</td>
                   <td>{task.institution}</td>
                   <td><PriorityBadge priority={task.priority} /></td>
-                  <td>{task.assignedDate}</td>
+                  <td>{task.completedDate || task.assignedDate}</td>
                 </tr>
               ))}
             </tbody>
@@ -572,15 +581,13 @@ function SectionMaintenanceReports({ user }) {
 
 // ─── SECTION: Announcements ───────────────────────────────────────
 function SectionAnnouncements() {
-  const [announcements, setAnnouncements] = useState(() => getAnnouncements({ institution: 'MESOB Center' }));
+  const { announcements, loading } = useAnnouncements();
   const [selected, setSelected] = useState(null);
-
-  function markRead(id) {
-    setAnnouncements(prev => prev.map(a => a.id === id ? { ...a, read: true } : a));
-  }
 
   if (selected) {
     const ann = announcements.find(a => a.id === selected);
+    if (!ann) return null;
+
     return (
       <>
         <div className="mb-6">
@@ -597,10 +604,10 @@ function SectionAnnouncements() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
             <h2 className="text-lg font-semibold text-gray-900">{ann.title}</h2>
-            {!ann.read && <span className="badge bg-blue-100 text-blue-800 flex-shrink-0">New</span>}
+            {ann.is_active && <span className="badge bg-green-100 text-green-800 flex-shrink-0">Active</span>}
           </div>
-          <p className="text-sm text-gray-500 mb-4">{ann.date} {ann.author && `• ${ann.author}`}</p>
-          <p className="text-sm text-gray-700 leading-relaxed">{ann.body}</p>
+          <p className="text-sm text-gray-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
+          <p className="text-sm text-gray-700 leading-relaxed">{ann.content}</p>
         </div>
       </>
     );
@@ -612,22 +619,27 @@ function SectionAnnouncements() {
         <h2 className="text-lg font-semibold text-gray-900 mb-1">Announcements</h2>
         <p className="text-sm text-gray-500">Operational announcements and notifications.</p>
       </div>
+
+      {loading && !announcements.length && (
+        <div className="text-center py-8 text-gray-500">Loading announcements...</div>
+      )}
+
       <div className="space-y-3">
         {announcements.length === 0 ? (
           <div className="text-center text-gray-400 py-12">No announcements available.</div>
         ) : announcements.map(ann => (
           <div
             key={ann.id}
-            onClick={() => { setSelected(ann.id); markRead(ann.id); }}
-            className={`bg-white rounded-2xl border shadow-sm p-5 cursor-pointer hover:shadow-md transition-all duration-200 ${ann.read ? 'border-gray-100' : 'border-blue-200 bg-blue-50/30'}`}
+            onClick={() => setSelected(ann.id)}
+            className={`bg-white rounded-2xl border shadow-sm p-5 cursor-pointer hover:shadow-md transition-all duration-200 ${ann.is_active ? 'border-gray-100' : 'border-gray-200 bg-gray-50'}`}
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  {!ann.read && <span className="inline-block w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />}
+                  {ann.is_active && <span className="inline-block w-2 h-2 rounded-full bg-green-600 flex-shrink-0" />}
                   <h3 className="font-semibold text-sm text-gray-900 leading-snug">{ann.title}</h3>
                 </div>
-                <p className="text-xs text-gray-500">{ann.date}</p>
+                <p className="text-xs text-gray-500">{new Date(ann.published_at || ann.created_at).toLocaleDateString()}</p>
               </div>
               <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none"
                 stroke="currentColor" viewBox="0 0 24 24">
@@ -693,20 +705,113 @@ export default function ICTStaffDashboard() {
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('Dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [tasks, setTasks] = useState([]);
+  const [loadingTasks, setLoadingTasks] = useState(true);
+
+  // Load tasks at parent level so all sections can access them
+  const loadTasks = useCallback(async () => {
+    try {
+      console.log('=== ICT STAFF: Loading tasks ===');
+      const response = await api.get('/maintenance/my-tasks');
+      console.log('Tasks response:', response);
+      
+      if (!response.success || !response.data) {
+        console.log('No tasks or failed response');
+        setTasks([]);
+        return;
+      }
+      
+      const backendTasks = Array.isArray(response.data) ? response.data : [];
+      console.log('Backend tasks count:', backendTasks.length);
+      console.log('Tasks by status:', backendTasks.reduce((acc, t) => {
+        acc[t.status] = (acc[t.status] || 0) + 1;
+        return acc;
+      }, {}));
+      
+      const normalizedTasks = backendTasks.map(task => {
+        const report = task.maintenance_reports || {};
+        const institution = report.institutions || {};
+        const attachments = report.maintenance_attachments || [];
+        const photo = attachments.find(a => a.file_type?.startsWith('image/'));
+        
+        const statusMap = {
+          PENDING: 'Assigned',
+          IN_PROGRESS: 'In Progress',
+          COMPLETED: 'Completed',
+          CANCELLED: 'Cancelled'
+        };
+        
+        return {
+          id: task.id,
+          maintenanceTaskId: task.id,
+          reportId: report.id,
+          title: report.title || 'Maintenance Task',
+          description: report.description || '',
+          location: report.location || '',
+          equipmentInfo: report.equipment_info || '',
+          institution: institution.name_en || 'Unknown Institution',
+          institutionName_am: institution.name_am || '',
+          priority: report.priority || 'Normal',
+          status: statusMap[task.status] || task.status,
+          backendStatus: task.status,
+          assignedDate: task.created_at
+            ? new Date(task.created_at).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+              })
+            : 'N/A',
+          completedAt: task.completed_at || null,
+          completedDate: task.completed_at
+            ? new Date(task.completed_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              })
+            : 'N/A',
+          resolution: task.completion_notes || '',
+          photo: photo?.file_url || null,
+          photoName: photo?.file_name || null,
+          attachments: attachments
+        };
+      });
+      
+      console.log('Normalized tasks:', normalizedTasks);
+      console.log('Completed tasks:', normalizedTasks.filter(t => t.status === 'Completed').length);
+      setTasks(normalizedTasks);
+    } catch (error) {
+      console.error('Failed to load maintenance tasks:', error);
+      setTasks([]);
+    } finally {
+      setLoadingTasks(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTasks();
+  }, [loadTasks]);
 
   function navigate(section) {
     setActiveSection(section);
     setSidebarOpen(false);
+    
+    // Reload tasks when navigating to task-related sections
+    if (section === 'My Tasks' || section === 'Maintenance Reports' || section === 'Dashboard') {
+      loadTasks();
+    }
   }
 
   function renderSection() {
     switch (activeSection) {
-      case 'Dashboard':           return <SectionDashboard setActiveSection={navigate} user={user} />;
-      case 'My Tasks':            return <SectionMyTasks user={user} />;
-      case 'Maintenance Reports': return <SectionMaintenanceReports user={user} />;
+      case 'Dashboard':           return <SectionDashboard setActiveSection={navigate} tasks={tasks} />;
+      case 'My Tasks':            return <SectionMyTasks user={user} tasks={tasks} setTasks={setTasks} loadingTasks={loadingTasks} reloadTasks={loadTasks} />;
+      case 'Maintenance Reports': return <SectionMaintenanceReports user={user} tasks={tasks} />;
       case 'Announcements':       return <SectionAnnouncements />;
       case 'My Profile':          return <SectionMyProfile user={user} />;
-      default:                    return <SectionDashboard setActiveSection={navigate} user={user} />;
+      default:                    return <SectionDashboard setActiveSection={navigate} tasks={tasks} />;
     }
   }
 
@@ -771,6 +876,7 @@ export default function ICTStaffDashboard() {
               </h1>
             </div>
             <div className="flex items-center gap-3">
+              <LanguageSwitcher />
               <span className="badge bg-cyan-100 text-cyan-800">Technician</span>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-gray-900">{user?.name}</p>

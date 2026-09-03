@@ -1,28 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import QueueManagement from '../../components/dashboard/QueueManagement';
+import FeedbackRating from '../../components/dashboard/FeedbackRating';
 import { useAuth } from '../../context/AuthContext';
 import { useQueue } from '../../context/QueueContext';
-import { getAnnouncements } from '../../utils/sharedData';
+import { useApplications } from '../../context/ApplicationContext';
+import { useAnnouncements } from '../../context/AnnouncementContext';
+import { useFeedback } from '../../context/FeedbackContext';
 import { organizationsData } from '../../data/organizations';
-import { getApplications, createApplication } from '../../utils/sharedData';
 
 export default function CitizenDashboard() {
   const { user } = useAuth();
   const { getActiveTickets } = useQueue();
+  const { applications, getActiveApplications, getCompletedApplications } = useApplications();
   const [activeSection, setActiveSection] = useState('dashboard');
   const firstName = user?.name?.split(' ')[0] || 'Citizen';
   const activeQueueCount = getActiveTickets().length;
   
-  // Get citizen applications
-  const applications = getApplications({ citizenEmail: user?.email });
-  const activeApplications = applications.filter(app => app.status === 'Submitted' || app.status === 'Under Review').length;
-  const completedApplications = applications.filter(app => app.status === 'Approved' || app.status === 'Completed').length;
+  // Get application counts
+  const activeApplications = getActiveApplications().length;
+  const completedApplications = getCompletedApplications().length;
 
   const navLinks = [
     { label: 'My Dashboard', section: 'dashboard' },
     { label: 'My Applications', section: 'applications' },
+    { label: 'My Feedback', section: 'feedback' },
     { label: 'My Queue', section: 'queue' },
     { label: 'Apply for Service', section: 'apply' },
     { label: 'Announcements', section: 'announcements' },
@@ -177,6 +180,11 @@ export default function CitizenDashboard() {
       {/* My Applications Section */}
       {activeSection === 'applications' && (
         <MyApplicationsSection applications={applications} setActiveSection={setActiveSection} />
+      )}
+
+      {/* My Feedback Section */}
+      {activeSection === 'feedback' && (
+        <MyFeedbackSection />
       )}
 
       {/* My Queue Section */}
@@ -471,6 +479,18 @@ function MyApplicationsSection({ applications, setActiveSection }) {
                 <p className="text-sm text-gray-700 leading-relaxed">{app.additionalInfo}</p>
               </div>
             )}
+
+            {/* Feedback Rating Section - Only show for completed applications */}
+            {app.status === 'Completed' && (
+              <div className="border-t border-gray-100 pt-6">
+                <h3 className="font-semibold text-gray-900 mb-4">Rate This Service</h3>
+                <FeedbackRating
+                  applicationId={app.id}
+                  institutionId={app.institution_id}
+                  serviceId={app.service_id}
+                />
+              </div>
+            )}
           </div>
         </div>
       </>
@@ -584,6 +604,7 @@ function MyApplicationsSection({ applications, setActiveSection }) {
 
 // ─── Apply for Service Section Component ──────────────────────────
 function ApplyForServiceSection({ user, setActiveSection }) {
+  const { createApplication } = useApplications();
   const [selectedInstitution, setSelectedInstitution] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -630,7 +651,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmitApplication = (e) => {
+  const handleSubmitApplication = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) return;
@@ -653,7 +674,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
       }
     };
 
-    const result = createApplication(application);
+    const result = await createApplication(application);
     
     if (result.success) {
       setSubmissionSuccess(result.application);
@@ -1089,23 +1110,176 @@ function ApplyForServiceSection({ user, setActiveSection }) {
   );
 }
 
+// ─── My Feedback Section Component ────────────────────────────────
+function MyFeedbackSection() {
+  const { myFeedback, loading, fetchMyFeedback } = useFeedback();
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
+
+  // Fetch feedback on mount
+  useEffect(() => {
+    fetchMyFeedback();
+  }, [fetchMyFeedback]);
+
+  const getRatingStars = (rating) => {
+    return '⭐'.repeat(rating);
+  };
+
+  const getRatingMeaning = (rating) => {
+    const meanings = {
+      1: 'Poor',
+      2: 'Good',
+      3: 'Very Good',
+      4: 'Excellent',
+      5: 'Fantastic'
+    };
+    return meanings[rating] || '';
+  };
+
+  // Feedback detail view
+  if (selectedFeedback) {
+    const feedback = myFeedback.find(f => f.id === selectedFeedback);
+    if (!feedback) {
+      setSelectedFeedback(null);
+      return null;
+    }
+
+    return (
+      <>
+        <div className="mb-6">
+          <button
+            onClick={() => setSelectedFeedback(null)}
+            className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to My Feedback
+          </button>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-yellow-50 to-yellow-100">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">{feedback.service_name}</h2>
+                <p className="text-sm text-gray-600">{feedback.institution_name}</p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl mb-1">{getRatingStars(feedback.rating)}</div>
+                <p className="text-sm text-gray-600">{feedback.rating}/5 — {getRatingMeaning(feedback.rating)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Rating</p>
+                <p className="font-semibold text-gray-900">
+                  {getRatingStars(feedback.rating)} {feedback.rating}/5 — {getRatingMeaning(feedback.rating)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Source</p>
+                <span className={`inline-block badge ${
+                  feedback.source === 'WEBSITE' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                }`}>
+                  {feedback.source === 'WEBSITE' ? 'Website' : 'Telegram'}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Submitted</p>
+                <p className="font-medium text-gray-900">{new Date(feedback.created_at).toLocaleDateString()}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Time</p>
+                <p className="font-medium text-gray-900">{new Date(feedback.created_at).toLocaleTimeString()}</p>
+              </div>
+            </div>
+
+            {feedback.comment && (
+              <div className="border-t border-gray-100 pt-6">
+                <h3 className="font-semibold text-gray-900 mb-2">Your Comment</h3>
+                <p className="text-sm text-gray-700 leading-relaxed">{feedback.comment}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Feedback list view
+  return (
+    <>
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-1">My Feedback</h2>
+        <p className="text-sm text-gray-500">View your service ratings and feedback history</p>
+      </div>
+
+      {loading && myFeedback.length === 0 && (
+        <div className="text-center py-8 text-gray-500">Loading your feedback...</div>
+      )}
+
+      {!loading && myFeedback.length === 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-100 flex items-center justify-center">
+            <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+            </svg>
+          </div>
+          <p className="font-medium text-gray-500">No feedback yet</p>
+          <p className="text-sm text-gray-400 mt-1">After completing a service, you can rate your experience here</p>
+        </div>
+      )}
+
+      {myFeedback.length > 0 && (
+        <div className="space-y-3">
+          {myFeedback.map(feedback => (
+            <div
+              key={feedback.id}
+              onClick={() => setSelectedFeedback(feedback.id)}
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 cursor-pointer hover:shadow-md transition-all duration-200"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="font-semibold text-sm text-gray-900">{feedback.service_name}</h3>
+                    <span className={`badge text-xs ${
+                      feedback.source === 'WEBSITE' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                    }`}>
+                      {feedback.source === 'WEBSITE' ? 'Website' : 'Telegram'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-2">{feedback.institution_name}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{getRatingStars(feedback.rating)}</span>
+                    <span className="text-xs text-gray-600">{feedback.rating}/5 — {getRatingMeaning(feedback.rating)}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">{new Date(feedback.created_at).toLocaleDateString()}</p>
+                </div>
+                <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 // ─── Citizen Announcements Component ──────────────────────────────
 function CitizenAnnouncements() {
-  const [announcements, setAnnouncements] = useState(() => {
-    // Citizens see system and mesob announcements (public announcements)
-    const systemAnnouncements = getAnnouncements({ scope: 'system' });
-    const mesobAnnouncements = getAnnouncements({ scope: 'mesob' });
-    return [...systemAnnouncements, ...mesobAnnouncements].sort((a, b) => b.id - a.id);
-  });
+  const { announcements, loading } = useAnnouncements();
   const [selected, setSelected] = useState(null);
-
-  function markRead(id) {
-    setAnnouncements(prev => prev.map(a => a.id === id ? { ...a, read: true } : a));
-  }
 
   // Announcement detail view
   if (selected) {
     const ann = announcements.find(a => a.id === selected);
+    if (!ann) return null;
+
     return (
       <>
         <div className="mb-6">
@@ -1122,10 +1296,10 @@ function CitizenAnnouncements() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
             <h2 className="text-lg font-semibold text-gray-900">{ann.title}</h2>
-            {!ann.read && <span className="badge bg-blue-100 text-blue-800 flex-shrink-0">New</span>}
+            {ann.is_active && <span className="badge bg-green-100 text-green-800 flex-shrink-0">Active</span>}
           </div>
-          <p className="text-sm text-gray-500 mb-4">{ann.date} {ann.author && `• ${ann.author}`}</p>
-          <p className="text-sm text-gray-700 leading-relaxed">{ann.body}</p>
+          <p className="text-sm text-gray-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
+          <p className="text-sm text-gray-700 leading-relaxed">{ann.content}</p>
         </div>
       </>
     );
@@ -1138,6 +1312,10 @@ function CitizenAnnouncements() {
         <h2 className="text-lg font-semibold text-gray-900 mb-1">Announcements</h2>
         <p className="text-sm text-gray-500">Latest updates and notices from MESOB Center.</p>
       </div>
+
+      {loading && !announcements.length && (
+        <div className="text-center py-8 text-gray-500">Loading announcements...</div>
+      )}
 
       <div className="space-y-3">
         {announcements.length === 0 ? (
@@ -1154,16 +1332,16 @@ function CitizenAnnouncements() {
           announcements.map(ann => (
             <div
               key={ann.id}
-              onClick={() => { setSelected(ann.id); markRead(ann.id); }}
-              className={`bg-white rounded-2xl border shadow-sm p-5 cursor-pointer hover:shadow-md transition-all duration-200 ${ann.read ? 'border-gray-100' : 'border-blue-200 bg-blue-50/30'}`}
+              onClick={() => setSelected(ann.id)}
+              className={`bg-white rounded-2xl border shadow-sm p-5 cursor-pointer hover:shadow-md transition-all duration-200 ${ann.is_active ? 'border-gray-100' : 'border-gray-200 bg-gray-50'}`}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    {!ann.read && <span className="inline-block w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />}
+                    {ann.is_active && <span className="inline-block w-2 h-2 rounded-full bg-green-600 flex-shrink-0" />}
                     <h3 className="font-semibold text-sm text-gray-900 leading-snug">{ann.title}</h3>
                   </div>
-                  <p className="text-xs text-gray-500">{ann.date} {ann.author && `• ${ann.author}`}</p>
+                  <p className="text-xs text-gray-500">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
                 </div>
                 <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />

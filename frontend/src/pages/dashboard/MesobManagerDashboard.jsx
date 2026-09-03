@@ -1,21 +1,29 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNotifications } from '../../context/NotificationContext';
-import { organizationsData } from '../../data/organizations';
-import { getAnnouncements, createAnnouncement, getMaintenanceTasks, createAnnouncementNotification } from '../../utils/sharedData';
+import { useAnnouncements } from '../../context/AnnouncementContext';
+import { useServices } from '../../context/ServiceContext';
+import { useMaintenance } from '../../context/MaintenanceContext';
+import { useQueue } from '../../context/QueueContext';
+import { useApplications } from '../../context/ApplicationContext';
+import { useApp } from '../../context/AppContext';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
+import MesobFeedbackOverview from '../../components/dashboard/MesobFeedbackOverview';
 
 // ─── Navigation sections ──────────────────────────────────────────
-const SECTIONS = [
-  'Dashboard',
-  'Institution Monitoring',
-  'Queue Monitoring',
-  'Application Monitoring',
-  'Maintenance Oversight',
-  'Reports',
-  'Analytics',
-  'Announcements',
-  'My Profile',
-];
+function getSections(t) {
+  return [
+    t.dashboard,
+    t.institution_monitoring,
+    t.queue_monitoring,
+    t.application_monitoring,
+    t.maintenance_oversight,
+    t.feedback_overview,
+    t.reports,
+    t.analytics,
+    t.announcements,
+    t.my_profile,
+  ];
+}
 
 // No mock data - ready for backend integration
 // Queue, applications, and maintenance data will come from API
@@ -43,12 +51,15 @@ function StatusBadge({ status }) {
 
 // ─── SECTION: Dashboard Overview ─────────────────────────────────
 function SectionDashboard({ setActiveSection }) {
-  const totalInstitutions = organizationsData.length;
-  // TODO: Replace with API data when backend is integrated
-  const totalQueue = 0; // Will come from queue management API
-  const totalApps = 0; // Will come from application tracking API
-  const tasks = getMaintenanceTasks({}); // Using real maintenance task system
-  const totalMaint = tasks.filter(t => t.status !== 'Completed').length;
+  const { institutions } = useServices();
+  const { reports } = useMaintenance();
+  const { myTickets } = useQueue();
+  const { applications } = useApplications();
+  
+  const totalInstitutions = institutions.length;
+  const totalQueue = myTickets.filter(t => t.status === 'waiting' || t.status === 'called').length;
+  const totalApps = applications.length;
+  const totalMaint = reports.filter(t => t.status !== 'Completed' && t.status !== 'COMPLETED').length;
 
   return (
     <>
@@ -88,16 +99,19 @@ function SectionDashboard({ setActiveSection }) {
               <tr><th>Institution</th><th>Queue</th><th>Applications</th><th>Maintenance</th><th>Status</th></tr>
             </thead>
             <tbody>
-              {organizationsData.slice(0, 6).map(org => {
-                // TODO: Replace with real API data
-                const s = { queue: 0, applications: 0, maintenance: 0, status: 'Normal' };
+              {institutions.slice(0, 6).map(inst => {
+                const instQueue = myTickets.filter(t => t.institutionId === inst.id && (t.status === 'waiting' || t.status === 'called')).length;
+                const instApps = applications.filter(app => app.institutionId === inst.id).length;
+                const instMaint = reports.filter(r => r.institution === (inst.name_en || inst.name) && r.status !== 'Completed' && r.status !== 'COMPLETED').length;
+                const status = instQueue > 5 ? 'Busy' : 'Normal';
+                
                 return (
-                  <tr key={org.id}>
-                    <td className="font-medium">{org.name_en}</td>
-                    <td>{s.queue}</td>
-                    <td>{s.applications}</td>
-                    <td>{s.maintenance}</td>
-                    <td><StatusBadge status={s.status} /></td>
+                  <tr key={inst.id}>
+                    <td className="font-medium">{inst.name_en || inst.name}</td>
+                    <td>{instQueue}</td>
+                    <td>{instApps}</td>
+                    <td>{instMaint}</td>
+                    <td><StatusBadge status={status} /></td>
                   </tr>
                 );
               })}
@@ -114,10 +128,27 @@ function SectionDashboard({ setActiveSection }) {
             <h2 className="font-semibold text-gray-900">Queue Snapshot</h2>
             <button onClick={() => setActiveSection('Queue Monitoring')} className="text-sm text-blue-600 hover:underline font-medium">View all</button>
           </div>
-          <div className="p-6 text-center text-gray-400 py-12">
-            <p className="text-sm">Queue management system will be integrated with backend API.</p>
-            <p className="text-xs mt-2">Active queue items will appear here.</p>
-          </div>
+          {myTickets.filter(t => t.status === 'waiting' || t.status === 'called').length > 0 ? (
+            <div className="table-container border-0 rounded-none">
+              <table className="data-table">
+                <thead><tr><th>Token</th><th>Institution</th><th>Service</th><th>Status</th></tr></thead>
+                <tbody>
+                  {myTickets.filter(t => t.status === 'waiting' || t.status === 'called').slice(0, 4).map(ticket => (
+                    <tr key={ticket.id}>
+                      <td className="font-medium">{ticket.token}</td>
+                      <td>{ticket.institutionName}</td>
+                      <td className="text-sm">{ticket.serviceName}</td>
+                      <td><StatusBadge status={ticket.status === 'waiting' ? 'Waiting' : 'Processing'} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-6 text-center text-gray-400 py-12">
+              <p className="text-sm">No active queue items</p>
+            </div>
+          )}
         </div>
 
         {/* Maintenance snapshot */}
@@ -126,12 +157,12 @@ function SectionDashboard({ setActiveSection }) {
             <h2 className="font-semibold text-gray-900">Maintenance Snapshot</h2>
             <button onClick={() => setActiveSection('Maintenance Oversight')} className="text-sm text-blue-600 hover:underline font-medium">View all</button>
           </div>
-          {tasks.filter(t => t.status !== 'Completed').length > 0 ? (
+          {reports.filter(t => t.status !== 'Completed' && t.status !== 'COMPLETED').length > 0 ? (
             <div className="table-container border-0 rounded-none">
               <table className="data-table">
                 <thead><tr><th>Task ID</th><th>Institution</th><th>Priority</th><th>Status</th></tr></thead>
                 <tbody>
-                  {tasks.filter(t => t.status !== 'Completed').slice(0, 4).map(t => (
+                  {reports.filter(t => t.status !== 'Completed' && t.status !== 'COMPLETED').slice(0, 4).map(t => (
                     <tr key={t.id}>
                       <td className="font-medium">{t.id}</td>
                       <td>{t.institution}</td>
@@ -159,12 +190,19 @@ function SectionDashboard({ setActiveSection }) {
 
 // ─── SECTION: Institution Monitoring ─────────────────────────────
 function SectionInstitutionMonitoring() {
+  const { institutions } = useServices();
+  const { myTickets } = useQueue();
+  const { applications } = useApplications();
+  const { reports } = useMaintenance();
   const [selected, setSelected] = useState(null);
 
   if (selected) {
-    const org = organizationsData.find(o => o.id === selected);
-    // TODO: Replace with real API data
-    const s = { queue: 0, applications: 0, maintenance: 0, status: 'Normal' };
+    const inst = institutions.find(i => i.id === selected);
+    const instQueue = myTickets.filter(t => t.institutionId === selected && (t.status === 'waiting' || t.status === 'called')).length;
+    const instApps = applications.filter(app => app.institutionId === selected).length;
+    const instMaint = reports.filter(r => r.institution === (inst?.name_en || inst?.name) && r.status !== 'Completed' && r.status !== 'COMPLETED').length;
+    const status = instQueue > 5 ? 'Busy' : 'Normal';
+    
     return (
       <>
         <div className="mb-6">
@@ -175,29 +213,24 @@ function SectionInstitutionMonitoring() {
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
           <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
-            <img src={org.image} alt={org.name_en} className="w-14 h-14 object-contain rounded-xl bg-gray-50 p-1" onError={e => { e.target.style.display = 'none'; }} />
+            {inst?.logo && <img src={inst.logo} alt={inst?.name_en || inst?.name} className="w-14 h-14 object-contain rounded-xl bg-gray-50 p-1" onError={e => { e.target.style.display = 'none'; }} />}
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">{org.name_en}</h2>
-              <p className="text-sm text-gray-500">{org.name_am}</p>
-              <StatusBadge status={s.status} />
+              <h2 className="text-lg font-semibold text-gray-900">{inst?.name_en || inst?.name}</h2>
+              <p className="text-sm text-gray-500">{inst?.name_am}</p>
+              <StatusBadge status={status} />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Active Queue</p><p className="text-2xl font-bold">{s.queue}</p></div>
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Applications</p><p className="text-2xl font-bold">{s.applications}</p></div>
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Maintenance Tasks</p><p className="text-2xl font-bold">{s.maintenance}</p></div>
+            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Active Queue</p><p className="text-2xl font-bold">{instQueue}</p></div>
+            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Applications</p><p className="text-2xl font-bold">{instApps}</p></div>
+            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Maintenance Tasks</p><p className="text-2xl font-bold">{instMaint}</p></div>
           </div>
-          <div>
-            <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-3">Services Offered</p>
-            <div className="space-y-2">
-              {org.services.map((svc, i) => (
-                <div key={i} className="flex items-start justify-between p-3 rounded-xl bg-gray-50 border border-gray-100 text-sm">
-                  <span className="font-medium text-gray-900">{svc.title_en}</span>
-                  <span className="text-gray-500 ml-4 flex-shrink-0">{svc.time}</span>
-                </div>
-              ))}
+          {inst?.description_en && (
+            <div className="p-4 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-700">
+              <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-2">About</p>
+              <p>{inst.description_en}</p>
             </div>
-          </div>
+          )}
         </div>
       </>
     );
@@ -214,17 +247,19 @@ function SectionInstitutionMonitoring() {
           <table className="data-table">
             <thead><tr><th>Institution</th><th>Queue</th><th>Applications</th><th>Maintenance</th><th>Status</th><th>Action</th></tr></thead>
             <tbody>
-              {organizationsData.map(org => {
-                // TODO: Replace with real API data
-                const s = { queue: 0, applications: 0, maintenance: 0, status: 'Normal' };
+              {institutions.map(inst => {
+                const instQueue = myTickets.filter(t => t.institutionId === inst.id && (t.status === 'waiting' || t.status === 'called')).length;
+                const instApps = applications.filter(app => app.institutionId === inst.id).length;
+                const instMaint = reports.filter(r => r.institution === (inst?.name_en || inst?.name) && r.status !== 'Completed' && r.status !== 'COMPLETED').length;
+                const status = instQueue > 5 ? 'Busy' : 'Normal';
                 return (
-                  <tr key={org.id}>
-                    <td className="font-medium">{org.name_en}</td>
-                    <td>{s.queue}</td>
-                    <td>{s.applications}</td>
-                    <td>{s.maintenance}</td>
-                    <td><StatusBadge status={s.status} /></td>
-                    <td><button onClick={() => setSelected(org.id)} className="text-blue-600 hover:underline text-sm font-medium">View</button></td>
+                  <tr key={inst.id}>
+                    <td className="font-medium">{inst?.name_en || inst?.name}</td>
+                    <td>{instQueue}</td>
+                    <td>{instApps}</td>
+                    <td>{instMaint}</td>
+                    <td><StatusBadge status={status} /></td>
+                    <td><button onClick={() => setSelected(inst.id)} className="text-blue-600 hover:underline text-sm font-medium">View</button></td>
                   </tr>
                 );
               })}
@@ -241,12 +276,11 @@ function SectionInstitutionMonitoring() {
 
 // ─── SECTION: Queue Monitoring ────────────────────────────────────
 function SectionQueueMonitoring() {
-  // TODO: Replace with real queue data from API
-  const queueItems = []; // Will come from queue management system
+  const { myTickets } = useQueue();
   
-  const waiting = 0;
-  const processing = 0;
-  const completed = 0;
+  const waiting = myTickets.filter(t => t.status === 'waiting').length;
+  const processing = myTickets.filter(t => t.status === 'called' || t.status === 'processing').length;
+  const completed = myTickets.filter(t => t.status === 'completed' || t.status === 'served').length;
 
   return (
     <>
@@ -262,18 +296,37 @@ function SectionQueueMonitoring() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">Queue Items</h3>
-          <span className="text-sm text-gray-500">{queueItems.length} items</span>
+          <span className="text-sm text-gray-500">{myTickets.length} items</span>
         </div>
-        <div className="p-6 text-center text-gray-400 py-12">
-          <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-          <p className="text-sm font-medium mb-2">Queue Management System Not Yet Integrated</p>
-          <p className="text-xs">Active queue items from all institutions will appear here once the queue management system is connected to the backend.</p>
-        </div>
+        {myTickets.length > 0 ? (
+          <div className="table-container border-0 rounded-none">
+            <table className="data-table">
+              <thead><tr><th>Ticket</th><th>Citizen</th><th>Service</th><th>Priority</th><th>Status</th></tr></thead>
+              <tbody>
+                {myTickets.slice(0, 20).map(ticket => (
+                  <tr key={ticket.id}>
+                    <td className="font-medium">{ticket.ticketNumber || `#${ticket.id}`}</td>
+                    <td>{ticket.citizenName || 'N/A'}</td>
+                    <td>{ticket.serviceName || ticket.service || 'N/A'}</td>
+                    <td><PriorityBadge priority={ticket.priority || 'Normal'} /></td>
+                    <td><StatusBadge status={ticket.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-6 text-center text-gray-400 py-12">
+            <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <p className="text-sm font-medium mb-2">No Queue Items</p>
+            <p className="text-xs">There are currently no queue items to display.</p>
+          </div>
+        )}
       </div>
       <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800">
-        <strong>Note:</strong> Queue monitoring across all MESOB institutions will be available when the queue management system is integrated with the backend API.
+        <strong>Note:</strong> Showing all queue items across MESOB institutions.
       </div>
     </>
   );
@@ -281,12 +334,11 @@ function SectionQueueMonitoring() {
 
 // ─── SECTION: Application Monitoring ─────────────────────────────
 function SectionApplicationMonitoring() {
-  // TODO: Replace with real application data from API
-  const applications = []; // Will come from application tracking system
+  const { applications } = useApplications();
   
-  const pending = 0;
-  const inProg = 0;
-  const done = 0;
+  const pending = applications.filter(app => app.status === 'pending' || app.status === 'waiting' || app.status === 'Pending' || app.status === 'Waiting').length;
+  const inProg = applications.filter(app => app.status === 'in_progress' || app.status === 'processing' || app.status === 'In Progress' || app.status === 'Processing').length;
+  const done = applications.filter(app => app.status === 'completed' || app.status === 'approved' || app.status === 'Completed' || app.status === 'Approved').length;
 
   return (
     <>
@@ -304,16 +356,35 @@ function SectionApplicationMonitoring() {
           <h3 className="font-semibold text-gray-900">Applications</h3>
           <span className="text-sm text-gray-500">{applications.length} result{applications.length !== 1 ? 's' : ''}</span>
         </div>
-        <div className="p-6 text-center text-gray-400 py-12">
-          <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <p className="text-sm font-medium mb-2">Application Tracking System Not Yet Integrated</p>
-          <p className="text-xs">Applications from all institutions will appear here once the application tracking system is connected to the backend.</p>
-        </div>
+        {applications.length > 0 ? (
+          <div className="table-container border-0 rounded-none">
+            <table className="data-table">
+              <thead><tr><th>ID</th><th>Applicant</th><th>Service</th><th>Status</th><th>Date</th></tr></thead>
+              <tbody>
+                {applications.slice(0, 20).map(app => (
+                  <tr key={app.id}>
+                    <td className="font-medium">#{app.id}</td>
+                    <td>{app.applicantName || app.citizenName || 'N/A'}</td>
+                    <td>{app.serviceName || app.service || 'N/A'}</td>
+                    <td><StatusBadge status={app.status} /></td>
+                    <td className="text-sm text-gray-500">{app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'N/A'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-6 text-center text-gray-400 py-12">
+            <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-sm font-medium mb-2">No Applications</p>
+            <p className="text-xs">There are currently no applications to display.</p>
+          </div>
+        )}
       </div>
       <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800">
-        <strong>Note:</strong> Application monitoring across all MESOB institutions will be available when the application tracking system is integrated with the backend API.
+        <strong>Note:</strong> Showing all applications across MESOB institutions.
       </div>
     </>
   );
@@ -321,7 +392,8 @@ function SectionApplicationMonitoring() {
 
 // ─── SECTION: Maintenance Oversight ──────────────────────────────
 function SectionMaintenanceOversight() {
-  const tasks = getMaintenanceTasks(); // All tasks across institutions
+  const { reports } = useMaintenance(); // Get all maintenance reports from context
+  const tasks = reports || []; // Alias for compatibility
   const open      = tasks.filter(t => t.status !== 'Completed').length;
   const completed = tasks.filter(t => t.status === 'Completed').length;
   const highPri   = tasks.filter(t => t.priority === 'High' && t.status !== 'Completed').length;
@@ -369,18 +441,21 @@ function SectionMaintenanceOversight() {
 
 // ─── SECTION: Reports ────────────────────────────────────────────
 function SectionReports() {
+  const { institutions } = useServices();
+  const { myTickets } = useQueue();
+  const { applications } = useApplications();
+  const { reports } = useMaintenance();
   const [activeReport, setActiveReport] = useState('queue');
 
-  // TODO: Connect to backend API for real MESOB-wide reports data
-  const qWaiting = 0;
-  const qProcessing = 0;
-  const qCompleted = 0;
-  const appPending = 0;
-  const appInProg = 0;
-  const appDone = 0;
-  const maintOpen = 0;
-  const maintDone = 0;
-  const maintReport = 0;
+  const qWaiting = myTickets.filter(t => t.status === 'waiting').length;
+  const qProcessing = myTickets.filter(t => t.status === 'called' || t.status === 'processing').length;
+  const qCompleted = myTickets.filter(t => t.status === 'completed' || t.status === 'served').length;
+  const appPending = applications.filter(app => app.status === 'pending' || app.status === 'waiting' || app.status === 'Pending' || app.status === 'Waiting').length;
+  const appInProg = applications.filter(app => app.status === 'in_progress' || app.status === 'processing' || app.status === 'In Progress' || app.status === 'Processing').length;
+  const appDone = applications.filter(app => app.status === 'completed' || app.status === 'approved' || app.status === 'Completed' || app.status === 'Approved').length;
+  const maintOpen = reports.filter(r => r.status !== 'Completed' && r.status !== 'COMPLETED').length;
+  const maintDone = reports.filter(r => r.status === 'Completed' || r.status === 'COMPLETED').length;
+  const maintReport = reports.length;
 
   const tabs = [
     { key: 'queue',       label: 'Queue Report'       },
@@ -427,15 +502,26 @@ function SectionReports() {
               <table className="data-table">
                 <thead><tr><th>Ticket</th><th>Institution</th><th>Service</th><th>Priority</th><th>Status</th></tr></thead>
                 <tbody>
-                  <tr>
-                    <td colSpan={5} className="text-center text-gray-400 py-8">
-                      <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                      <p className="font-medium text-gray-500">No queue data available yet</p>
-                      <p className="text-sm text-gray-400 mt-1">Queue reports will appear when the queue management system is integrated</p>
-                    </td>
-                  </tr>
+                  {myTickets.length > 0 ? (
+                    myTickets.slice(0, 20).map(ticket => {
+                      const inst = institutions.find(i => i.id === ticket.institutionId);
+                      return (
+                        <tr key={ticket.id}>
+                          <td className="font-medium">{ticket.ticketNumber || `#${ticket.id}`}</td>
+                          <td>{inst?.name_en || 'N/A'}</td>
+                          <td>{ticket.serviceName || ticket.service || 'N/A'}</td>
+                          <td><PriorityBadge priority={ticket.priority || 'Normal'} /></td>
+                          <td><StatusBadge status={ticket.status} /></td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="text-center text-gray-400 py-8">
+                        <p className="font-medium text-gray-500">No queue tickets</p>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -457,15 +543,26 @@ function SectionReports() {
               <table className="data-table">
                 <thead><tr><th>App ID</th><th>Institution</th><th>Service</th><th>Submitted</th><th>Status</th></tr></thead>
                 <tbody>
-                  <tr>
-                    <td colSpan={5} className="text-center text-gray-400 py-8">
-                      <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <p className="font-medium text-gray-500">No application data available yet</p>
-                      <p className="text-sm text-gray-400 mt-1">Application reports will appear when the application tracking system is integrated</p>
-                    </td>
-                  </tr>
+                  {applications.length > 0 ? (
+                    applications.slice(0, 20).map(app => {
+                      const inst = institutions.find(i => i.id === app.institutionId);
+                      return (
+                        <tr key={app.id}>
+                          <td className="font-medium">#{app.id}</td>
+                          <td>{inst?.name_en || 'N/A'}</td>
+                          <td>{app.serviceName || app.service || 'N/A'}</td>
+                          <td className="text-sm">{app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'N/A'}</td>
+                          <td><StatusBadge status={app.status} /></td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="text-center text-gray-400 py-8">
+                        <p className="font-medium text-gray-500">No applications</p>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -485,17 +582,27 @@ function SectionReports() {
             <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">Maintenance Report – MESOB-wide</h3></div>
             <div className="table-container border-0 rounded-none">
               <table className="data-table">
-                <thead><tr><th>Task ID</th><th>Institution</th><th>Task</th><th>Priority</th><th>Technician</th><th>Status</th><th>Report</th></tr></thead>
+                <thead><tr><th>Task ID</th><th>Institution</th><th>Task</th><th>Priority</th><th>Technician</th><th>Status</th><th>Date</th></tr></thead>
                 <tbody>
-                  <tr>
-                    <td colSpan={7} className="text-center text-gray-400 py-8">
-                      <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <p className="font-medium text-gray-500">Using live maintenance data</p>
-                      <p className="text-sm text-gray-400 mt-1">See Maintenance Oversight for current maintenance tasks</p>
-                    </td>
-                  </tr>
+                  {reports.length > 0 ? (
+                    reports.slice(0, 20).map(task => (
+                      <tr key={task.id}>
+                        <td className="font-medium">{task.id}</td>
+                        <td>{task.institution}</td>
+                        <td>{task.title}</td>
+                        <td><PriorityBadge priority={task.priority} /></td>
+                        <td>{task.assignedTo}</td>
+                        <td><StatusBadge status={task.status} /></td>
+                        <td className="text-sm">{task.assignedDate}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="text-center text-gray-400 py-8">
+                        <p className="font-medium text-gray-500">No maintenance tasks</p>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -507,9 +614,15 @@ function SectionReports() {
       {activeReport === 'institution' && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Total Institutions</p><p className="text-2xl font-bold">{organizationsData.length}</p></div>
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Busy</p><p className="text-2xl font-bold text-amber-600">0</p></div>
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Normal</p><p className="text-2xl font-bold text-green-600">{organizationsData.length}</p></div>
+            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Total Institutions</p><p className="text-2xl font-bold">{institutions.length}</p></div>
+            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Busy</p><p className="text-2xl font-bold text-amber-600">{institutions.filter(inst => {
+              const qCount = myTickets.filter(t => t.institutionId === inst.id && (t.status === 'waiting' || t.status === 'called')).length;
+              return qCount > 5;
+            }).length}</p></div>
+            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Normal</p><p className="text-2xl font-bold text-green-600">{institutions.filter(inst => {
+              const qCount = myTickets.filter(t => t.institutionId === inst.id && (t.status === 'waiting' || t.status === 'called')).length;
+              return qCount <= 5;
+            }).length}</p></div>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
             <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">Institution Report – MESOB-wide</h3></div>
@@ -517,15 +630,21 @@ function SectionReports() {
               <table className="data-table">
                 <thead><tr><th>Institution</th><th>Queue</th><th>Applications</th><th>Maintenance</th><th>Status</th></tr></thead>
                 <tbody>
-                  {organizationsData.map(org => (
-                    <tr key={org.id}>
-                      <td className="font-medium">{org.name_en}</td>
-                      <td>0</td>
-                      <td>0</td>
-                      <td>0</td>
-                      <td><StatusBadge status="Normal" /></td>
-                    </tr>
-                  ))}
+                  {institutions.map(inst => {
+                    const instQueue = myTickets.filter(t => t.institutionId === inst.id && (t.status === 'waiting' || t.status === 'called')).length;
+                    const instApps = applications.filter(app => app.institutionId === inst.id).length;
+                    const instMaint = reports.filter(r => r.institution === (inst?.name_en || inst?.name) && r.status !== 'Completed' && r.status !== 'COMPLETED').length;
+                    const status = instQueue > 5 ? 'Busy' : 'Normal';
+                    return (
+                      <tr key={inst.id}>
+                        <td className="font-medium">{inst?.name_en || inst?.name}</td>
+                        <td>{instQueue}</td>
+                        <td>{instApps}</td>
+                        <td>{instMaint}</td>
+                        <td><StatusBadge status={status} /></td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -542,18 +661,23 @@ function SectionReports() {
 
 // ─── SECTION: Analytics ───────────────────────────────────────────
 function SectionAnalytics() {
+  const { institutions } = useServices();
+  const { myTickets } = useQueue();
+  const { applications } = useApplications();
+  const { reports } = useMaintenance();
   const [filterInst, setFilterInst] = useState('');
-  const institutions = organizationsData;
 
   const displayInsts = filterInst
     ? institutions.filter(o => o.id === filterInst)
     : institutions;
 
-  // TODO: Connect to backend API for real institution statistics
-  const totalQueue = 0;
-  const totalApps = 0;
-  const totalMaint = 0;
-  const busyCount = 0;
+  const totalQueue = myTickets.filter(t => t.status === 'waiting' || t.status === 'called').length;
+  const totalApps = applications.length;
+  const totalMaint = reports.filter(r => r.status !== 'Completed' && r.status !== 'COMPLETED').length;
+  const busyCount = institutions.filter(inst => {
+    const qCount = myTickets.filter(t => t.institutionId === inst.id && (t.status === 'waiting' || t.status === 'called')).length;
+    return qCount > 5;
+  }).length;
 
   return (
     <>
@@ -589,15 +713,21 @@ function SectionAnalytics() {
           <table className="data-table">
             <thead><tr><th>Institution</th><th>Queue</th><th>Applications</th><th>Maintenance</th><th>Status</th></tr></thead>
             <tbody>
-              {displayInsts.map(org => (
-                <tr key={org.id}>
-                  <td className="font-medium">{org.name_en}</td>
-                  <td>0</td>
-                  <td>0</td>
-                  <td>0</td>
-                  <td><StatusBadge status="Normal" /></td>
-                </tr>
-              ))}
+              {displayInsts.map(inst => {
+                const instQueue = myTickets.filter(t => t.institutionId === inst.id && (t.status === 'waiting' || t.status === 'called')).length;
+                const instApps = applications.filter(app => app.institutionId === inst.id).length;
+                const instMaint = reports.filter(r => r.institution === (inst?.name_en || inst?.name) && r.status !== 'Completed' && r.status !== 'COMPLETED').length;
+                const status = instQueue > 5 ? 'Busy' : 'Normal';
+                return (
+                  <tr key={inst.id}>
+                    <td className="font-medium">{inst?.name_en || inst?.name}</td>
+                    <td>{instQueue}</td>
+                    <td>{instApps}</td>
+                    <td>{instMaint}</td>
+                    <td><StatusBadge status={status} /></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -611,51 +741,45 @@ function SectionAnalytics() {
 }
 
 // ─── SECTION: Announcements ───────────────────────────────────────
-function SectionAnnouncements({ user }) {
-  const { getUsers } = useAuth();
-  const { createNotification } = useNotifications();
-  const [announcements, setAnnouncements] = useState(() => getAnnouncements({ scope: 'mesob' }));
+function SectionAnnouncements() {
+  const { announcements, createAnnouncement: createAnnouncementAPI, loading, error } = useAnnouncements();
   const [selected, setSelected] = useState(null);
   const [view, setView] = useState('list'); // 'list' | 'new'
-  const [form, setForm] = useState({ title: '', body: '' });
+  const [form, setForm] = useState({ title: '', body: '', scope: 'INTERNAL', targetRoles: [] });
   const [formError, setFormError] = useState('');
 
-  function markRead(id) { setAnnouncements(prev => prev.map(a => a.id === id ? { ...a, read: true } : a)); }
-
-  function submitAnnouncement(e) {
+  async function submitAnnouncement(e) {
     e.preventDefault();
     if (!form.title.trim() || !form.body.trim()) {
       setFormError('Title and content are required.');
       return;
     }
 
-    const result = createAnnouncement({
+    // Validate ROLE scope requires target roles
+    if (form.scope === 'ROLE' && (!form.targetRoles || form.targetRoles.length === 0)) {
+      setFormError('Please select at least one role for ROLE scope.');
+      return;
+    }
+
+    setFormError('');
+
+    const announcementData = {
       title: form.title.trim(),
-      body: form.body.trim(),
-      author: user?.name || 'MESOB Manager',
-      scope: 'mesob',
-      institution: null,
-    });
+      content: form.body.trim(),
+      scope: form.scope
+    };
+
+    // Add optional fields based on scope
+    if (form.scope === 'ROLE' && form.targetRoles.length > 0) {
+      announcementData.targetRoles = form.targetRoles;
+    }
+
+    const result = await createAnnouncementAPI(announcementData);
 
     if (result.success) {
-      // Notify all MESOB staff (all users with institution = 'MESOB Center' or roles in MESOB)
-      const allUsers = getUsers ? getUsers() : [];
-      const mesobStaff = allUsers.filter(u => 
-        u.institution === 'MESOB Center' || 
-        u.role === 'mesobManager' || 
-        u.role === 'superAdmin'
-      );
-
-      mesobStaff.forEach(staff => {
-        const notificationData = createAnnouncementNotification(result.announcement, staff.email);
-        createNotification(notificationData);
-      });
-
-      setAnnouncements(prev => [result.announcement, ...prev]);
-      setForm({ title: '', body: '' });
-      setFormError('');
+      setForm({ title: '', body: '', scope: 'INTERNAL', targetRoles: [] });
       setView('list');
-      alert(`Announcement published successfully!\n\n${mesobStaff.length} MESOB staff members have been notified.`);
+      alert(`Announcement published successfully!`);
     } else {
       setFormError(result.message || 'Failed to create announcement.');
     }
@@ -672,7 +796,7 @@ function SectionAnnouncements({ user }) {
           </button>
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 max-w-2xl">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">New MESOB Announcement</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">New Announcement</h2>
           <form onSubmit={submitAnnouncement} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Title <span className="text-red-500">*</span></label>
@@ -686,12 +810,51 @@ function SectionAnnouncements({ user }) {
                 placeholder="Announcement content"
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none transition text-sm resize-y" />
             </div>
-            <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-sm text-red-800">
-              <strong>Scope:</strong> This announcement will be visible to all MESOB staff across all institutions.
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Audience <span className="text-red-500">*</span></label>
+              <select value={form.scope} onChange={e => setForm(f => ({ ...f, scope: e.target.value, targetRoles: [] }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none transition text-sm">
+                <option value="PUBLIC">Public - Visible to everyone including citizens</option>
+                <option value="INTERNAL">Internal - Staff only (employees, managers, admins)</option>
+                <option value="ROLE">Role - Specific role(s)</option>
+              </select>
             </div>
+            
+            {form.scope === 'ROLE' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Target Roles <span className="text-red-500">*</span></label>
+                <div className="space-y-2">
+                  {['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'ICT_STAFF'].map(role => (
+                    <label key={role} className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" 
+                        checked={form.targetRoles.includes(role)}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setForm(f => ({ ...f, targetRoles: [...f.targetRoles, role] }));
+                          } else {
+                            setForm(f => ({ ...f, targetRoles: f.targetRoles.filter(r => r !== role) }));
+                          }
+                        }}
+                        className="rounded border-gray-300 text-red-600 focus:ring-red-400" />
+                      <span className="text-gray-700">{role.replace(/_/g, ' ')}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-sm text-red-800">
+              <strong>Scope: {form.scope}</strong>
+              {form.scope === 'PUBLIC' && <p className="mt-1">This announcement will be visible to all users including citizens.</p>}
+              {form.scope === 'INTERNAL' && <p className="mt-1">This announcement will be visible only to staff (not citizens).</p>}
+              {form.scope === 'ROLE' && <p className="mt-1">This announcement will be visible only to the selected role(s).</p>}
+            </div>
+            
             {formError && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">{formError}</div>}
-            <button type="submit" className="px-6 py-3 bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-semibold rounded-xl transition text-sm">
-              Publish Announcement
+            {error && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">{error}</div>}
+            <button type="submit" disabled={loading} className="px-6 py-3 bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-semibold rounded-xl transition text-sm disabled:opacity-50">
+              {loading ? 'Publishing...' : 'Publish Announcement'}
             </button>
           </form>
         </div>
@@ -702,6 +865,8 @@ function SectionAnnouncements({ user }) {
   // Announcement detail view
   if (selected) {
     const ann = announcements.find(a => a.id === selected);
+    if (!ann) return null;
+
     return (
       <>
         <div className="mb-6">
@@ -713,10 +878,10 @@ function SectionAnnouncements({ user }) {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
             <h2 className="text-lg font-semibold text-gray-900">{ann.title}</h2>
-            {!ann.read && <span className="badge bg-blue-100 text-blue-800 flex-shrink-0">New</span>}
+            {ann.is_active && <span className="badge bg-green-100 text-green-800 flex-shrink-0">Active</span>}
           </div>
-          <p className="text-sm text-gray-500 mb-4">{ann.date} {ann.author && `• ${ann.author}`}</p>
-          <p className="text-sm text-gray-700 leading-relaxed">{ann.body}</p>
+          <p className="text-sm text-gray-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
+          <p className="text-sm text-gray-700 leading-relaxed">{ann.content}</p>
         </div>
       </>
     );
@@ -734,19 +899,29 @@ function SectionAnnouncements({ user }) {
           + New Announcement
         </button>
       </div>
+
+      {loading && !announcements.length && (
+        <div className="text-center py-8 text-gray-500">Loading announcements...</div>
+      )}
+
       <div className="space-y-3">
         {announcements.length === 0 ? (
           <div className="text-center text-gray-400 py-12">No announcements available.</div>
         ) : announcements.map(ann => (
-          <div key={ann.id} onClick={() => { setSelected(ann.id); markRead(ann.id); }}
-            className={`bg-white rounded-2xl border shadow-sm p-5 cursor-pointer hover:shadow-md transition-all duration-200 ${ann.read ? 'border-gray-100' : 'border-blue-200 bg-blue-50/30'}`}>
+          <div key={ann.id} onClick={() => setSelected(ann.id)}
+            className={`bg-white rounded-2xl border shadow-sm p-5 cursor-pointer hover:shadow-md transition-all duration-200 ${ann.is_active ? 'border-gray-100' : 'border-gray-200 bg-gray-50'}`}>
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  {!ann.read && <span className="inline-block w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />}
+                  {ann.is_active && <span className="inline-block w-2 h-2 rounded-full bg-green-600 flex-shrink-0" />}
                   <h3 className="font-semibold text-sm text-gray-900 leading-snug">{ann.title}</h3>
+                  {ann.scope === 'PUBLIC' && <span className="badge bg-green-100 text-green-800 text-xs">Public</span>}
+                  {ann.scope === 'INTERNAL' && <span className="badge bg-blue-100 text-blue-800 text-xs">Internal</span>}
+                  {ann.scope === 'SYSTEM' && <span className="badge bg-purple-100 text-purple-800 text-xs">System</span>}
+                  {ann.scope === 'ROLE' && <span className="badge bg-orange-100 text-orange-800 text-xs">Role</span>}
+                  {ann.scope === 'INSTITUTION' && <span className="badge bg-indigo-100 text-indigo-800 text-xs">Institution</span>}
                 </div>
-                <p className="text-xs text-gray-500">{ann.date} {ann.author && `• ${ann.author}`}</p>
+                <p className="text-xs text-gray-500">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
               </div>
               <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
@@ -795,7 +970,8 @@ function SectionMyProfile({ user }) {
 // ─── Main MesobManagerDashboard ───────────────────────────────────
 export default function MesobManagerDashboard() {
   const { user } = useAuth();
-  const [activeSection, setActiveSection] = useState('Dashboard');
+  const { t } = useApp();
+  const [activeSection, setActiveSection] = useState(t.dashboard);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   function navigate(section) {
@@ -805,15 +981,16 @@ export default function MesobManagerDashboard() {
 
   function renderSection() {
     switch (activeSection) {
-      case 'Dashboard':              return <SectionDashboard setActiveSection={navigate} />;
-      case 'Institution Monitoring': return <SectionInstitutionMonitoring />;
-      case 'Queue Monitoring':       return <SectionQueueMonitoring />;
-      case 'Application Monitoring': return <SectionApplicationMonitoring />;
-      case 'Maintenance Oversight':  return <SectionMaintenanceOversight />;
-      case 'Reports':                return <SectionReports />;
-      case 'Analytics':              return <SectionAnalytics />;
-      case 'Announcements':          return <SectionAnnouncements user={user} />;
-      case 'My Profile':             return <SectionMyProfile user={user} />;
+      case t.dashboard:              return <SectionDashboard setActiveSection={navigate} />;
+      case t.institution_monitoring: return <SectionInstitutionMonitoring />;
+      case t.queue_monitoring:       return <SectionQueueMonitoring />;
+      case t.application_monitoring: return <SectionApplicationMonitoring />;
+      case t.maintenance_oversight:  return <SectionMaintenanceOversight />;
+      case t.feedback_overview:      return <MesobFeedbackOverview />;
+      case t.reports:                return <SectionReports />;
+      case t.analytics:              return <SectionAnalytics />;
+      case t.announcements:          return <SectionAnnouncements />;
+      case t.my_profile:             return <SectionMyProfile user={user} />;
       default:                       return <SectionDashboard setActiveSection={navigate} />;
     }
   }
@@ -835,8 +1012,8 @@ export default function MesobManagerDashboard() {
           </div>
 
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {SECTIONS.map(section => (
-              <button key={section} onClick={() => navigate(section)}
+            {getSections(t).map((section, idx) => (
+              <button key={idx} onClick={() => navigate(section)}
                 className={`sidebar-link w-full text-left${activeSection === section ? ' active' : ''}`}>
                 {section}
               </button>
@@ -846,7 +1023,7 @@ export default function MesobManagerDashboard() {
           <div className="p-4 border-t border-gray-100">
             <button onClick={() => { localStorage.removeItem('mesob_auth'); window.location.href = '/'; }}
               className="sidebar-link w-full text-left text-red-600 hover:bg-red-50">
-              Logout
+              {t.logout}
             </button>
           </div>
         </aside>
@@ -861,10 +1038,11 @@ export default function MesobManagerDashboard() {
                 </svg>
               </button>
               <h1 className="text-lg font-semibold text-gray-900">
-                {activeSection === 'Dashboard' ? 'MESOB Manager Dashboard' : activeSection}
+                {activeSection === t.dashboard ? t.mesob_manager_dashboard : activeSection}
               </h1>
             </div>
             <div className="flex items-center gap-3">
+              <LanguageSwitcher />
               <span className="badge bg-red-100 text-red-800">MESOB Manager</span>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-gray-900">{user?.name}</p>

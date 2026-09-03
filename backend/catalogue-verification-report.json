@@ -1,0 +1,206 @@
+{
+  "timestamp": "2026-08-29T10:10:00.397Z",
+  "summary": {
+    "institutions": {
+      "expected": 12,
+      "found": 12,
+      "missing": [],
+      "extra": [],
+      "name_mismatches": [],
+      "website_mismatches": [],
+      "website_missing": []
+    },
+    "services": {
+      "total": 41,
+      "by_institution": {
+        "electric": 1,
+        "revenue": 2,
+        "justice": 3,
+        "cbe": 3,
+        "ethiotel": 2,
+        "ethiopost": 11,
+        "investment": 1,
+        "labor": 2,
+        "trade": 7,
+        "construction": 1,
+        "fayda": 6,
+        "sidama-bank": 2
+      },
+      "missing_requirements": [],
+      "missing_processing_time": [],
+      "missing_fee": [],
+      "missing_url": [
+        {
+          "institution": "electric",
+          "service": "Electricity Bill Payment"
+        },
+        {
+          "institution": "revenue",
+          "service": "Tax Payment"
+        },
+        {
+          "institution": "revenue",
+          "service": "TIN Registration"
+        },
+        {
+          "institution": "justice",
+          "service": "Issuance of Practice Licenses for Federal Attorneys"
+        },
+        {
+          "institution": "justice",
+          "service": "Renewal of Federal Attorney Practice Licenses"
+        },
+        {
+          "institution": "justice",
+          "service": "Upgrading of Federal Attorney Practice Licenses"
+        },
+        {
+          "institution": "cbe",
+          "service": "Account Opening"
+        },
+        {
+          "institution": "cbe",
+          "service": "Mobile Banking"
+        },
+        {
+          "institution": "cbe",
+          "service": "New Bank Account"
+        },
+        {
+          "institution": "ethiotel",
+          "service": "New SIM Card Registration"
+        },
+        {
+          "institution": "ethiotel",
+          "service": "Telebirr Registration and Services"
+        },
+        {
+          "institution": "ethiopost",
+          "service": "Bill Payment Services"
+        },
+        {
+          "institution": "ethiopost",
+          "service": "Courier Services"
+        },
+        {
+          "institution": "ethiopost",
+          "service": "Domestic Parcel and Letter Services"
+        },
+        {
+          "institution": "ethiopost",
+          "service": "Express Mail Service (EMS)"
+        },
+        {
+          "institution": "ethiopost",
+          "service": "International Parcel and Letter Services"
+        },
+        {
+          "institution": "ethiopost",
+          "service": "P.O. Box Rental"
+        },
+        {
+          "institution": "ethiopost",
+          "service": "Philatelic Services (Stamp Collection)"
+        },
+        {
+          "institution": "ethiopost",
+          "service": "Postal Banking Services"
+        },
+        {
+          "institution": "ethiopost",
+          "service": "Postal Money Order"
+        },
+        {
+          "institution": "ethiopost",
+          "service": "Registered Mail"
+        },
+        {
+          "institution": "ethiopost",
+          "service": "Track and Trace Services"
+        },
+        {
+          "institution": "investment",
+          "service": "Investment License / Permit"
+        },
+        {
+          "institution": "labor",
+          "service": "Issuance of a New Work Permit for Foreign Nationals"
+        },
+        {
+          "institution": "labor",
+          "service": "Work Permit Renewal for Foreign Nationals"
+        },
+        {
+          "institution": "trade",
+          "service": "Business License Renewal"
+        },
+        {
+          "institution": "trade",
+          "service": "Certificate of Origin"
+        },
+        {
+          "institution": "trade",
+          "service": "Consumer Protection Services"
+        },
+        {
+          "institution": "trade",
+          "service": "Fair Trade Practice Certification"
+        },
+        {
+          "institution": "trade",
+          "service": "Import/Export License"
+        },
+        {
+          "institution": "trade",
+          "service": "New Business Registration"
+        },
+        {
+          "institution": "trade",
+          "service": "Trade Name Reservation"
+        },
+        {
+          "institution": "construction",
+          "service": "Building Permit"
+        },
+        {
+          "institution": "fayda",
+          "service": "Fayda Demographic and Biometric Data Update / Renewal"
+        },
+        {
+          "institution": "fayda",
+          "service": "Fayda National Digital ID Grievance and Dispute Resolution System (Level 1)"
+        },
+        {
+          "institution": "fayda",
+          "service": "Fayda National Digital ID Registration (New ID)"
+        },
+        {
+          "institution": "fayda",
+          "service": "Fayda National Digital ID Replacement (Lost / Damaged)"
+        },
+        {
+          "institution": "fayda",
+          "service": "National ID Renewal"
+        },
+        {
+          "institution": "fayda",
+          "service": "New National ID Application"
+        },
+        {
+          "institution": "sidama-bank",
+          "service": "Account Opening"
+        },
+        {
+          "institution": "sidama-bank",
+          "service": "Mobile Banking"
+        }
+      ],
+      "invalid_urls": []
+    },
+    "total_issues": 2
+  },
+  "issues": [
+    "Service count mismatch for revenue: expected 1, found 2",
+    "Service count mismatch for cbe: expected 2, found 3"
+  ]
+}

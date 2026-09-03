@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth, ROLE_ROUTES } from '../../context/AuthContext';
+import { useApp } from '../../context/AppContext';
 import PasswordInput from '../../components/PasswordInput';
 
 const DEMO_ACCOUNTS = [
-  { label: 'Super Admin',         email: 'superadmin@mesobcenter.et',   password: 'super123',   style: 'bg-purple-50 hover:bg-purple-100 text-purple-800' },
-  { label: 'MESOB Manager',       email: 'manager@mesobcenter.et',      password: 'manager123', style: 'bg-red-50 hover:bg-red-100 text-red-800' },
-  { label: 'Institution Manager', email: 'inst.manager@mesobcenter.et', password: 'inst123',    style: 'bg-orange-50 hover:bg-orange-100 text-orange-800' },
-  { label: 'Employee',            email: 'employee@mesobcenter.et',     password: 'emp123',     style: 'bg-blue-50 hover:bg-blue-100 text-blue-800' },
-  { label: 'ICT Staff',           email: 'ict.staff@mesobcenter.et',    password: 'ict123',     style: 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800' },
-  { label: 'Citizen',             email: 'citizen@mesobcenter.et',      password: 'citizen123', style: 'bg-green-50 hover:bg-green-100 text-green-800' },
+  { label: 'Super Admin',         email: 'superadmin@mesobcenter.et',        password: 'SuperAdmin@2026',      style: 'bg-purple-50 hover:bg-purple-100 text-purple-800' },
+  { label: 'MESOB Manager',       email: 'manager@mesobcenter.et',           password: 'MesobManager@2026',    style: 'bg-red-50 hover:bg-red-100 text-red-800' },
+  { label: 'Institution Manager', email: 'inst.manager@mesobcenter.et',      password: 'InstManager@2026',     style: 'bg-orange-50 hover:bg-orange-100 text-orange-800' },
+  { label: 'Employee',            email: 'employee@mesobcenter.et',          password: 'Employee@2026',        style: 'bg-blue-50 hover:bg-blue-100 text-blue-800' },
+  { label: 'ICT Staff',           email: 'ict.staff@mesobcenter.et',         password: 'IctStaff@2026',        style: 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800' },
+  { label: 'Citizen',             email: 'citizen@mesobcenter.et',           password: 'Citizen@2026',         style: 'bg-green-50 hover:bg-green-100 text-green-800' },
 ];
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const { t } = useApp();
   const navigate = useNavigate();
 
   const [email, setEmail]       = useState('');
@@ -30,7 +32,7 @@ export default function LoginPage() {
     setError('');
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     console.log('=== FORM SUBMIT ===');
     console.log('Email:', email);
@@ -40,7 +42,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     
     try {
-      const result = login(email.trim(), password);
+      const result = await login(email.trim(), password);
       console.log('Login result:', result);
       
       if (!result.success) {
@@ -77,14 +79,14 @@ export default function LoginPage() {
             />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">HAWASSA MESOB</h1>
-          <p className="text-gray-500 mt-1">Sign in to your account</p>
+          <p className="text-gray-500 mt-1">{t.login_subtitle}</p>
         </div>
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">{t.email_address}</label>
               <input
                 type="email"
                 id="email"
@@ -97,7 +99,7 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">{t.password}</label>
               <PasswordInput
                 id="password"
                 value={password}
@@ -119,13 +121,13 @@ export default function LoginPage() {
               disabled={isSubmitting}
               className="w-full bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-semibold py-3 rounded-xl transition shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'Signing in...' : 'Sign in'}
+              {isSubmitting ? t.signing_in : t.sign_in}
             </button>
           </form>
 
           {/* Demo accounts */}
           <div className="mt-6 pt-6 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Demo Accounts (click to fill)</p>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">{t.demo_accounts}</p>
             <div className="space-y-2 text-sm max-h-72 overflow-y-auto pr-1">
               {DEMO_ACCOUNTS.map((acc) => (
                 <button

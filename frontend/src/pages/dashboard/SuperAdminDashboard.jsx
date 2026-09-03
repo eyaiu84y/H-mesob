@@ -1,29 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth, ROLE_LABELS, ROLE_BADGE } from '../../context/AuthContext';
-import { useNotifications } from '../../context/NotificationContext';
+import { useAnnouncements } from '../../context/AnnouncementContext';
+import { useServices } from '../../context/ServiceContext';
 import { organizationsData } from '../../data/organizations';
-import { 
-  getAnnouncements, 
-  createAnnouncement,
-  createAnnouncementNotification,
-  getInstitutions,
-  createInstitution,
-  updateInstitution,
-  deleteInstitution 
-} from '../../utils/sharedData';
+import { useApp } from '../../context/AppContext';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
+import api from '../../utils/api';
 
 // ─── Navigation sections ──────────────────────────────────────────
-const SECTIONS = [
-  'Dashboard',
-  'User Management',
-  'Institution Management',
-  'Roles & Permissions',
-  'System Settings',
-  'Reports',
-  'Analytics',
-  'Announcements',
-  'My Profile',
-];
+// Using function to access translations dynamically
+function getSections(t) {
+  return [
+    t.dashboard,
+    t.user_management,
+    t.institution_management,
+    t.roles_permissions,
+    t.system_settings,
+    t.reports,
+    t.analytics,
+    t.announcements,
+    t.my_profile,
+  ];
+}
 
 // ─── Role display helpers ─────────────────────────────────────────
 const ROLE_COLORS = {
@@ -31,7 +29,7 @@ const ROLE_COLORS = {
   mesob_manager:       'bg-red-50 text-red-800 border-red-200',
   institution_manager: 'bg-orange-50 text-orange-800 border-orange-200',
   employee:            'bg-blue-50 text-blue-800 border-blue-200',
-  technician:          'bg-cyan-50 text-cyan-800 border-cyan-200',
+  ict_staff:           'bg-cyan-50 text-cyan-800 border-cyan-200',
   citizen:             'bg-green-50 text-green-800 border-green-200',
 };
 
@@ -65,42 +63,44 @@ function StatusBadge({ status }) {
 // ─── SECTION: Dashboard Overview ─────────────────────────────────
 function SectionDashboard({ setActiveSection }) {
   const { getUsers } = useAuth();
+  const { announcements } = useAnnouncements();
+  const { institutions } = useServices();
+  const { t } = useApp();
   const users = getUsers().map(stripPassword);
-  const announcements = getAnnouncements({ scope: 'system' });
-  const unread = announcements.filter(a => !a.read).length;
+  const unread = announcements.filter(a => !a.is_read).length;
 
   return (
     <>
       {/* Stat cards */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
         <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Total Users</p>
+          <p className="text-sm text-gray-500 mb-1">{t.total_users}</p>
           <p className="text-2xl font-bold">{users.length}</p>
         </div>
         <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Institutions</p>
-          <p className="text-2xl font-bold">{organizationsData.length}</p>
+          <p className="text-sm text-gray-500 mb-1">{t.institutions}</p>
+          <p className="text-2xl font-bold">{institutions.length}</p>
         </div>
         <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Active Users</p>
+          <p className="text-sm text-gray-500 mb-1">{t.active_users}</p>
           <p className="text-2xl font-bold text-green-600">{users.filter(u => u.status === 'Active').length}</p>
         </div>
         <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Announcements</p>
+          <p className="text-sm text-gray-500 mb-1">{t.announcements}</p>
           <p className="text-2xl font-bold">{unread}</p>
-          <p className="text-xs text-gray-500 mt-1">Unread</p>
+          <p className="text-xs text-gray-500 mt-1">{t.unread}</p>
         </div>
       </div>
 
       {/* User overview */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">User Overview</h2>
-          <button onClick={() => setActiveSection('User Management')} className="text-sm text-blue-600 hover:underline font-medium">View all</button>
+          <h2 className="font-semibold text-gray-900">{t.user_overview}</h2>
+          <button onClick={() => setActiveSection(t.user_management)} className="text-sm text-blue-600 hover:underline font-medium">{t.view_all}</button>
         </div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
-            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+            <thead><tr><th>{t.name}</th><th>{t.email}</th><th>{t.role}</th><th>{t.status}</th></tr></thead>
             <tbody>
               {users.slice(0, 5).map(u => (
                 <tr key={u.id}>
@@ -125,11 +125,11 @@ function SectionDashboard({ setActiveSection }) {
           <table className="data-table">
             <thead><tr><th>Institution</th><th>Services</th><th>Status</th></tr></thead>
             <tbody>
-              {organizationsData.slice(0, 5).map(org => (
-                <tr key={org.id}>
-                  <td className="font-medium">{org.name_en}</td>
-                  <td>{org.services.length}</td>
-                  <td><span className="badge bg-green-100 text-green-800">Active</span></td>
+              {institutions.slice(0, 5).map(inst => (
+                <tr key={inst.id}>
+                  <td className="font-medium">{inst.name_en || inst.name}</td>
+                  <td>{inst.services?.length || 0}</td>
+                  <td><span className="badge bg-green-100 text-green-800">{inst.status || 'Active'}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -162,7 +162,7 @@ function SectionDashboard({ setActiveSection }) {
 // ─── SECTION: User Management ─────────────────────────────────────
 // ─── SECTION: User Management ─────────────────────────────────────
 function SectionUserManagement() {
-  const { user: currentUser, getUsers, createUser, updateUser, toggleUserStatus } = useAuth();
+  const { user: currentUser, getUsers, fetchUsers, createUser, updateUser, toggleUserStatus, usersLoading } = useAuth();
   const [rawUsers, setRawUsers] = useState(() => getUsers().map(stripPassword));
   const [query, setQuery] = useState('');
   const [filterRole, setFilterRole] = useState('');
@@ -171,6 +171,19 @@ function SectionUserManagement() {
   const [editUser, setEditUser] = useState(null);
   const [showAddUser, setShowAddUser] = useState(false);
   const [editError, setEditError] = useState('');
+
+  // Refresh users list when usersLoading completes (data has been fetched)
+  useEffect(() => {
+    if (!usersLoading) {
+      const users = getUsers();
+      setRawUsers(users.map(stripPassword));
+    }
+  }, [usersLoading, getUsers]);
+
+  // Fetch users from backend on mount
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   // Add User Form State
   const [newUserForm, setNewUserForm] = useState({
@@ -183,8 +196,9 @@ function SectionUserManagement() {
     status: 'Active',
   });
 
-  // Get list of institutions from organizations.js
-  const institutions = organizationsData.map(org => org.name_en);
+  // Get list of institutions from ServiceContext
+  const { institutions: institutionsList } = useServices();
+  const institutions = institutionsList; // Use full institution objects
 
   const filtered = rawUsers.filter(u => {
     const q = query.toLowerCase();
@@ -200,8 +214,8 @@ function SectionUserManagement() {
 
   // Determine which fields are required based on role
   function getRequiredFields(role) {
-    const institutionRequired = ['institution_manager', 'employee', 'technician'].includes(role);
-    const employeeIdRequired = ['institution_manager', 'employee', 'technician'].includes(role);
+    const institutionRequired = ['institution_manager', 'employee', 'ict_staff'].includes(role);
+    const employeeIdRequired = ['institution_manager', 'employee', 'ict_staff'].includes(role);
     return { institutionRequired, employeeIdRequired };
   }
 
@@ -218,7 +232,7 @@ function SectionUserManagement() {
     setEditError('');
   }
 
-  function handleAddUser(e) {
+  async function handleAddUser(e) {
     e.preventDefault();
     setEditError('');
 
@@ -250,8 +264,8 @@ function SectionUserManagement() {
       return;
     }
 
-    // Create user via AuthContext
-    const result = createUser(
+    // Create user via AuthContext (now async)
+    const result = await createUser(
       {
         name: newUserForm.name,
         email: newUserForm.email,
@@ -273,20 +287,19 @@ function SectionUserManagement() {
     // Show success with temp password
     alert(
       `User created successfully!\n\n` +
-      `Name: ${result.user.name}\n` +
+      `Name: ${result.user.full_name || result.user.name}\n` +
       `Email: ${result.user.email}\n` +
-      `Role: ${ROLE_LABELS[result.user.role]}\n` +
+      `Role: ${ROLE_LABELS[result.user.role?.toLowerCase()] || result.user.role}\n` +
       `Temporary Password: ${result.tempPassword}\n\n` +
       `Please share this temporary password with the user securely.`
     );
 
-    // Refresh user list
-    setRawUsers(getUsers().map(stripPassword));
+    // User list will auto-refresh via useEffect watching usersLoading
     resetNewUserForm();
     setShowAddUser(false);
   }
 
-  function handleEditUser(e) {
+  async function handleEditUser(e) {
     e.preventDefault();
     setEditError('');
 
@@ -307,7 +320,7 @@ function SectionUserManagement() {
       return;
     }
 
-    const result = updateUser(
+    const result = await updateUser(
       editUser.id,
       {
         name: editUser.name,
@@ -316,9 +329,7 @@ function SectionUserManagement() {
         institution: editUser.institution || null,
         employeeId: editUser.employeeId || null,
         status: editUser.status,
-      },
-      currentUser.role,
-      currentUser.institution
+      }
     );
 
     if (!result.success) {
@@ -326,17 +337,16 @@ function SectionUserManagement() {
       return;
     }
 
-    // Refresh user list
-    setRawUsers(getUsers().map(stripPassword));
+    // User list will auto-refresh via useEffect watching usersLoading
     setEditUser(null);
     setEditError('');
   }
 
-  function handleToggleStatus(userId) {
-    const result = toggleUserStatus(userId, currentUser.role, currentUser.institution);
+  async function handleToggleStatus(userId) {
+    const result = await toggleUserStatus(userId);
     if (result.success) {
-      // Refresh user list
-      setRawUsers(getUsers().map(stripPassword));
+      // User list will auto-refresh via useEffect watching usersLoading
+      alert(result.message);
     } else {
       alert(result.message);
     }
@@ -414,7 +424,7 @@ function SectionUserManagement() {
           </div>
 
           {/* Institution (conditional) */}
-          {['institution_manager', 'employee', 'technician'].includes(newUserForm.role) && (
+          {['institution_manager', 'employee', 'ict_staff'].includes(newUserForm.role) && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Institution <span className="text-red-500">*</span>
@@ -426,23 +436,23 @@ function SectionUserManagement() {
               >
                 <option value="">Select Institution...</option>
                 {institutions.map(inst => (
-                  <option key={inst} value={inst}>{inst}</option>
+                  <option key={inst.id} value={inst.id}>{inst.name_en || inst.name}</option>
                 ))}
               </select>
             </div>
           )}
 
           {/* Employee/Staff ID (conditional) */}
-          {['institution_manager', 'employee', 'technician'].includes(newUserForm.role) && (
+          {['institution_manager', 'employee', 'ict_staff'].includes(newUserForm.role) && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                {newUserForm.role === 'technician' ? 'Staff ID' : 'Employee ID'} <span className="text-red-500">*</span>
+                {newUserForm.role === 'ict_staff' ? 'Staff ID' : 'Employee ID'} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={newUserForm.employeeId}
                 onChange={e => setNewUserForm(f => ({ ...f, employeeId: e.target.value }))}
-                placeholder={newUserForm.role === 'technician' ? 'TECH-001' : 'EMP-001'}
+                placeholder={newUserForm.role === 'ict_staff' ? 'TECH-001' : 'EMP-001'}
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
               />
             </div>
@@ -548,7 +558,7 @@ function SectionUserManagement() {
           </div>
 
           {/* Institution (conditional) */}
-          {['institution_manager', 'employee', 'technician'].includes(editUser.role) && (
+          {['institution_manager', 'employee', 'ict_staff'].includes(editUser.role) && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Institution <span className="text-red-500">*</span>
@@ -560,17 +570,17 @@ function SectionUserManagement() {
               >
                 <option value="">Select Institution...</option>
                 {institutions.map(inst => (
-                  <option key={inst} value={inst}>{inst}</option>
+                  <option key={inst.id} value={inst.id}>{inst.name_en || inst.name}</option>
                 ))}
               </select>
             </div>
           )}
 
           {/* Employee/Staff ID (conditional) */}
-          {['institution_manager', 'employee', 'technician'].includes(editUser.role) && (
+          {['institution_manager', 'employee', 'ict_staff'].includes(editUser.role) && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                {editUser.role === 'technician' ? 'Staff ID' : 'Employee ID'} <span className="text-red-500">*</span>
+                {editUser.role === 'ict_staff' ? 'Staff ID' : 'Employee ID'} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -666,7 +676,7 @@ function SectionUserManagement() {
         >
           <option value="">All Institutions</option>
           {institutions.map(inst => (
-            <option key={inst} value={inst}>{inst}</option>
+            <option key={inst.id} value={inst.id}>{inst.name_en || inst.name}</option>
           ))}
         </select>
 
@@ -762,29 +772,81 @@ function SectionUserManagement() {
 function SectionInstitutionManagement() {
   // RBAC: Only super_admin may create/modify institutions.
   const { user } = useAuth();
+  const { institutions: backendInstitutions, refreshInstitutions } = useServices();
+  // Role is already transformed to lowercase by roleMapper
   const canCreate = user?.role === 'super_admin';
   
-  // Load institutions from localStorage (custom) + organizationsData (default)
-  const customInstitutions = getInstitutions();
-  const allInstitutions = [
-    ...organizationsData.map(o => ({ ...o, status: 'Active', source: 'default' })),
-    ...customInstitutions.map(o => ({ ...o, source: 'custom' }))
-  ];
-  
-  const [institutions, setInstitutions] = useState(allInstitutions);
+  // Use backend institutions as single source of truth
+  const institutions = backendInstitutions || [];
   const [view, setView] = useState('list'); // 'list' | 'new' | 'edit'
   const [editingInstitution, setEditingInstitution] = useState(null);
   const [form, setForm] = useState({
     name_en: '',
     name_am: '',
+    code: '',
     image: '',
     imagePreview: '',
     description: '',
     details: '',
     officialUrl: '',
+    phone: '',
+    email: '',
+    address: '',
     services: [],
   });
   const [formError, setFormError] = useState('');
+
+  // API-based institution CRUD functions
+  async function createInstitutionAPI(institutionData) {
+    try {
+      const result = await api.post('/institutions', institutionData);
+      
+      if (result.success) {
+        // Refresh institutions from backend
+        await refreshInstitutions();
+        return { success: true, message: 'Institution created successfully' };
+      } else {
+        return { success: false, message: result.message || 'Failed to create institution' };
+      }
+    } catch (error) {
+      console.error('Error creating institution:', error);
+      return { success: false, message: 'Failed to create institution' };
+    }
+  }
+
+  async function updateInstitutionAPI(id, institutionData) {
+    try {
+      const result = await api.patch(`/institutions/${id}`, institutionData);
+      
+      if (result.success) {
+        // Refresh institutions from backend
+        await refreshInstitutions();
+        return { success: true, message: 'Institution updated successfully' };
+      } else {
+        return { success: false, message: result.message || 'Failed to update institution' };
+      }
+    } catch (error) {
+      console.error('Error updating institution:', error);
+      return { success: false, message: 'Failed to update institution' };
+    }
+  }
+
+  async function deleteInstitutionAPI(id) {
+    try {
+      const result = await api.delete(`/institutions/${id}`);
+      
+      if (result.success) {
+        // Refresh institutions from backend
+        await refreshInstitutions();
+        return { success: true, message: 'Institution deleted successfully' };
+      } else {
+        return { success: false, message: result.message || 'Failed to delete institution' };
+      }
+    } catch (error) {
+      console.error('Error deleting institution:', error);
+      return { success: false, message: 'Failed to delete institution' };
+    }
+  }
 
   // Service form state
   const [serviceForm, setServiceForm] = useState({
@@ -920,7 +982,7 @@ function SectionInstitutionManagement() {
     return null;
   }
 
-  function saveInstitution(e) {
+  async function saveInstitution(e) {
     e.preventDefault();
     
     const error = validateInstitution();
@@ -929,52 +991,28 @@ function SectionInstitutionManagement() {
       return;
     }
 
+    // Map frontend fields to backend API fields
     const institutionData = {
-      id: editingInstitution ? editingInstitution.id : `custom-${Date.now()}`,
-      name_en: form.name_en.trim(),
-      name_am: form.name_am.trim() || form.name_en.trim(),
-      image: form.image,
+      name: form.name_en.trim(),
+      nameAm: form.name_am.trim() || form.name_en.trim(),
+      code: form.code.trim() || form.name_en.trim().toLowerCase().replace(/\s+/g, '-'),
+      logoUrl: form.image,
       description: form.description.trim(),
       details: form.details.trim(),
-      officialUrl: form.officialUrl.trim(),
-      services: form.services,
-      status: editingInstitution?.status || 'Active',
+      websiteUrl: form.officialUrl.trim(),
+      phone: form.phone?.trim() || null,
+      email: form.email?.trim() || null,
+      address: form.address?.trim() || null,
+      status: editingInstitution?.status || 'ACTIVE'
     };
 
     let result;
     if (editingInstitution) {
-      // Update existing institution
-      if (editingInstitution.source === 'default') {
-        // For default institutions, update in-memory only (UI-level changes)
-        setInstitutions(prev => prev.map(inst => 
-          inst.id === editingInstitution.id 
-            ? { ...institutionData, source: 'default', status: inst.status }
-            : inst
-        ));
-        result = { success: true };
-      } else {
-        // For custom institutions, persist to localStorage
-        result = updateInstitution(editingInstitution.id, institutionData);
-        if (result.success) {
-          const customInsts = getInstitutions();
-          const allInsts = [
-            ...organizationsData.map(o => ({ ...o, status: 'Active', source: 'default' })),
-            ...customInsts.map(o => ({ ...o, source: 'custom' }))
-          ];
-          setInstitutions(allInsts);
-        }
-      }
+      // Update existing institution via API
+      result = await updateInstitutionAPI(editingInstitution.id, institutionData);
     } else {
-      // Create new institution
-      result = createInstitution(institutionData);
-      if (result.success) {
-        const customInsts = getInstitutions();
-        const allInsts = [
-          ...organizationsData.map(o => ({ ...o, status: 'Active', source: 'default' })),
-          ...customInsts.map(o => ({ ...o, source: 'custom' }))
-        ];
-        setInstitutions(allInsts);
-      }
+      // Create new institution via API
+      result = await createInstitutionAPI(institutionData);
     }
     
     if (result.success) {
@@ -982,73 +1020,70 @@ function SectionInstitutionManagement() {
       setForm({
         name_en: '',
         name_am: '',
+        code: '',
         image: '',
         imagePreview: '',
         description: '',
         details: '',
         officialUrl: '',
+        phone: '',
+        email: '',
+        address: '',
         services: [],
       });
       setFormError('');
       setView('list');
       setEditingInstitution(null);
       
-      if (editingInstitution?.source === 'default') {
-        alert('Institution updated successfully!\n\nNote: Changes to default institutions are session-only and will reset on page reload.');
-      } else {
-        alert(editingInstitution ? 'Institution updated successfully!' : 'Institution created successfully!');
-      }
+      alert(editingInstitution ? 'Institution updated successfully!' : 'Institution created successfully!');
     } else {
       setFormError(result.message || 'Failed to save institution');
     }
   }
 
-  function toggleStatus(id) {
+  async function toggleStatus(id) {
     const institution = institutions.find(i => i.id === id);
     if (!institution) return;
     
-    const newStatus = institution.status === 'Active' ? 'Inactive' : 'Active';
+    const newStatus = institution.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
     
-    // Update status in memory for both default and custom institutions
-    setInstitutions(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
+    // Update via API
+    const result = await updateInstitutionAPI(id, { status: newStatus });
     
-    // If custom institution, persist to localStorage
-    if (institution.source === 'custom') {
-      updateInstitution(id, { status: newStatus });
+    if (!result.success) {
+      alert(result.message || 'Failed to update status');
     }
   }
 
   function editInstitution(institution) {
     setEditingInstitution(institution);
     setForm({
-      name_en: institution.name_en,
-      name_am: institution.name_am || '',
-      image: institution.image,
-      imagePreview: institution.image,
+      name_en: institution.name_en || institution.name,
+      name_am: institution.name_am || institution.nameAm || '',
+      code: institution.code || '',
+      image: institution.logo_url || institution.logoUrl || institution.image || '',
+      imagePreview: institution.logo_url || institution.logoUrl || institution.image || '',
       description: institution.description || '',
       details: institution.details || '',
-      officialUrl: institution.officialUrl,
-      services: [...institution.services],
+      officialUrl: institution.website_url || institution.websiteUrl || institution.officialUrl || '',
+      phone: institution.phone || '',
+      email: institution.email || '',
+      address: institution.address || '',
+      services: institution.services || [],
     });
     setView('new'); // Reuse the same form for editing
   }
 
-  function deleteInst(id) {
+  async function deleteInst(id) {
     const institution = institutions.find(i => i.id === id);
     if (!institution) return;
     
-    if (institution.source === 'default') {
-      alert('Cannot delete default institutions');
+    if (!confirm(`Are you sure you want to delete "${institution.name_en || institution.name}"?\n\nThis action cannot be undone.`)) {
       return;
     }
     
-    if (!confirm(`Are you sure you want to delete "${institution.name_en}"?`)) {
-      return;
-    }
-    
-    const result = deleteInstitution(id);
+    const result = await deleteInstitutionAPI(id);
     if (result.success) {
-      setInstitutions(prev => prev.filter(o => o.id !== id));
       alert('Institution deleted successfully');
     } else {
       alert(result.message || 'Failed to delete institution');
@@ -1108,6 +1143,20 @@ function SectionInstitutionManagement() {
 
               <div className="mt-5">
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Institution Code
+                </label>
+                <input
+                  type="text"
+                  value={form.code}
+                  onChange={e => setForm(f => ({ ...f, code: e.target.value }))}
+                  placeholder="e.g. immigration (auto-generated if empty)"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">Unique identifier for the institution. Auto-generated from name if left empty.</p>
+              </div>
+
+              <div className="mt-5">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Institution Logo <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -1161,6 +1210,46 @@ function SectionInstitutionManagement() {
                   placeholder="https://example.gov.et"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
                 />
+              </div>
+
+              {/* Contact Information */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={form.phone}
+                    onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                    placeholder="+251 11 234 5678"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                    placeholder="info@institution.gov.et"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Physical Address
+                  </label>
+                  <input
+                    type="text"
+                    value={form.address}
+                    onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+                    placeholder="Hawassa, Ethiopia"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1439,13 +1528,13 @@ function SectionInstitutionManagement() {
         </div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
-            <thead><tr><th>Institution</th><th>Amharic Name</th><th>Services</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Institution</th><th>Amharic Name</th><th>Code</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
               {institutions.map(org => (
                 <tr key={org.id}>
-                  <td className="font-medium">{org.name_en}</td>
-                  <td>{org.name_am}</td>
-                  <td>{org.services.length}</td>
+                  <td className="font-medium">{org.name_en || org.name}</td>
+                  <td>{org.name_am || org.nameAm || ''}</td>
+                  <td className="text-xs text-gray-600">{org.code || ''}</td>
                   <td><StatusBadge status={org.status} /></td>
                   <td>
                     <div className="flex gap-3">
@@ -1456,19 +1545,14 @@ function SectionInstitutionManagement() {
                             Edit
                           </button>
                           <button onClick={() => toggleStatus(org.id)}
-                            className={`text-sm font-medium ${org.status === 'Active' ? 'text-amber-600 hover:underline' : 'text-green-600 hover:underline'}`}>
-                            {org.status === 'Active' ? 'Deactivate' : 'Activate'}
+                            className={`text-sm font-medium ${(org.status === 'ACTIVE' || org.status === 'Active') ? 'text-amber-600 hover:underline' : 'text-green-600 hover:underline'}`}>
+                            {(org.status === 'ACTIVE' || org.status === 'Active') ? 'Deactivate' : 'Activate'}
+                          </button>
+                          <button onClick={() => deleteInst(org.id)}
+                            className="text-red-600 hover:underline text-sm font-medium">
+                            Delete
                           </button>
                         </>
-                      )}
-                      {org.source === 'custom' && canCreate && (
-                        <button onClick={() => deleteInst(org.id)}
-                          className="text-red-600 hover:underline text-sm font-medium">
-                          Delete
-                        </button>
-                      )}
-                      {org.source === 'default' && (
-                        <span className="text-xs text-gray-400 ml-2">(Default)</span>
                       )}
                     </div>
                   </td>
@@ -1488,7 +1572,7 @@ function SectionRolesPermissions() {
   const roleDefinitions = [
     { role: 'citizen',             label: 'Citizen',             color: ROLE_COLORS.citizen,             perms: ['View service requirements', 'Track own applications', 'View announcements', 'Submit contact forms'] },
     { role: 'employee',            label: 'Employee',            color: ROLE_COLORS.employee,            perms: ['Process assigned queue items', 'Search applications', 'View service requirements', 'View announcements'] },
-    { role: 'technician',          label: 'Technician',          color: ROLE_COLORS.technician,          perms: ['View assigned technical tasks', 'Update task status', 'Submit maintenance reports', 'View announcements'] },
+    { role: 'ict_staff',          label: 'ICT Staff',          color: ROLE_COLORS.ict_staff,          perms: ['View assigned technical tasks', 'Update task status', 'Submit maintenance reports', 'View announcements'] },
     { role: 'institution_manager', label: 'Institution Manager', color: ROLE_COLORS.institution_manager, perms: ['Monitor institution queue', 'Monitor applications', 'Assign tasks to Technicians', 'View maintenance', 'View institution reports', 'View announcements'] },
     { role: 'mesob_manager',       label: 'MESOB Manager',       color: ROLE_COLORS.mesob_manager,       perms: ['Monitor all institutions', 'Monitor MESOB-wide queue', 'Monitor applications', 'Monitor maintenance', 'View analytics', 'View reports', 'View announcements'] },
     { role: 'super_admin',         label: 'Super Admin',         color: ROLE_COLORS.super_admin,         perms: ['User Management', 'Institution Management', 'Roles & Permissions', 'System Settings', 'System Reports', 'System Analytics', 'Manage Announcements'] },
@@ -1600,6 +1684,7 @@ function SectionSystemSettings() {
 // ─── SECTION: Reports ─────────────────────────────────────────────
 function SectionReports() {
   const { getUsers } = useAuth();
+  const { institutions } = useServices();
   const [activeTab, setActiveTab] = useState('users');
   const users = getUsers().map(stripPassword);
   const tabs = [
@@ -1650,17 +1735,17 @@ function SectionReports() {
       {activeTab === 'institutions' && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Total Institutions</p><p className="text-2xl font-bold">{organizationsData.length}</p></div>
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Total Services</p><p className="text-2xl font-bold">{organizationsData.reduce((s, o) => s + o.services.length, 0)}</p></div>
+            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Total Institutions</p><p className="text-2xl font-bold">{institutions.length}</p></div>
+            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Active</p><p className="text-2xl font-bold text-green-600">{institutions.filter(i => i.status === 'active' || i.is_active).length}</p></div>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
             <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">Institution Report</h3></div>
             <div className="table-container border-0 rounded-none">
               <table className="data-table">
-                <thead><tr><th>Institution</th><th>Amharic Name</th><th>Services</th><th>Status</th></tr></thead>
+                <thead><tr><th>Institution</th><th>Amharic Name</th><th>Code</th><th>Status</th></tr></thead>
                 <tbody>
-                  {organizationsData.map(org => (
-                    <tr key={org.id}><td className="font-medium">{org.name_en}</td><td>{org.name_am}</td><td>{org.services.length}</td><td><span className="badge bg-green-100 text-green-800">Active</span></td></tr>
+                  {institutions.map(inst => (
+                    <tr key={inst.id}><td className="font-medium">{inst.name_en || inst.name}</td><td>{inst.name_am}</td><td>{inst.code || 'N/A'}</td><td><span className="badge bg-green-100 text-green-800">Active</span></td></tr>
                   ))}
                 </tbody>
               </table>
@@ -1748,44 +1833,54 @@ function SectionAnalytics() {
 
 // ─── SECTION: Announcements ───────────────────────────────────────
 function SectionAnnouncements() {
-  const { getUsers } = useAuth();
-  const { createNotification } = useNotifications();
-  const [announcements, setAnnouncements] = useState(() => getAnnouncements({}));
+  const { announcements, createAnnouncement: createAnnouncementAPI, loading, error } = useAnnouncements();
   const [selected, setSelected] = useState(null);
   const [showNew, setShowNew] = useState(false);
-  const [form, setForm] = useState({ title: '', body: '' });
+  const [form, setForm] = useState({ title: '', body: '', scope: 'INTERNAL', targetRoles: [], institutionId: '' });
   const [formError, setFormError] = useState('');
 
-  function markRead(id) {
-    setAnnouncements(prev => prev.map(a => a.id === id ? { ...a, read: true } : a));
-  }
-
-  function publishAnnouncement(e) {
+  async function publishAnnouncement(e) {
     e.preventDefault();
-    if (!form.title.trim() || !form.body.trim()) { setFormError('Title and body are required.'); return; }
+    if (!form.title.trim() || !form.body.trim()) { 
+      setFormError('Title and body are required.'); 
+      return; 
+    }
     
-    const result = createAnnouncement({
+    // Validate ROLE scope requires target roles
+    if (form.scope === 'ROLE' && (!form.targetRoles || form.targetRoles.length === 0)) {
+      setFormError('Please select at least one role for ROLE scope.');
+      return;
+    }
+    
+    // Validate INSTITUTION scope requires institution
+    if (form.scope === 'INSTITUTION' && !form.institutionId) {
+      setFormError('Please select an institution for INSTITUTION scope.');
+      return;
+    }
+    
+    setFormError('');
+    
+    const announcementData = {
       title: form.title.trim(),
-      body: form.body.trim(),
-      author: 'System Admin',
-      scope: 'system',
-      institution: null,
-    });
+      content: form.body.trim(),
+      scope: form.scope
+    };
+    
+    // Add optional fields based on scope
+    if (form.scope === 'ROLE' && form.targetRoles.length > 0) {
+      announcementData.targetRoles = form.targetRoles;
+    }
+    
+    if (form.scope === 'INSTITUTION' && form.institutionId) {
+      announcementData.institutionId = form.institutionId;
+    }
+    
+    const result = await createAnnouncementAPI(announcementData);
 
     if (result.success) {
-      // Notify ALL users (system-wide announcement)
-      const allUsers = getUsers ? getUsers() : [];
-      
-      allUsers.forEach(user => {
-        const notificationData = createAnnouncementNotification(result.announcement, user.email);
-        createNotification(notificationData);
-      });
-
-      setAnnouncements(prev => [result.announcement, ...prev]);
-      setForm({ title: '', body: '' });
-      setFormError('');
+      setForm({ title: '', body: '', scope: 'INTERNAL', targetRoles: [], institutionId: '' });
       setShowNew(false);
-      alert(`System announcement published successfully!\n\n${allUsers.length} users have been notified.`);
+      alert(`Announcement published successfully!`);
     } else {
       setFormError(result.message || 'Failed to create announcement.');
     }
@@ -1793,6 +1888,8 @@ function SectionAnnouncements() {
 
   if (selected) {
     const ann = announcements.find(a => a.id === selected);
+    if (!ann) return null;
+    
     return (
       <>
         <div className="mb-6">
@@ -1804,10 +1901,11 @@ function SectionAnnouncements() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
             <h2 className="text-lg font-semibold text-gray-900">{ann.title}</h2>
-            {!ann.read && <span className="badge bg-blue-100 text-blue-800 flex-shrink-0">New</span>}
+            {!ann.is_active && <span className="badge bg-gray-100 text-gray-800 flex-shrink-0">Draft</span>}
+            {ann.is_active && <span className="badge bg-green-100 text-green-800 flex-shrink-0">Active</span>}
           </div>
-          <p className="text-xs text-gray-500 mb-4">{ann.date} · {ann.author}</p>
-          <p className="text-sm text-gray-700 leading-relaxed">{ann.body}</p>
+          <p className="text-xs text-gray-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} · {ann.creator?.full_name || 'System'}</p>
+          <p className="text-sm text-gray-700 leading-relaxed">{ann.content}</p>
         </div>
       </>
     );
@@ -1828,7 +1926,7 @@ function SectionAnnouncements() {
 
       {showNew && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6 max-w-2xl">
-          <h3 className="font-semibold text-gray-900 mb-4">Create System Announcement</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">Create Announcement</h3>
           <form onSubmit={publishAnnouncement} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Title <span className="text-red-500">*</span></label>
@@ -1842,28 +1940,90 @@ function SectionAnnouncements() {
                 placeholder="Announcement content..."
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm resize-y" />
             </div>
-            <div className="p-4 bg-purple-50 border border-purple-100 rounded-xl text-sm text-purple-900">
-              <strong>Scope:</strong> This announcement will be visible system-wide to all users.
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Audience <span className="text-red-500">*</span></label>
+              <select value={form.scope} onChange={e => setForm(f => ({ ...f, scope: e.target.value, targetRoles: [], institutionId: '' }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm">
+                <option value="PUBLIC">Public - Visible to everyone including citizens</option>
+                <option value="INTERNAL">Internal - Staff only (employees, managers, admins)</option>
+                <option value="SYSTEM">System - Admins and managers only</option>
+                <option value="ROLE">Role - Specific role(s)</option>
+                <option value="INSTITUTION">Institution - Specific institution</option>
+              </select>
             </div>
+            
+            {form.scope === 'ROLE' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Target Roles <span className="text-red-500">*</span></label>
+                <div className="space-y-2">
+                  {['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'ICT_STAFF', 'CITIZEN'].map(role => (
+                    <label key={role} className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" 
+                        checked={form.targetRoles.includes(role)}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setForm(f => ({ ...f, targetRoles: [...f.targetRoles, role] }));
+                          } else {
+                            setForm(f => ({ ...f, targetRoles: f.targetRoles.filter(r => r !== role) }));
+                          }
+                        }}
+                        className="rounded border-gray-300 text-purple-600 focus:ring-purple-400" />
+                      <span className="text-gray-700">{role.replace(/_/g, ' ')}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {form.scope === 'INSTITUTION' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Institution <span className="text-red-500">*</span></label>
+                <input type="text" value={form.institutionId} onChange={e => setForm(f => ({ ...f, institutionId: e.target.value }))}
+                  placeholder="Enter institution ID"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm" />
+                <p className="text-xs text-gray-500 mt-1">Enter the UUID of the target institution</p>
+              </div>
+            )}
+            
+            <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-900">
+              <strong>Scope: {form.scope}</strong>
+              {form.scope === 'PUBLIC' && <p className="mt-1">This announcement will be visible to all users including citizens.</p>}
+              {form.scope === 'INTERNAL' && <p className="mt-1">This announcement will be visible only to staff (not citizens).</p>}
+              {form.scope === 'SYSTEM' && <p className="mt-1">This announcement will be visible only to admins and managers.</p>}
+              {form.scope === 'ROLE' && <p className="mt-1">This announcement will be visible only to the selected role(s).</p>}
+              {form.scope === 'INSTITUTION' && <p className="mt-1">This announcement will be visible only to users in the selected institution.</p>}
+            </div>
+            
             {formError && <p className="text-sm text-red-600">{formError}</p>}
-            <button type="submit" className="px-5 py-2.5 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition">
-              Publish Announcement
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <button type="submit" disabled={loading} className="px-5 py-2.5 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition disabled:opacity-50">
+              {loading ? 'Publishing...' : 'Publish Announcement'}
             </button>
           </form>
         </div>
       )}
 
+      {loading && !announcements.length && (
+        <div className="text-center py-8 text-gray-500">Loading announcements...</div>
+      )}
+
       <div className="space-y-3">
         {announcements.map(ann => (
-          <div key={ann.id} onClick={() => { setSelected(ann.id); markRead(ann.id); }}
-            className={`bg-white rounded-2xl border shadow-sm p-5 cursor-pointer hover:shadow-md transition-all duration-200 ${ann.read ? 'border-gray-100' : 'border-blue-200 bg-blue-50/30'}`}>
+          <div key={ann.id} onClick={() => setSelected(ann.id)}
+            className={`bg-white rounded-2xl border shadow-sm p-5 cursor-pointer hover:shadow-md transition-all duration-200 ${ann.is_active ? 'border-gray-100' : 'border-gray-200 bg-gray-50'}`}>
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  {!ann.read && <span className="inline-block w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />}
+                  {ann.is_active && <span className="inline-block w-2 h-2 rounded-full bg-green-600 flex-shrink-0" />}
                   <h3 className="font-semibold text-sm text-gray-900 leading-snug">{ann.title}</h3>
+                  {ann.scope === 'PUBLIC' && <span className="badge bg-green-100 text-green-800 text-xs">Public</span>}
+                  {ann.scope === 'INTERNAL' && <span className="badge bg-blue-100 text-blue-800 text-xs">Internal</span>}
+                  {ann.scope === 'SYSTEM' && <span className="badge bg-purple-100 text-purple-800 text-xs">System</span>}
+                  {ann.scope === 'ROLE' && <span className="badge bg-orange-100 text-orange-800 text-xs">Role</span>}
+                  {ann.scope === 'INSTITUTION' && <span className="badge bg-indigo-100 text-indigo-800 text-xs">Institution</span>}
                 </div>
-                <p className="text-xs text-gray-500">{ann.date} · {ann.author}</p>
+                <p className="text-xs text-gray-500">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} · {ann.creator?.full_name || 'System'}</p>
               </div>
               <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
@@ -1912,7 +2072,8 @@ function SectionMyProfile({ user }) {
 // ─── Main SuperAdminDashboard ─────────────────────────────────────
 export default function SuperAdminDashboard() {
   const { user } = useAuth();
-  const [activeSection, setActiveSection] = useState('Dashboard');
+  const { t } = useApp();
+  const [activeSection, setActiveSection] = useState(t.dashboard);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   function navigate(section) {
@@ -1922,15 +2083,15 @@ export default function SuperAdminDashboard() {
 
   function renderSection() {
     switch (activeSection) {
-      case 'Dashboard':             return <SectionDashboard setActiveSection={navigate} />;
-      case 'User Management':       return <SectionUserManagement />;
-      case 'Institution Management':return <SectionInstitutionManagement />;
-      case 'Roles & Permissions':   return <SectionRolesPermissions />;
-      case 'System Settings':       return <SectionSystemSettings />;
-      case 'Reports':               return <SectionReports />;
-      case 'Analytics':             return <SectionAnalytics />;
-      case 'Announcements':         return <SectionAnnouncements />;
-      case 'My Profile':            return <SectionMyProfile user={user} />;
+      case t.dashboard:             return <SectionDashboard setActiveSection={navigate} />;
+      case t.user_management:       return <SectionUserManagement />;
+      case t.institution_management:return <SectionInstitutionManagement />;
+      case t.roles_permissions:   return <SectionRolesPermissions />;
+      case t.system_settings:       return <SectionSystemSettings />;
+      case t.reports:               return <SectionReports />;
+      case t.analytics:             return <SectionAnalytics />;
+      case t.announcements:         return <SectionAnnouncements />;
+      case t.my_profile:            return <SectionMyProfile user={user} />;
       default:                      return <SectionDashboard setActiveSection={navigate} />;
     }
   }
@@ -1952,8 +2113,8 @@ export default function SuperAdminDashboard() {
           </div>
 
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {SECTIONS.map(section => (
-              <button key={section} onClick={() => navigate(section)}
+            {getSections(t).map((section, idx) => (
+              <button key={idx} onClick={() => navigate(section)}
                 className={`sidebar-link w-full text-left${activeSection === section ? ' active' : ''}`}>
                 {section}
               </button>
@@ -1963,7 +2124,7 @@ export default function SuperAdminDashboard() {
           <div className="p-4 border-t border-gray-100">
             <button onClick={() => { localStorage.removeItem('mesob_auth'); window.location.href = '/'; }}
               className="sidebar-link w-full text-left text-red-600 hover:bg-red-50">
-              Logout
+              {t.logout}
             </button>
           </div>
         </aside>
@@ -1978,10 +2139,11 @@ export default function SuperAdminDashboard() {
                 </svg>
               </button>
               <h1 className="text-lg font-semibold text-gray-900">
-                {activeSection === 'Dashboard' ? 'System Admin Dashboard' : activeSection}
+                {activeSection === t.dashboard ? t.system_admin_dashboard : activeSection}
               </h1>
             </div>
             <div className="flex items-center gap-3">
+              <LanguageSwitcher />
               <span className="badge bg-purple-100 text-purple-800">Super Admin</span>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-gray-900">{user?.name}</p>

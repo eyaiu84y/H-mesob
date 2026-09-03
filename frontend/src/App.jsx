@@ -2,8 +2,13 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import { AuthProvider } from './context/AuthContext';
+import { ServiceProvider } from './context/ServiceContext';
 import { QueueProvider } from './context/QueueContext';
+import { ApplicationProvider } from './context/ApplicationContext';
+import { MaintenanceProvider } from './context/MaintenanceContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { AnnouncementProvider } from './context/AnnouncementContext';
+import { FeedbackProvider } from './context/FeedbackContext';
 
 // Public pages
 import HomePage from './pages/HomePage';
@@ -41,73 +46,83 @@ export default function App() {
   return (
     <AppProvider>
       <AuthProvider>
-        <NotificationProvider>
-          <QueueProvider>
-            <Suspense fallback={<LoadingFallback />}>
-              <Routes>
-            {/* Public */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/service-catalogue" element={<ServiceCataloguePage />} />
-            <Route path="/government-service" element={<GovernmentServicePage />} />
+        <ServiceProvider>
+          <ApplicationProvider>
+            <MaintenanceProvider>
+              <NotificationProvider>
+                <AnnouncementProvider>
+                  <FeedbackProvider>
+                    <QueueProvider>
+                      <Suspense fallback={<LoadingFallback />}>
+                <Routes>
+                  {/* Public */}
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/service-catalogue" element={<ServiceCataloguePage />} />
+                  <Route path="/government-service" element={<GovernmentServicePage />} />
 
-            {/* Auth */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
+                  {/* Auth */}
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/signup" element={<SignupPage />} />
 
-            {/* Dashboards */}
-            <Route
-              path="/dashboard/super-admin"
-              element={
-                <RequireAuth allowedRoles={['super_admin']}>
-                  <SuperAdminDashboard />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/dashboard/mesob-manager"
-              element={
-                <RequireAuth allowedRoles={['mesob_manager']}>
-                  <MesobManagerDashboard />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/dashboard/institution-manager"
-              element={
-                <RequireAuth allowedRoles={['institution_manager']}>
-                  <InstitutionManagerDashboard />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/dashboard/employee"
-              element={
-                <RequireAuth allowedRoles={['employee']}>
-                  <EmployeeDashboard />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/dashboard/technician"
-              element={
-                <RequireAuth allowedRoles={['technician']}>
-                  <ICTStaffDashboard />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/dashboard/citizen"
-              element={
-                <RequireAuth allowedRoles={['citizen']}>
-                  <CitizenDashboard />
-                </RequireAuth>
-              }
-            />
-          </Routes>
-          </Suspense>
-        </QueueProvider>
-      </NotificationProvider>
-      </AuthProvider>
-    </AppProvider>
+                  {/* Dashboards */}
+                  <Route
+                    path="/dashboard/super-admin"
+                    element={
+                      <RequireAuth allowedRoles={['super_admin']}>
+                        <SuperAdminDashboard />
+                      </RequireAuth>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/mesob-manager"
+                    element={
+                      <RequireAuth allowedRoles={['mesob_manager']}>
+                        <MesobManagerDashboard />
+                      </RequireAuth>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/institution-manager"
+                    element={
+                      <RequireAuth allowedRoles={['institution_manager']}>
+                        <InstitutionManagerDashboard />
+                      </RequireAuth>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/employee"
+                    element={
+                      <RequireAuth allowedRoles={['employee']}>
+                        <EmployeeDashboard />
+                      </RequireAuth>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/ict-staff"
+                    element={
+                      <RequireAuth allowedRoles={['ict_staff']}>
+                        <ICTStaffDashboard />
+                      </RequireAuth>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/citizen"
+                    element={
+                      <RequireAuth allowedRoles={['citizen']}>
+                        <CitizenDashboard />
+                      </RequireAuth>
+                    }
+                  />
+                </Routes>
+              </Suspense>
+            </QueueProvider>
+          </FeedbackProvider>
+          </AnnouncementProvider>
+        </NotificationProvider>
+      </MaintenanceProvider>
+    </ApplicationProvider>
+  </ServiceProvider>
+</AuthProvider>
+</AppProvider>
   );
 }

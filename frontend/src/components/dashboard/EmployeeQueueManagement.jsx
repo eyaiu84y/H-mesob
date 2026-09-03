@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQueue } from '../../context/QueueContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -56,19 +56,27 @@ function QueueTokenCard({ ticket, isCurrent }) {
 
 export default function EmployeeQueueManagement() {
   const { user } = useAuth();
-  const { getInstitutionQueue, getCurrentServing, callNextToken, completeCurrentToken } = useQueue();
+  const { myTickets, getInstitutionQueue, getCurrentServing, callNextToken, completeCurrentToken, loading, refreshQueues } = useQueue();
   
-  const institutionNameToId = {
-    'Commercial Bank of Ethiopia': 'cbe',
-    'Ethio Telecom': 'ethiotel',
-    'Ethiopian Electric Utility': 'electric',
-    'National ID Program': 'fayda',
-    'Ministry of Justice': 'justice',
-    'Revenues Bureau': 'revenue',
-  };
-  
-  const institutionId = institutionNameToId[user?.institution] || null;
+  // Use institution_id directly from authenticated user (this is UUID from backend)
+  const institutionId = user?.institution_id || null;
   const [actionMessage, setActionMessage] = useState('');
+  const [actionInProgress, setActionInProgress] = useState(false);
+
+  // Auto-refresh on mount and when institution changes
+  useEffect(() => {
+    if (institutionId) {
+      console.log('Refreshing queues for institution:', institutionId);
+      refreshQueues();
+    }
+  }, [institutionId, refreshQueues]);
+
+  // Debug logging
+  console.log('=== EMPLOYEE QUEUE DEBUG ===');
+  console.log('User:', user);
+  console.log('Institution ID:', institutionId);
+  console.log('All tickets from context:', myTickets);
+  console.log('Institution queue:', getInstitutionQueue(institutionId));
   
   if (!institutionId) {
     return (
@@ -93,28 +101,48 @@ export default function EmployeeQueueManagement() {
   const currentServing = getCurrentServing(institutionId);
   const waitingCount = waitingQueue.filter(t => t.status === 'waiting').length;
 
-  function handleCallNext() {
+  async function handleCallNext() {
+    if (actionInProgress) return;
+    
     if (waitingCount === 0) {
       setActionMessage('No waiting customers to call.');
       setTimeout(() => setActionMessage(''), 3000);
       return;
     }
 
-    callNextToken(institutionId);
-    setActionMessage('Next customer called successfully!');
-    setTimeout(() => setActionMessage(''), 3000);
+    setActionInProgress(true);
+    try {
+      await callNextToken(institutionId);
+      setActionMessage('Next customer called successfully!');
+      setTimeout(() => setActionMessage(''), 3000);
+    } catch (err) {
+      setActionMessage(err.message || 'Failed to call next customer');
+      setTimeout(() => setActionMessage(''), 3000);
+    } finally {
+      setActionInProgress(false);
+    }
   }
 
-  function handleCompleteCurrent() {
+  async function handleCompleteCurrent() {
+    if (actionInProgress) return;
+    
     if (!currentServing) {
       setActionMessage('No customer currently being served.');
       setTimeout(() => setActionMessage(''), 3000);
       return;
     }
 
-    completeCurrentToken(institutionId);
-    setActionMessage('Customer marked as completed.');
-    setTimeout(() => setActionMessage(''), 3000);
+    setActionInProgress(true);
+    try {
+      await completeCurrentToken(institutionId);
+      setActionMessage('Customer marked as completed.');
+      setTimeout(() => setActionMessage(''), 3000);
+    } catch (err) {
+      setActionMessage(err.message || 'Failed to complete service');
+      setTimeout(() => setActionMessage(''), 3000);
+    } finally {
+      setActionInProgress(false);
+    }
   }
 
   return (
@@ -148,15 +176,17 @@ export default function EmployeeQueueManagement() {
             <div className="mt-4 flex gap-3">
               <button
                 onClick={handleCompleteCurrent}
-                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium"
+                disabled={actionInProgress || loading}
+                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Complete Service
+                {actionInProgress ? 'Processing...' : 'Complete Service'}
               </button>
               <button
                 onClick={handleCallNext}
-                className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+                disabled={actionInProgress || loading}
+                className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Call Next
+                {actionInProgress ? 'Processing...' : 'Call Next'}
               </button>
             </div>
           </div>

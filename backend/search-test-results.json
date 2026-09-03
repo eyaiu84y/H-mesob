@@ -1,0 +1,139 @@
+{
+  "timestamp": "2026-08-29T11:16:46.728Z",
+  "passed": 26,
+  "failed": 0,
+  "total": 26,
+  "successRate": 100,
+  "results": [
+    {
+      "test": "1.1: Missing query parameter rejected",
+      "status": "PASS",
+      "message": "Properly returns 400 error"
+    },
+    {
+      "test": "1.2: Empty query rejected",
+      "status": "PASS",
+      "message": "Properly validated"
+    },
+    {
+      "test": "1.3: Single character query rejected",
+      "status": "PASS",
+      "message": "Must be at least 2 characters"
+    },
+    {
+      "test": "1.4: Special characters handled gracefully",
+      "status": "PASS",
+      "message": "No server error"
+    },
+    {
+      "test": "2.1: Full institution name search",
+      "status": "PASS",
+      "message": "Found 2 institutions with \"Bank\""
+    },
+    {
+      "test": "2.2: Partial institution name search",
+      "status": "PASS",
+      "message": "Partial matching works"
+    },
+    {
+      "test": "2.3: Case-insensitive institution search",
+      "status": "PASS",
+      "message": "All cases return 2 results"
+    },
+    {
+      "test": "2.4: Institution results match database",
+      "status": "PASS",
+      "message": "All results verified in DB"
+    },
+    {
+      "test": "3.1: Service name search",
+      "status": "PASS",
+      "message": "Found 3 services"
+    },
+    {
+      "test": "3.2: Partial service name search",
+      "status": "PASS",
+      "message": "Partial matching works for services"
+    },
+    {
+      "test": "3.3: Case-insensitive service search",
+      "status": "PASS",
+      "message": "All cases return 6 results"
+    },
+    {
+      "test": "3.4: Service results match database",
+      "status": "PASS",
+      "message": "All results verified in DB"
+    },
+    {
+      "test": "4.1: Response structure",
+      "status": "PASS",
+      "message": "All required fields present"
+    },
+    {
+      "test": "4.2: Institution fields",
+      "status": "PASS",
+      "message": "All required fields present"
+    },
+    {
+      "test": "4.3: Service fields",
+      "status": "PASS",
+      "message": "All required fields present"
+    },
+    {
+      "test": "4.4: Service includes institution data",
+      "status": "PASS",
+      "message": "Institution relationship populated"
+    },
+    {
+      "test": "5.1: No duplicate institutions",
+      "status": "PASS",
+      "message": "2 unique institutions"
+    },
+    {
+      "test": "5.2: No duplicate services",
+      "status": "PASS",
+      "message": "4 unique services"
+    },
+    {
+      "test": "6.1: Uses real institutions table",
+      "status": "PASS",
+      "message": "8 results within expected range"
+    },
+    {
+      "test": "6.2: Uses real services table",
+      "status": "PASS",
+      "message": "10 results within expected range"
+    },
+    {
+      "test": "6.3: No invented search results",
+      "status": "PASS",
+      "message": "All results exist in database"
+    },
+    {
+      "test": "6.4: Service catalogue consistency",
+      "status": "PASS",
+      "message": "All services have complete data"
+    },
+    {
+      "test": "7.1: Amharic character search",
+      "status": "PASS",
+      "message": "Handles Unicode characters"
+    },
+    {
+      "test": "7.2: Numbers in search",
+      "status": "PASS",
+      "message": "Handles numeric queries"
+    },
+    {
+      "test": "7.3: Very long query",
+      "status": "PASS",
+      "message": "Handles long queries without error"
+    },
+    {
+      "test": "7.4: Search with spaces",
+      "status": "PASS",
+      "message": "Handles multi-word queries"
+    }
+  ]
+}

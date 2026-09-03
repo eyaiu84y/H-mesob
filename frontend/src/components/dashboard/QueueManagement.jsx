@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQueue } from '../../context/QueueContext';
-import { organizationsData } from '../../data/organizations';
+import { useServices } from '../../context/ServiceContext';
 
 // ─── Status badge styles ──────────────────────────────────────────
 const STATUS_STYLES = {
@@ -21,6 +21,20 @@ const STATUS_LABELS = {
 
 // ─── Ticket card component ────────────────────────────────────────
 function TicketCard({ ticket, onView, onCancel }) {
+  const [cancelling, setCancelling] = useState(false);
+
+  async function handleCancel() {
+    if (cancelling) return;
+    setCancelling(true);
+    try {
+      await onCancel(ticket.id);
+    } catch (err) {
+      console.error('Cancel failed:', err);
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   return (
     <div className={`bg-white rounded-xl border shadow-sm p-5 ${ticket.status === 'called' ? 'border-blue-400 ring-2 ring-blue-200' : 'border-gray-100'}`}>
       <div className="flex items-start justify-between mb-3">
@@ -67,8 +81,12 @@ function TicketCard({ ticket, onView, onCancel }) {
             </button>
           )}
           {onCancel && (ticket.status === 'waiting' || ticket.status === 'called') && (
-            <button onClick={() => onCancel(ticket.id)} className="text-xs text-red-500 hover:underline font-medium">
-              Leave Queue
+            <button 
+              onClick={handleCancel} 
+              disabled={cancelling}
+              className="text-xs text-red-500 hover:underline font-medium disabled:opacity-50"
+            >
+              {cancelling ? 'Leaving...' : 'Leave Queue'}
             </button>
           )}
         </div>
@@ -80,6 +98,7 @@ function TicketCard({ ticket, onView, onCancel }) {
 // ─── Main QueueManagement component ───────────────────────────────
 export default function QueueManagement() {
   const { getActiveTickets, getTicketHistory, registerForQueue, cancelTicket } = useQueue();
+  const { institutions, getServicesByInstitution } = useServices();
 
   // Steps: 'overview' | 'select-institution' | 'select-service' | 'confirm' | 'token-display'
   const [step, setStep] = useState('overview');
@@ -88,6 +107,7 @@ export default function QueueManagement() {
   const [selectedService, setSelectedService] = useState(null);
   const [newTicket, setNewTicket] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [registrationError, setRegistrationError] = useState(null);
 
   // Force re-render for live updates from simulation
   const [, setTick] = useState(0);
@@ -99,8 +119,8 @@ export default function QueueManagement() {
   const activeTickets = getActiveTickets();
   const ticketHistory = getTicketHistory();
 
-  function handleSelectInstitution(org) {
-    setSelectedInstitution(org);
+  function handleSelectInstitution(inst) {
+    setSelectedInstitution(inst);
     setSelectedService(null);
     setStep('select-service');
   }
@@ -110,14 +130,20 @@ export default function QueueManagement() {
     setStep('confirm');
   }
 
-  function handleRegister() {
-    const ticket = registerForQueue(
-      selectedInstitution.id,
-      selectedInstitution.name_en,
-      selectedService.title_en
-    );
-    setNewTicket(ticket);
-    setStep('token-display');
+  async function handleRegister() {
+    try {
+      setRegistrationError(null);
+      const ticket = await registerForQueue(
+        selectedInstitution.id,  // UUID
+        selectedService.id,       // UUID
+        'NORMAL'
+      );
+      setNewTicket(ticket);
+      setStep('token-display');
+    } catch (err) {
+      console.error('Registration failed:', err);
+      setRegistrationError(err.message || 'Failed to register for queue. Please try again.');
+    }
   }
 
   function handleBack() {
@@ -127,11 +153,13 @@ export default function QueueManagement() {
     } else if (step === 'confirm') {
       setStep('select-service');
       setSelectedService(null);
+      setRegistrationError(null);
     } else if (step === 'token-display') {
       setStep('overview');
       setNewTicket(null);
       setSelectedInstitution(null);
       setSelectedService(null);
+      setRegistrationError(null);
     } else {
       setStep('overview');
     }
@@ -143,9 +171,9 @@ export default function QueueManagement() {
   }
 
   // Filter institutions by search
-  const filteredOrgs = organizationsData.filter(org =>
-    org.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    org.name_am.includes(searchTerm)
+  const filteredInstitutions = institutions.filter(inst =>
+    inst.name_en?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    inst.name_am?.includes(searchTerm)
   );
 
   // ─── STEP: Overview ─────────────────────────────────────────────
@@ -260,27 +288,32 @@ export default function QueueManagement() {
 
         {/* Institution grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredOrgs.map(org => (
-            <button
-              key={org.id}
-              onClick={() => handleSelectInstitution(org)}
-              className="stat-card hover:border-blue-400 transition text-left cursor-pointer"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 font-bold text-sm">
-                  {org.name_en.charAt(0)}
+          {filteredInstitutions.map(inst => {
+            const instServices = getServicesByInstitution(inst.id);
+            return (
+              <button
+                key={inst.id}
+                onClick={() => handleSelectInstitution(inst)}
+                className="stat-card hover:border-blue-400 transition text-left cursor-pointer"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 font-bold text-sm">
+                    {inst.name_en?.charAt(0) || '?'}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-gray-900 mb-1 text-sm leading-tight">{inst.name_en}</h3>
+                    <p className="text-xs text-gray-500 truncate">{inst.name_am}</p>
+                    <p className="text-xs text-blue-600 mt-1 font-medium">
+                      {instServices.length} {instServices.length === 1 ? 'service' : 'services'} →
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <h3 className="font-semibold text-gray-900 mb-1 text-sm leading-tight">{org.name_en}</h3>
-                  <p className="text-xs text-gray-500 truncate">{org.name_am}</p>
-                  <p className="text-xs text-blue-600 mt-1 font-medium">{org.services.length} {org.services.length === 1 ? 'service' : 'services'} →</p>
-                </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
 
-        {filteredOrgs.length === 0 && (
+        {filteredInstitutions.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             <p className="font-medium">No institutions found</p>
             <p className="text-sm mt-1">Try a different search term</p>
@@ -292,6 +325,8 @@ export default function QueueManagement() {
 
   // ─── STEP: Select Service ───────────────────────────────────────
   if (step === 'select-service') {
+    const institutionServices = getServicesByInstitution(selectedInstitution.id);
+    
     return (
       <div className="space-y-6">
         <div>
@@ -306,31 +341,42 @@ export default function QueueManagement() {
 
         {/* Services list */}
         <div className="space-y-3">
-          {selectedInstitution.services.map((svc, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleSelectService(svc)}
-              className="w-full stat-card hover:border-blue-400 transition text-left cursor-pointer"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-1">{svc.title_en}</h3>
-                  <p className="text-xs text-gray-500">{svc.title_am}</p>
-                  <div className="flex gap-4 mt-2">
-                    <span className="text-xs text-gray-500">
-                      <span className="font-medium">Time:</span> {svc.time}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      <span className="font-medium">Fee:</span> {svc.fee}
-                    </span>
+          {institutionServices.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p className="font-medium">No services available</p>
+              <p className="text-sm mt-1">This institution has no services configured yet</p>
+            </div>
+          ) : (
+            institutionServices.map((svc) => (
+              <button
+                key={svc.id}
+                onClick={() => handleSelectService(svc)}
+                className="w-full stat-card hover:border-blue-400 transition text-left cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">{svc.title_en || svc.name}</h3>
+                    <p className="text-xs text-gray-500">{svc.title_am || svc.name_am}</p>
+                    <div className="flex gap-4 mt-2">
+                      {svc.processing_time && (
+                        <span className="text-xs text-gray-500">
+                          <span className="font-medium">Time:</span> {svc.processing_time}
+                        </span>
+                      )}
+                      {svc.service_fee && (
+                        <span className="text-xs text-gray-500">
+                          <span className="font-medium">Fee:</span> {svc.service_fee}
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </div>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </button>
-          ))}
+              </button>
+            ))
+          )}
         </div>
       </div>
     );
@@ -347,6 +393,12 @@ export default function QueueManagement() {
           <h2 className="text-xl font-semibold text-gray-900 mb-1">Confirm Queue Registration</h2>
           <p className="text-gray-600 text-sm">Review and confirm your queue registration.</p>
         </div>
+
+        {registrationError && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800">
+            <strong>Error:</strong> {registrationError}
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="space-y-4">
@@ -369,11 +421,11 @@ export default function QueueManagement() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Processing Time</p>
-                <p className="text-sm font-medium text-gray-700">{selectedService.time}</p>
+                <p className="text-sm font-medium text-gray-700">{selectedService.processing_time || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Fee</p>
-                <p className="text-sm font-medium text-gray-700">{selectedService.fee}</p>
+                <p className="text-sm font-medium text-gray-700">{selectedService.service_fee || 'N/A'}</p>
               </div>
             </div>
 

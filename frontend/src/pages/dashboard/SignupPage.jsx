@@ -23,7 +23,7 @@ export default function SignupPage() {
     }
   }, [isLoggedIn, user, navigate]);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError('');
 
@@ -52,7 +52,7 @@ export default function SignupPage() {
     // Public signup ONLY creates Citizen accounts - STAFF ROLES BLOCKED
     // Staff roles (super_admin, mesob_manager, institution_manager, employee, technician)
     // can ONLY be created by Super Admin through User Management
-    const result = signup(name, email, password, 'citizen');
+    const result = await signup(name, email, password, 'citizen');
     if (!result.success) {
       setError(result.message);
       return;
