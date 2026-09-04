@@ -20,7 +20,8 @@ export const createMaintenanceReport = async (reportData, currentUser) => {
 
     // Institution authorization check
     // EMPLOYEE and ICT_STAFF can only create reports for their own institution
-    if (['EMPLOYEE', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(currentUser.role)) {
+    const userRole = (currentUser.role || '').toUpperCase();
+    if (['EMPLOYEE', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(userRole)) {
       if (currentUser.institution_id !== institutionId) {
         return {
           success: false,
@@ -176,6 +177,10 @@ export const getMaintenanceReports = async (filters, currentUser) => {
     });
     console.log('Filters:', filters);
     
+    // Normalize role to uppercase for consistent comparison
+    const userRole = (currentUser.role || '').toUpperCase();
+    console.log('Normalized role:', userRole);
+    
     let query = supabase
       .from('maintenance_reports')
       .select(`
@@ -219,24 +224,27 @@ export const getMaintenanceReports = async (filters, currentUser) => {
       .order('created_at', { ascending: false });
 
     // Role-based filtering
-    if (currentUser.role === 'CITIZEN') {
+    if (userRole === 'CITIZEN') {
       // Citizens cannot access maintenance reports
       console.log('❌ Access denied - CITIZEN role');
       return {
         success: false,
         message: 'Access denied. Citizens cannot view maintenance reports.'
       };
-    } else if (currentUser.role === 'EMPLOYEE') {
+    } else if (userRole === 'EMPLOYEE') {
       // Employees see reports they created in their institution
       console.log('Filtering for EMPLOYEE - institution:', currentUser.institution_id);
       query = query.eq('institution_id', currentUser.institution_id);
-    } else if (currentUser.role === 'ICT_STAFF') {
+    } else if (userRole === 'ICT_STAFF') {
       // ICT staff see all reports in their institution
       console.log('Filtering for ICT_STAFF - institution:', currentUser.institution_id);
       query = query.eq('institution_id', currentUser.institution_id);
-    } else if (currentUser.role === 'INSTITUTION_MANAGER') {
+    } else if (userRole === 'INSTITUTION_MANAGER') {
       // Institution managers see all reports in their institution
-      console.log('Filtering for INSTITUTION_MANAGER - institution:', currentUser.institution_id);
+      console.log('✅ Filtering for INSTITUTION_MANAGER - institution:', currentUser.institution_id);
+      if (!currentUser.institution_id) {
+        console.log('❌ WARNING: Institution Manager has no institution_id!');
+      }
       query = query.eq('institution_id', currentUser.institution_id);
     } else {
       console.log('No role filter applied - ADMIN/MANAGER role');
@@ -249,7 +257,7 @@ export const getMaintenanceReports = async (filters, currentUser) => {
     if (filters.priority) {
       query = query.eq('priority', filters.priority);
     }
-    if (filters.institutionId && ['SUPER_ADMIN', 'MESOB_MANAGER'].includes(currentUser.role)) {
+    if (filters.institutionId && ['SUPER_ADMIN', 'MESOB_MANAGER'].includes(userRole)) {
       query = query.eq('institution_id', filters.institutionId);
     }
 
@@ -342,7 +350,8 @@ export const getMaintenanceReportById = async (reportId, currentUser) => {
     }
 
     // Authorization check
-    if (['EMPLOYEE', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(currentUser.role)
+    const userRole = (currentUser.role || '').toUpperCase();
+    if (['EMPLOYEE', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(userRole)
         && report.institution_id !== currentUser.institution_id
         && report.reported_by !== currentUser.id) {
       return {
@@ -572,7 +581,8 @@ export const getTaskById = async (taskId, currentUser) => {
     }
 
     // Authorization: only assigned ICT or managers can view
-    if (currentUser.role === 'ICT_STAFF' && task.assigned_to !== currentUser.id) {
+    const userRole = (currentUser.role || '').toUpperCase();
+    if (userRole === 'ICT_STAFF' && task.assigned_to !== currentUser.id) {
       return {
         success: false,
         message: 'You do not have permission to view this task.'
@@ -626,7 +636,8 @@ export const updateTaskStatus = async (taskId, status, currentUser) => {
     }
 
     // Authorization
-    if (currentUser.role === 'ICT_STAFF' && task.assigned_to !== currentUser.id) {
+    const userRole = (currentUser.role || '').toUpperCase();
+    if (userRole === 'ICT_STAFF' && task.assigned_to !== currentUser.id) {
       return {
         success: false,
         message: 'You can only update your own tasks.'
@@ -725,7 +736,8 @@ export const resolveTask = async (taskId, resolutionNotes, currentUser) => {
     }
 
     // Authorization
-    if (currentUser.role === 'ICT_STAFF' && task.assigned_to !== currentUser.id) {
+    const userRole = (currentUser.role || '').toUpperCase();
+    if (userRole === 'ICT_STAFF' && task.assigned_to !== currentUser.id) {
       return {
         success: false,
         message: 'You can only resolve your own tasks.'
