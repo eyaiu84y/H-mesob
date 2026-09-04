@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import api from '../utils/api';
+import { useAuth } from './AuthContext';
 
 const MaintenanceContext = createContext(null);
 
@@ -54,6 +55,7 @@ export function MaintenanceProvider({ children }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { user } = useAuth(); // Get current user
 
   // ── Fetch maintenance reports from backend ─────────────────────
   const fetchReports = useCallback(async (filters = {}) => {
@@ -87,11 +89,21 @@ export function MaintenanceProvider({ children }) {
   }, []);
 
   // ── Automatically load maintenance reports ────────────────────
+  // Skip loading for Citizens - they don't have access to maintenance reports
   useEffect(() => {
+    // Check if user has permission to view maintenance reports
+    const userRole = user?.role?.toUpperCase();
+    const canViewMaintenance = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'ICT_STAFF'].includes(userRole);
+    
+    if (!canViewMaintenance) {
+      console.log('=== MAINTENANCE CONTEXT: Skipping auto-load for role:', user?.role, '(no permission) ===');
+      return; // Citizens and other roles don't have access
+    }
+
     let mounted = true;
     const loadReports = async () => {
       try {
-        console.log('=== MAINTENANCE CONTEXT: AUTO-LOADING REPORTS ===');
+        console.log('=== MAINTENANCE CONTEXT: AUTO-LOADING REPORTS for role:', user?.role, '===');
         setLoading(true);
         setError(null);
         const response = await api.get('/maintenance/reports');
@@ -121,7 +133,7 @@ export function MaintenanceProvider({ children }) {
     };
     loadReports();
     return () => { mounted = false; };
-  }, []);
+  }, [user?.role]); // Re-run when user role changes
 
   // ── Create maintenance report ──────────────────────────────────
   const createReport = useCallback(async (institutionId, problemType, description, location, officeNumber, priority = 'NORMAL', category = 'General', attachments = []) => {
