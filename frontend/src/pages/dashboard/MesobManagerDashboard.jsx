@@ -822,23 +822,20 @@ function SectionAnnouncements() {
 
   // Check if current user can edit/delete an announcement
   function canModify(ann) {
-    // Debug logging
-    console.log('canModify check:', {
-      userRole: user?.role,
-      announcementCreator: ann.creator?.id,
-      announcementPublishedBy: ann.published_by,
-      userId: user?.id
-    });
-
-    // Super Admin and MESOB Manager can modify all
-    if (['SUPER_ADMIN', 'MESOB_MANAGER'].includes(user?.role)) {
-      console.log('User is admin/manager - can modify all');
+    if (!user) {
+      return false;
+    }
+    
+    // Normalize role to uppercase for comparison (backend returns lowercase)
+    const userRole = user.role?.toUpperCase();
+    
+    // Super Admin and MESOB Manager can modify all announcements
+    if (userRole === 'SUPER_ADMIN' || userRole === 'MESOB_MANAGER') {
       return true;
     }
     
-    // Others can only modify their own
+    // Others can only modify their own announcements
     const isOwner = ann.creator?.id === user?.id || ann.published_by === user?.id;
-    console.log('Is owner:', isOwner);
     return isOwner;
   }
 
