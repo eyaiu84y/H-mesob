@@ -1833,13 +1833,14 @@ function SectionAnalytics() {
 
 // ─── SECTION: Announcements ───────────────────────────────────────
 function SectionAnnouncements() {
-  const { announcements, createAnnouncement: createAnnouncementAPI, loading, error } = useAnnouncements();
+  const { user } = useAuth();
+  const { announcements, createAnnouncement: createAnnouncementAPI, updateAnnouncement, deleteAnnouncement, loading, error } = useAnnouncements();
   const [selected, setSelected] = useState(null);
-  const [showNew, setShowNew] = useState(false);
+  const [view, setView] = useState('list'); // 'list' | 'new' | 'edit'
   const [form, setForm] = useState({ title: '', body: '', scope: 'INTERNAL', targetRoles: [], institutionId: '' });
   const [formError, setFormError] = useState('');
 
-  async function publishAnnouncement(e) {
+  async function submitAnnouncement(e) {
     e.preventDefault();
     if (!form.title.trim() || !form.body.trim()) { 
       setFormError('Title and body are required.'); 
@@ -1875,20 +1876,75 @@ function SectionAnnouncements() {
       announcementData.institutionId = form.institutionId;
     }
     
-    const result = await createAnnouncementAPI(announcementData);
+    let result;
+    if (view === 'edit' && selected) {
+      // Update existing announcement
+      result = await updateAnnouncement(selected, announcementData);
+    } else {
+      // Create new announcement
+      result = await createAnnouncementAPI(announcementData);
+    }
 
     if (result.success) {
       setForm({ title: '', body: '', scope: 'INTERNAL', targetRoles: [], institutionId: '' });
-      setShowNew(false);
-      alert(`Announcement published successfully!`);
+      setView('list');
+      setSelected(null);
+      alert(view === 'edit' ? 'Announcement updated successfully!' : 'Announcement published successfully!');
     } else {
-      setFormError(result.message || 'Failed to create announcement.');
+      setFormError(result.message || `Failed to ${view === 'edit' ? 'update' : 'create'} announcement.`);
     }
   }
 
+  function handleEdit(ann) {
+    setForm({
+      title: ann.title,
+      body: ann.content,
+      scope: ann.scope,
+      targetRoles: ann.target_roles || [],
+      institutionId: ann.institution_id || ''
+    });
+    setSelected(ann.id);
+    setView('edit');
+  }
+
+  async function handleDelete(annId, annTitle) {
+    if (!confirm(`Are you sure you want to delete "${annTitle}"?\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    const result = await deleteAnnouncement(annId);
+    if (result.success) {
+      setSelected(null);
+      setView('list');
+      alert('Announcement deleted successfully!');
+    } else {
+      alert(result.message || 'Failed to delete announcement.');
+    }
+  }
+
+  // Check if current user can edit/delete an announcement
+  function canModify(ann) {
+    if (!user) return false;
+    
+    // Normalize role to uppercase for comparison (backend returns lowercase)
+    const userRole = user.role?.toUpperCase();
+    
+    // Super Admin can modify all announcements
+    if (userRole === 'SUPER_ADMIN') {
+      return true;
+    }
+    
+    // Others can only modify their own announcements
+    const isOwner = ann.creator?.id === user?.id || ann.published_by === user?.id;
+    return isOwner;
+  }
+
+  // Announcement detail view
   if (selected) {
     const ann = announcements.find(a => a.id === selected);
     if (!ann) return null;
+
+    const canEdit = canModify(ann);
     
     return (
       <>
@@ -1901,33 +1957,54 @@ function SectionAnnouncements() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
             <h2 className="text-lg font-semibold text-gray-900">{ann.title}</h2>
-            {!ann.is_active && <span className="badge bg-gray-100 text-gray-800 flex-shrink-0">Draft</span>}
-            {ann.is_active && <span className="badge bg-green-100 text-green-800 flex-shrink-0">Active</span>}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {ann.is_active && <span className="badge bg-green-100 text-green-800">Active</span>}
+              {canEdit && (
+                <>
+                  <button 
+                    onClick={() => handleEdit(ann)}
+                    className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                    title="Edit announcement"
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(ann.id, ann.title)}
+                    className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition"
+                    title="Delete announcement"
+                  >
+                    Delete
+                  </button>
+                </>
+              )}
+            </div>
           </div>
           <p className="text-xs text-gray-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} · {ann.creator?.full_name || 'System'}</p>
-          <p className="text-sm text-gray-700 leading-relaxed">{ann.content}</p>
+          <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{ann.content}</div>
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <p className="text-xs text-gray-500">
+              <strong>Scope:</strong> {ann.scope} 
+              {ann.target_roles && ann.target_roles.length > 0 && <span> ({ann.target_roles.join(', ')})</span>}
+            </p>
+          </div>
         </div>
       </>
     );
   }
 
-  return (
-    <>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">Announcements</h2>
-          <p className="text-sm text-gray-500">System-level announcements and notifications.</p>
+  // New/Edit announcement form
+  if (view === 'new' || view === 'edit') {
+    return (
+      <>
+        <div className="mb-6">
+          <button onClick={() => { setView('list'); setSelected(null); setFormError(''); }} className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
+            Cancel
+          </button>
         </div>
-        <button onClick={() => setShowNew(v => !v)}
-          className="px-4 py-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition">
-          {showNew ? 'Cancel' : '+ New Announcement'}
-        </button>
-      </div>
-
-      {showNew && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6 max-w-2xl">
-          <h3 className="font-semibold text-gray-900 mb-4">Create Announcement</h3>
-          <form onSubmit={publishAnnouncement} className="space-y-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 max-w-2xl">
+          <h3 className="font-semibold text-gray-900 mb-4">{view === 'edit' ? 'Edit Announcement' : 'Create Announcement'}</h3>
+          <form onSubmit={submitAnnouncement} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Title <span className="text-red-500">*</span></label>
               <input type="text" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
@@ -1998,11 +2075,27 @@ function SectionAnnouncements() {
             {formError && <p className="text-sm text-red-600">{formError}</p>}
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button type="submit" disabled={loading} className="px-5 py-2.5 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition disabled:opacity-50">
-              {loading ? 'Publishing...' : 'Publish Announcement'}
+              {loading ? (view === 'edit' ? 'Updating...' : 'Publishing...') : (view === 'edit' ? 'Update Announcement' : 'Publish Announcement')}
             </button>
           </form>
         </div>
-      )}
+      </>
+    );
+  }
+
+  // Announcement list view
+  return (
+    <>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">Announcements</h2>
+          <p className="text-sm text-gray-500">System-level announcements and notifications.</p>
+        </div>
+        <button onClick={() => setView('new')}
+          className="px-4 py-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition">
+          + New Announcement
+        </button>
+      </div>
 
       {loading && !announcements.length && (
         <div className="text-center py-8 text-gray-500">Loading announcements...</div>
