@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAnnouncements } from '../../context/AnnouncementContext';
+import { useApplications } from '../../context/ApplicationContext';
 import { useMaintenance } from '../../context/MaintenanceContext';
 import { useQueue } from '../../context/QueueContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
@@ -51,9 +52,24 @@ function StatusBadge({ status }) {
 function SectionDashboard({ setActiveSection, userInstitution }) {
   const { announcements } = useAnnouncements();
   const { reports } = useMaintenance();
-  // TODO: Replace with real data from API
-  const activeQueue = 0; // Will come from queue management system
-  const activeApps = 0; // Will come from application tracking system
+  const { myTickets } = useQueue();
+  const { user } = useAuth();
+  
+  // Get institution ID for filtering
+  const institutionId = user?.institution_id;
+  
+  // Filter queue items by institution
+  const queueItems = useMemo(() => {
+    if (!institutionId) return [];
+    return myTickets.filter(ticket => ticket.institutionId === institutionId);
+  }, [myTickets, institutionId]);
+  
+  // Calculate queue statistics
+  const activeQueue = queueItems.filter(item => 
+    item.status === 'waiting' || item.status === 'called'
+  ).length;
+  
+  const activeApps = 0; // TODO: Will come from application tracking system
   const institutionTasks = (reports || []).filter(t => t.institution === userInstitution);
   const openMaint = institutionTasks.filter(t => t.status !== 'Completed').length;
   const unread = announcements.filter(a => !a.is_read).length;
@@ -246,8 +262,161 @@ function SectionQueueManagement({ userInstitution }) {
 
 // ─── SECTION: Applications ────────────────────────────────────────
 function SectionApplications({ userInstitution }) {
-  // TODO: Replace with real application data from API
-  const applications = []; // Will come from application tracking system
+  const { applications } = useApplications();
+  const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedApp, setSelectedApp] = useState(null);
+
+  // Filter applications for this institution
+  const institutionApplications = applications.filter(app => 
+    app.institution === userInstitution || 
+    app.institutionId === user?.institution_id
+  );
+
+  // Filter by search query
+  const filteredApplications = institutionApplications.filter(app => {
+    const q = searchQuery.toLowerCase();
+    return (
+      (app.applicationNumber && app.applicationNumber.toLowerCase().includes(q)) ||
+      (app.citizenName && app.citizenName.toLowerCase().includes(q)) ||
+      (app.citizenEmail && app.citizenEmail.toLowerCase().includes(q)) ||
+      (app.service && app.service.toLowerCase().includes(q)) ||
+      (app.status && app.status.toLowerCase().includes(q))
+    );
+  });
+
+  // Application detail view
+  if (selectedApp) {
+    return (
+      <>
+        <div className="mb-6">
+          <button
+            onClick={() => setSelectedApp(null)}
+            className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Applications
+          </button>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="border-b border-gray-100 pb-4 mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Application Details</h2>
+            <p className="text-sm text-gray-500 mt-1">Application #{selectedApp.applicationNumber || selectedApp.id}</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label className="text-sm font-medium text-gray-500">Status</label>
+              <div className="mt-1">
+                <span className={`badge ${
+                  selectedApp.status === 'Submitted' ? 'bg-blue-100 text-blue-800' :
+                  selectedApp.status === 'Under Review' ? 'bg-amber-100 text-amber-800' :
+                  selectedApp.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                  selectedApp.status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {selectedApp.status}
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Submitted</label>
+              <p className="mt-1 text-gray-900">{selectedApp.submittedDate}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Service</label>
+              <p className="mt-1 text-gray-900">{selectedApp.service}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Institution</label>
+              <p className="mt-1 text-gray-900">{selectedApp.institution}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Last Updated</label>
+              <p className="mt-1 text-gray-900">{selectedApp.lastUpdated}</p>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100 pt-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Citizen Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Name</label>
+                <p className="mt-1 text-gray-900">{selectedApp.citizenName || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Email</label>
+                <p className="mt-1 text-gray-900">{selectedApp.citizenEmail || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Phone</label>
+                <p className="mt-1 text-gray-900">{selectedApp.citizenPhone || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+
+          {selectedApp.applicationData && (
+            <div className="border-t border-gray-100 pt-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Application Data</h3>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="space-y-3">
+                  {selectedApp.applicationData.fullName && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Full Name</label>
+                      <p className="mt-1 text-gray-900">{selectedApp.applicationData.fullName}</p>
+                    </div>
+                  )}
+                  {selectedApp.applicationData.address && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Address</label>
+                      <p className="mt-1 text-gray-900">{selectedApp.applicationData.address}</p>
+                    </div>
+                  )}
+                  {selectedApp.applicationData.additionalInfo && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Additional Information</label>
+                      <p className="mt-1 text-gray-900 whitespace-pre-wrap">{selectedApp.applicationData.additionalInfo}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedApp.reviewNotes && (
+            <div className="border-t border-gray-100 pt-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Review Notes</h3>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-gray-900 whitespace-pre-wrap">{selectedApp.reviewNotes}</p>
+              </div>
+            </div>
+          )}
+
+          {selectedApp.assignedEmployee && (
+            <div className="border-t border-gray-100 pt-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Assignment</h3>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Assigned To</label>
+                <p className="mt-1 text-gray-900">{selectedApp.assignedEmployee}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="border-t border-gray-100 pt-6 mt-6">
+            <button 
+              onClick={() => setSelectedApp(null)}
+              className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -255,21 +424,87 @@ function SectionApplications({ userInstitution }) {
         <h2 className="text-lg font-semibold text-gray-900 mb-1">Applications</h2>
         <p className="text-sm text-gray-500">Monitor applications for {userInstitution || 'your institution'}.</p>
       </div>
+
+      {/* Search bar */}
+      <div className="mb-6">
+        <div className="relative max-w-md">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search applications..."
+            className="w-full px-4 py-2.5 pl-10 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition text-sm"
+          />
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+      </div>
+
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">Institution Applications</h3>
-          <span className="text-sm text-gray-500">{applications.length} result{applications.length !== 1 ? 's' : ''}</span>
+          <span className="text-sm text-gray-500">{filteredApplications.length} result{filteredApplications.length !== 1 ? 's' : ''}</span>
         </div>
-        <div className="p-6 text-center text-gray-400 py-12">
-          <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <p className="text-sm font-medium mb-2">No Applications</p>
-          <p className="text-xs">Applications submitted to your institution will appear here.</p>
-        </div>
+        
+        {filteredApplications.length > 0 ? (
+          <div className="table-container border-0 rounded-none">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Application ID</th>
+                  <th>Citizen</th>
+                  <th>Service</th>
+                  <th>Status</th>
+                  <th>Submitted</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredApplications.map(app => (
+                  <tr key={app.id}>
+                    <td className="font-medium">{app.applicationNumber || app.id}</td>
+                    <td>{app.citizenName || app.citizenEmail}</td>
+                    <td>{app.service}</td>
+                    <td>
+                      <span className={`badge ${
+                        app.status === 'Submitted' ? 'bg-blue-100 text-blue-800' :
+                        app.status === 'Under Review' ? 'bg-amber-100 text-amber-800' :
+                        app.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                        app.status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {app.status}
+                      </span>
+                    </td>
+                    <td>{app.submittedDate}</td>
+                    <td className="text-right">
+                      <button 
+                        onClick={() => setSelectedApp(app)}
+                        className="text-blue-600 hover:underline text-sm font-medium"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-6 text-center text-gray-400 py-12">
+            <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-sm font-medium mb-2">No Applications</p>
+            <p className="text-xs">{searchQuery ? 'No applications match your search' : 'Applications submitted to your institution will appear here'}</p>
+          </div>
+        )}
       </div>
       <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl text-sm text-orange-800">
-        <strong>Applications:</strong> Applications for your institution's services will be displayed here when the application tracking system is integrated.
+        <strong>Applications:</strong> All applications submitted for your institution's services are displayed here.
       </div>
     </>
   );
@@ -1123,13 +1358,43 @@ function SectionTaskAssignment({ userInstitution }) {
 
 // ─── SECTION: Reports ─────────────────────────────────────────────
 function SectionReports({ userInstitution }) {
-  // TODO: Connect to backend API for real reports data
+  const { myTickets, loading: queueLoading } = useQueue();
+  const { reports: maintenanceReports } = useMaintenance();
+  const { user } = useAuth();
+  
+  // Get institution ID for filtering
+  const institutionId = user?.institution_id;
+  
+  // Filter queue items by institution
+  const queueItems = useMemo(() => {
+    if (!institutionId) return [];
+    return myTickets.filter(ticket => ticket.institutionId === institutionId);
+  }, [myTickets, institutionId]);
+  
+  // Calculate queue statistics
+  const queueActive = queueItems.filter(item => 
+    item.status === 'waiting' || item.status === 'called'
+  ).length;
+  
+  const today = new Date().toDateString();
+  const qCompleted = queueItems.filter(item => {
+    if (item.status !== 'completed') return false;
+    const completedDate = new Date(item.completedAt || item.createdAt).toDateString();
+    return completedDate === today;
+  }).length;
+  
+  // Calculate maintenance statistics
+  const institutionMaintenance = (maintenanceReports || []).filter(
+    t => t.institution === userInstitution
+  );
+  const maintDone = institutionMaintenance.filter(
+    t => t.status === 'Completed' || t.status === 'COMPLETED'
+  ).length;
+  
+  // TODO: Application statistics (when applications API is ready)
   const completed = 0;
   const pending = 0;
   const inProg = 0;
-  const qCompleted = 0;
-  const queueActive = 0;
-  const maintDone = 0;
 
   return (
     <>
@@ -1381,9 +1646,9 @@ function SectionStaffManagement({ userInstitution }) {
 
 function SectionAnnouncements({ userInstitution }) {
   const { user: authUser } = useAuth();
-  const { announcements, createAnnouncement: createAnnouncementAPI, loading, error } = useAnnouncements();
+  const { announcements, createAnnouncement: createAnnouncementAPI, updateAnnouncement, deleteAnnouncement, loading, error } = useAnnouncements();
   const [selected, setSelected] = useState(null);
-  const [view, setView] = useState('list'); // 'list' | 'new'
+  const [view, setView] = useState('list'); // 'list' | 'new' | 'edit'
   const [form, setForm] = useState({ title: '', body: '', scope: 'INSTITUTION' });
   const [formError, setFormError] = useState('');
 
@@ -1407,29 +1672,78 @@ function SectionAnnouncements({ userInstitution }) {
       announcementData.institutionId = authUser.institution_id;
     }
 
-    const result = await createAnnouncementAPI(announcementData);
+    let result;
+    if (view === 'edit' && selected) {
+      // Update existing announcement
+      result = await updateAnnouncement(selected, announcementData);
+    } else {
+      // Create new announcement
+      result = await createAnnouncementAPI(announcementData);
+    }
 
     if (result.success) {
       setForm({ title: '', body: '', scope: 'INSTITUTION' });
       setView('list');
-      alert(`Announcement published successfully!`);
+      setSelected(null);
+      alert(view === 'edit' ? 'Announcement updated successfully!' : 'Announcement published successfully!');
     } else {
-      setFormError(result.message || 'Failed to create announcement.');
+      setFormError(result.message || `Failed to ${view === 'edit' ? 'update' : 'create'} announcement.`);
     }
   }
 
-  // New announcement form
-  if (view === 'new') {
+  function handleEdit(ann) {
+    setForm({
+      title: ann.title,
+      body: ann.content,
+      scope: ann.scope
+    });
+    setSelected(ann.id);
+    setView('edit');
+  }
+
+  async function handleDelete(annId, annTitle) {
+    if (!confirm(`Are you sure you want to delete "${annTitle}"?\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    const result = await deleteAnnouncement(annId);
+    if (result.success) {
+      setSelected(null);
+      setView('list');
+      alert('Announcement deleted successfully!');
+    } else {
+      alert(result.message || 'Failed to delete announcement.');
+    }
+  }
+
+  // Check if current user can edit/delete an announcement
+  function canModify(ann) {
+    if (!authUser) return false;
+    
+    // Normalize role to uppercase for comparison (backend returns lowercase)
+    const userRole = authUser.role?.toUpperCase();
+    
+    // Institution Manager can only modify their own announcements
+    if (userRole === 'INSTITUTION_MANAGER') {
+      const isOwner = ann.creator?.id === authUser?.id || ann.published_by === authUser?.id;
+      return isOwner;
+    }
+    
+    return false;
+  }
+
+  // New/Edit announcement form
+  if (view === 'new' || view === 'edit') {
     return (
       <>
         <div className="mb-6">
-          <button onClick={() => { setView('list'); setFormError(''); }} className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
+          <button onClick={() => { setView('list'); setSelected(null); setFormError(''); }} className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
             Cancel
           </button>
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 max-w-2xl">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">New Announcement</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">{view === 'edit' ? 'Edit Announcement' : 'New Announcement'}</h2>
           <form onSubmit={submitAnnouncement} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Title <span className="text-red-500">*</span></label>
@@ -1464,7 +1778,7 @@ function SectionAnnouncements({ userInstitution }) {
             {formError && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">{formError}</div>}
             {error && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">{error}</div>}
             <button type="submit" disabled={loading} className="px-6 py-3 bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-semibold rounded-xl transition text-sm disabled:opacity-50">
-              {loading ? 'Publishing...' : 'Publish Announcement'}
+              {loading ? (view === 'edit' ? 'Updating...' : 'Publishing...') : (view === 'edit' ? 'Update Announcement' : 'Publish Announcement')}
             </button>
           </form>
         </div>
@@ -1477,6 +1791,8 @@ function SectionAnnouncements({ userInstitution }) {
     const ann = announcements.find(a => a.id === selected);
     if (!ann) return null;
 
+    const canEdit = canModify(ann);
+
     return (
       <>
         <div className="mb-6">
@@ -1488,10 +1804,35 @@ function SectionAnnouncements({ userInstitution }) {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
             <h2 className="text-lg font-semibold text-gray-900">{ann.title}</h2>
-            {ann.is_active && <span className="badge bg-green-100 text-green-800 flex-shrink-0">Active</span>}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {ann.is_active && <span className="badge bg-green-100 text-green-800">Active</span>}
+              {canEdit && (
+                <>
+                  <button 
+                    onClick={() => handleEdit(ann)}
+                    className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                    title="Edit announcement"
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(ann.id, ann.title)}
+                    className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition"
+                    title="Delete announcement"
+                  >
+                    Delete
+                  </button>
+                </>
+              )}
+            </div>
           </div>
           <p className="text-sm text-gray-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
-          <p className="text-sm text-gray-700 leading-relaxed">{ann.content}</p>
+          <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{ann.content}</div>
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <p className="text-xs text-gray-500">
+              <strong>Scope:</strong> {ann.scope}
+            </p>
+          </div>
         </div>
       </>
     );
@@ -1505,7 +1846,7 @@ function SectionAnnouncements({ userInstitution }) {
           <h2 className="text-lg font-semibold text-gray-900 mb-1">Announcements</h2>
           <p className="text-sm text-gray-500">Operational announcements for your institution.</p>
         </div>
-        <button onClick={() => setView('new')} className="px-4 py-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition">
+        <button onClick={() => { setView('new'); setSelected(null); setFormError(''); }} className="px-4 py-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition">
           + New Announcement
         </button>
       </div>

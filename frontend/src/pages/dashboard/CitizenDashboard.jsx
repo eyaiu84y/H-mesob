@@ -656,17 +656,15 @@ function ApplyForServiceSection({ user, setActiveSection }) {
     
     if (!validateForm()) return;
 
-    const application = {
-      service: selectedService.title_en,
-      institution: selectedInstitution.name_en,
-      citizenEmail: user?.email,
-      applicantDetails: {
-        fullName: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address
-      },
+    // Prepare application data in the format expected by backend
+    const applicationData = {
+      fullName: formData.fullName,
+      email: formData.email,
+      phone: formData.phone,
+      address: formData.address,
       additionalInfo: formData.additionalInfo,
+      serviceName: selectedService.title_en,
+      institutionName: selectedInstitution.name_en,
       serviceDetails: {
         time: selectedService.time,
         fee: selectedService.fee,
@@ -674,7 +672,9 @@ function ApplyForServiceSection({ user, setActiveSection }) {
       }
     };
 
-    const result = await createApplication(application);
+    // Note: Since we're using mock data, we'll pass null for IDs
+    // The backend will need to handle this appropriately
+    const result = await createApplication(null, null, applicationData, []);
     
     if (result.success) {
       setSubmissionSuccess(result.application);
@@ -687,6 +687,9 @@ function ApplyForServiceSection({ user, setActiveSection }) {
         address: '',
         additionalInfo: ''
       });
+    } else {
+      // Show error message to user
+      alert(result.message || 'Failed to submit application. Please try again.');
     }
   };
 

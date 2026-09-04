@@ -2091,7 +2091,7 @@ function SectionAnnouncements() {
           <h2 className="text-lg font-semibold text-gray-900 mb-1">Announcements</h2>
           <p className="text-sm text-gray-500">System-level announcements and notifications.</p>
         </div>
-        <button onClick={() => setView('new')}
+        <button onClick={() => { setView('new'); setSelected(null); setFormError(''); }}
           className="px-4 py-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition">
           + New Announcement
         </button>

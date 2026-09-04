@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useMaintenance } from '../../context/MaintenanceContext';
 import { useAnnouncements } from '../../context/AnnouncementContext';
+import { useApplications } from '../../context/ApplicationContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import { organizationsData } from '../../data/organizations';
 import EmployeeQueueManagement from '../../components/dashboard/EmployeeQueueManagement';
@@ -96,18 +97,123 @@ function SectionMyQueue() {
 
 // ─── SECTION: Search Applications ───────────────────────────────
 function SectionSearchApplications() {
+  const { applications } = useApplications();
   const [query, setQuery] = useState('');
-  const applications = [];
+  const [selectedApp, setSelectedApp] = useState(null);
 
   const filtered = applications.filter(app => {
     const q = query.toLowerCase();
     return (
-      app.id.toLowerCase().includes(q) ||
-      app.citizen.toLowerCase().includes(q) ||
-      app.service.toLowerCase().includes(q) ||
-      app.status.toLowerCase().includes(q)
+      (app.applicationNumber && app.applicationNumber.toLowerCase().includes(q)) ||
+      (app.citizenName && app.citizenName.toLowerCase().includes(q)) ||
+      (app.citizenEmail && app.citizenEmail.toLowerCase().includes(q)) ||
+      (app.service && app.service.toLowerCase().includes(q)) ||
+      (app.status && app.status.toLowerCase().includes(q))
     );
   });
+
+  // Application detail view
+  if (selectedApp) {
+    return (
+      <>
+        <div className="mb-6">
+          <button
+            onClick={() => setSelectedApp(null)}
+            className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Search
+          </button>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="border-b border-gray-100 pb-4 mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Application Details</h2>
+            <p className="text-sm text-gray-500 mt-1">Application #{selectedApp.applicationNumber || selectedApp.id}</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label className="text-sm font-medium text-gray-500">Status</label>
+              <div className="mt-1">
+                <StatusBadge status={selectedApp.status} />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Submitted</label>
+              <p className="mt-1 text-gray-900">{selectedApp.submittedDate}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Service</label>
+              <p className="mt-1 text-gray-900">{selectedApp.service}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Institution</label>
+              <p className="mt-1 text-gray-900">{selectedApp.institution}</p>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100 pt-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Citizen Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Name</label>
+                <p className="mt-1 text-gray-900">{selectedApp.citizenName || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Email</label>
+                <p className="mt-1 text-gray-900">{selectedApp.citizenEmail || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Phone</label>
+                <p className="mt-1 text-gray-900">{selectedApp.citizenPhone || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+
+          {selectedApp.applicationData && (
+            <div className="border-t border-gray-100 pt-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Application Data</h3>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="space-y-3">
+                  {selectedApp.applicationData.fullName && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Full Name</label>
+                      <p className="mt-1 text-gray-900">{selectedApp.applicationData.fullName}</p>
+                    </div>
+                  )}
+                  {selectedApp.applicationData.address && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Address</label>
+                      <p className="mt-1 text-gray-900">{selectedApp.applicationData.address}</p>
+                    </div>
+                  )}
+                  {selectedApp.applicationData.additionalInfo && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Additional Information</label>
+                      <p className="mt-1 text-gray-900 whitespace-pre-wrap">{selectedApp.applicationData.additionalInfo}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedApp.assignedEmployee && (
+            <div className="border-t border-gray-100 pt-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Assignment</h3>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Assigned To</label>
+                <p className="mt-1 text-gray-900">{selectedApp.assignedEmployee}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -157,13 +263,18 @@ function SectionSearchApplications() {
               ) : (
                 filtered.map(app => (
                   <tr key={app.id}>
-                    <td className="font-medium">{app.id}</td>
-                    <td>{app.citizen}</td>
+                    <td className="font-medium">{app.applicationNumber || app.id}</td>
+                    <td>{app.citizenName || app.citizenEmail}</td>
                     <td>{app.service}</td>
                     <td><StatusBadge status={app.status} /></td>
-                    <td>{app.submitted}</td>
+                    <td>{app.submittedDate}</td>
                     <td className="text-right">
-                      <button className="text-blue-600 hover:underline text-sm font-medium">View</button>
+                      <button 
+                        onClick={() => setSelectedApp(app)}
+                        className="text-blue-600 hover:underline text-sm font-medium"
+                      >
+                        View
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -179,8 +290,29 @@ function SectionSearchApplications() {
 // ─── SECTION: Service Requirements ───────────────────────────────
 function SectionServiceRequirements() {
   const { user } = useAuth();
-  const institution = organizationsData.find(org => org.name_en === user?.institution);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Find institution by matching various fields
+  const institution = organizationsData.find(org => 
+    org.name_en === user?.institution ||
+    org.name_am === user?.institution ||
+    org.id === user?.institution ||
+    org.name_en?.toLowerCase().includes(user?.institution?.toLowerCase()) ||
+    (user?.institution_name && org.name_en === user.institution_name)
+  );
+  
   const services = institution?.services || [];
+
+  // Filter services by search query
+  const filteredServices = services.filter(service => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      service.title_en?.toLowerCase().includes(q) ||
+      service.title_am?.toLowerCase().includes(q) ||
+      service.docs_en?.some(doc => doc.toLowerCase().includes(q))
+    );
+  });
 
   return (
     <>
@@ -189,21 +321,63 @@ function SectionServiceRequirements() {
         <p className="text-sm text-gray-500">Document requirements and processing information for your institution's services.</p>
       </div>
 
+      {/* Search bar */}
+      {services.length > 0 && (
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search services or documents..."
+              className="w-full px-4 py-2.5 pl-10 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition text-sm"
+            />
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-4">
-        {services.length === 0 ? (
+        {filteredServices.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-            <p className="font-medium text-gray-500">No services found</p>
-            <p className="text-sm text-gray-400 mt-1">No services are configured for your institution.</p>
+            {services.length === 0 ? (
+              <>
+                <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="font-medium text-gray-500">No services found</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  {institution ? 
+                    `No services are configured for ${institution.name_en}.` : 
+                    `Your institution is not configured yet.`
+                  }
+                </p>
+                {user?.institution && !institution && (
+                  <p className="text-xs text-gray-400 mt-2">
+                    Your institution: {user.institution}
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="font-medium text-gray-500">No matching services</p>
+                <p className="text-sm text-gray-400 mt-1">Try adjusting your search criteria</p>
+              </>
+            )}
           </div>
         ) : (
-          services.map((service, idx) => (
+          filteredServices.map((service, idx) => (
             <div key={idx} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
               <div className="flex items-start justify-between mb-3">
-                <div>
+                <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">{service.title_en}</h3>
                   <p className="text-sm text-gray-500">{service.title_am}</p>
                 </div>
-                <div className="flex gap-4 text-sm">
+                <div className="flex gap-4 text-sm ml-4">
                   <div>
                     <p className="text-xs text-gray-500">Time</p>
                     <p className="font-medium text-gray-700">{service.time}</p>
@@ -226,10 +400,34 @@ function SectionServiceRequirements() {
                   ))}
                 </ul>
               </div>
+              
+              {service.docs_am && service.docs_am.length > 0 && (
+                <details className="mt-4">
+                  <summary className="text-xs font-medium text-gray-700 cursor-pointer hover:text-blue-600">
+                    የሚፈለጉ ሰነዶች (Amharic)
+                  </summary>
+                  <ul className="text-sm text-gray-600 space-y-1 mt-2">
+                    {service.docs_am.map((doc, docIdx) => (
+                      <li key={docIdx} className="flex items-start gap-2">
+                        <span className="text-blue-600 mt-1">•</span>
+                        <span>{doc}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
             </div>
           ))
         )}
       </div>
+
+      {institution && services.length > 0 && (
+        <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800">
+          <strong>Institution:</strong> {institution.name_en}
+          <span className="mx-2">•</span>
+          <strong>Services:</strong> {filteredServices.length} of {services.length} displayed
+        </div>
+      )}
     </>
   );
 }
