@@ -157,9 +157,10 @@ async function runTests() {
         email: 'superadmin@mesobcenter.et',
         password: 'SuperAdmin@2026'
       });
+      const hasToken = res.data.success && (res.data.token || res.data.data?.accessToken);
       return {
-        pass: res.status === 200 && res.data.success && res.data.token,
-        message: res.data.success ? 'Login successful, token received' : res.data.message
+        pass: res.status === 200 && hasToken,
+        message: hasToken ? 'Login successful, token received' : (res.data.message || 'Login failed')
       };
     } catch (error) {
       return { pass: false, message: 'Auth endpoint failed' };
@@ -172,7 +173,7 @@ async function runTests() {
       email: 'superadmin@mesobcenter.et',
       password: 'SuperAdmin@2026'
     });
-    authToken = res.data.token;
+    authToken = res.data.token || res.data.data?.accessToken;
   } catch (e) {
     // Ignore
   }
