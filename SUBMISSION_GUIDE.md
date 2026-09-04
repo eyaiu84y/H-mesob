@@ -59,12 +59,12 @@ npm start
 
 | Role | Email | Password | Dashboard Works? |
 |------|-------|----------|------------------|
-| Super Admin | superadmin@mesobcenter.et | super123 | ✅ |
+| Super Admin | superadmin@mesobcenter.et | SuperAdmin@2026 | ✅ |
 | MESOB Manager | manager@mesobcenter.et | MesobManager@2026 | ✅ |
-| Inst. Manager | inst.manager@mesobcenter.et | inst123 | ✅ |
-| Employee | employee@mesobcenter.et | emp123 | ✅ |
-| ICT Staff | ict@mesobcenter.et | ict123 | ✅ |
-| Citizen | citizen@mesobcenter.et | citizen123 | ✅ |
+| Inst. Manager | inst.manager@mesobcenter.et | InstManager@2026 | ✅ |
+| Employee | employee@mesobcenter.et | Employee@2026 | ✅ |
+| ICT Staff | ict.staff@mesobcenter.et | IctStaff@2026 | ✅ |
+| Citizen | citizen@mesobcenter.et | Citizen@2026 | ✅ |
 
 ---
 
@@ -499,7 +499,7 @@ Print this for demo:
 
 Super Admin:
   Email: superadmin@mesobcenter.et
-  Password: super123
+  Password: SuperAdmin@2026
 
 MESOB Manager:
   Email: manager@mesobcenter.et
@@ -507,19 +507,19 @@ MESOB Manager:
 
 Institution Manager:
   Email: inst.manager@mesobcenter.et
-  Password: inst123
+  Password: InstManager@2026
 
 Employee:
   Email: employee@mesobcenter.et
-  Password: emp123
+  Password: Employee@2026
 
 ICT Staff:
-  Email: ict@mesobcenter.et
-  Password: ict123
+  Email: ict.staff@mesobcenter.et
+  Password: IctStaff@2026
 
 Citizen:
   Email: citizen@mesobcenter.et
-  Password: citizen123
+  Password: Citizen@2026
 
 Backend: http://localhost:3000
 Frontend: http://localhost:5173

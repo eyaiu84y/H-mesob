@@ -29,12 +29,12 @@
 
 ### Test Users (From seed data)
 ```
-Super Admin:     superadmin@mesobcenter.et     / super123
+Super Admin:     superadmin@mesobcenter.et     / SuperAdmin@2026
 MESOB Manager:   manager@mesobcenter.et        / MesobManager@2026
-Inst. Manager:   inst.manager@mesobcenter.et   / inst123
-Employee:        employee@mesobcenter.et       / emp123
-ICT Staff:       ict@mesobcenter.et           / ict123
-Citizen:         citizen@mesobcenter.et        / citizen123
+Inst. Manager:   inst.manager@mesobcenter.et   / InstManager@2026
+Employee:        employee@mesobcenter.et       / Employee@2026
+ICT Staff:       ict.staff@mesobcenter.et      / IctStaff@2026
+Citizen:         citizen@mesobcenter.et        / Citizen@2026
 ```
 
 ### ✅ Authentication Tests

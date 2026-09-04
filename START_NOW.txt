@@ -64,22 +64,22 @@ Keep this terminal open and run:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Super Admin:
-  superadmin@mesobcenter.et / super123
+  superadmin@mesobcenter.et / SuperAdmin@2026
 
 MESOB Manager:
   manager@mesobcenter.et / MesobManager@2026
 
 Institution Manager:
-  inst.manager@mesobcenter.et / inst123
+  inst.manager@mesobcenter.et / InstManager@2026
 
 Employee:
-  employee@mesobcenter.et / emp123
+  employee@mesobcenter.et / Employee@2026
 
 ICT Staff:
-  ict@mesobcenter.et / ict123
+  ict.staff@mesobcenter.et / IctStaff@2026
 
 Citizen:
-  citizen@mesobcenter.et / citizen123
+  citizen@mesobcenter.et / Citizen@2026
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

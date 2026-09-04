@@ -10,7 +10,7 @@ const https = require('https');
 const http = require('http');
 
 // Configuration
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // Colors for console output
@@ -155,7 +155,7 @@ async function runTests() {
     try {
       const res = await makeRequest(`${BACKEND_URL}/api/auth/login`, 'POST', {
         email: 'superadmin@mesobcenter.et',
-        password: 'super123'
+        password: 'SuperAdmin@2026'
       });
       return {
         pass: res.status === 200 && res.data.success && res.data.token,
@@ -170,7 +170,7 @@ async function runTests() {
   try {
     const res = await makeRequest(`${BACKEND_URL}/api/auth/login`, 'POST', {
       email: 'superadmin@mesobcenter.et',
-      password: 'super123'
+      password: 'SuperAdmin@2026'
     });
     authToken = res.data.token;
   } catch (e) {
