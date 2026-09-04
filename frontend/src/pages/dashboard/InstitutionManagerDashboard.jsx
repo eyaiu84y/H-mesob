@@ -115,10 +115,23 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
           <h2 className="font-semibold text-gray-900">Queue Overview</h2>
           <button onClick={() => setActiveSection('Queue Management')} className="text-sm text-blue-600 hover:underline font-medium">View all</button>
         </div>
-        <div className="p-6 text-center text-gray-400">
-          <p className="text-sm">Queue management system will be integrated with backend API.</p>
-          <p className="text-xs mt-2">Active queue items will appear here.</p>
-        </div>
+        {activeQueue > 0 ? (
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm text-gray-600">Active Tickets</span>
+              <span className="text-2xl font-bold text-gray-900">{activeQueue}</span>
+            </div>
+            <p className="text-xs text-gray-500">Citizens are currently in queue at your institution.</p>
+          </div>
+        ) : (
+          <div className="p-6 text-center text-gray-400">
+            <svg className="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <p className="text-sm">No active queue items</p>
+            <p className="text-xs mt-1">Queue tickets will appear here when citizens check in.</p>
+          </div>
+        )}
       </div>
 
       {/* Applications overview */}
@@ -127,10 +140,23 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
           <h2 className="font-semibold text-gray-900">Applications Overview</h2>
           <button onClick={() => setActiveSection('Applications')} className="text-sm text-blue-600 hover:underline font-medium">View all</button>
         </div>
-        <div className="p-6 text-center text-gray-400">
-          <p className="text-sm">Application tracking system will be integrated with backend API.</p>
-          <p className="text-xs mt-2">Pending applications will appear here.</p>
-        </div>
+        {activeApps > 0 ? (
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm text-gray-600">Pending / In Progress</span>
+              <span className="text-2xl font-bold text-gray-900">{activeApps}</span>
+            </div>
+            <p className="text-xs text-gray-500">Applications waiting for review or currently being processed.</p>
+          </div>
+        ) : (
+          <div className="p-6 text-center text-gray-400">
+            <svg className="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-sm">No pending applications</p>
+            <p className="text-xs mt-1">New applications will appear here when citizens submit them.</p>
+          </div>
+        )}
       </div>
 
       <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl text-sm text-orange-800">
