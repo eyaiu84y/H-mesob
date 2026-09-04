@@ -69,7 +69,6 @@ export default function News() {
                   </p>
                   <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mt-4">
                     <span>{formatDate(announcement.published_at)}</span>
-                    <span>{announcement.creator?.full_name || 'MESOB'}</span>
                   </div>
                 </div>
               ))}
@@ -88,8 +87,6 @@ export default function News() {
                     </h1>
                     <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                       <span>{formatDate(selectedNews.published_at)}</span>
-                      <span>•</span>
-                      <span>{selectedNews.creator?.full_name || 'MESOB'}</span>
                     </div>
                   </div>
                   
