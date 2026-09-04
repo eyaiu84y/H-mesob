@@ -27,11 +27,8 @@ export default function Header() {
   const navLinks = [
     { href: '#Home',            label: t.nav_home },
     { href: '#organizations',   label: t.nav_organizations },
-    { href: '#popular-services',label: t.nav_popular },
     { href: '#news',            label: t.nav_news },
     { href: '#about',           label: t.nav_about },
-    { href: '#Address',         label: t.nav_address },
-    { href: '#contact',         label: t.nav_contact },
   ];
 
   const currentLang = LANGUAGES.find((l) => l.code === lang) || LANGUAGES[0];
