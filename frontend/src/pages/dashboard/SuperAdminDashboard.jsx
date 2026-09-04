@@ -176,9 +176,12 @@ function SectionUserManagement() {
   useEffect(() => {
     if (!usersLoading) {
       const users = getUsers();
-      setRawUsers(users.map(stripPassword));
+      const cleanedUsers = users.map(stripPassword);
+      setRawUsers(cleanedUsers);
     }
-  }, [usersLoading, getUsers]);
+    // Disable exhaustive-deps as we only want this to run when loading state changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usersLoading]);
 
   // Fetch users from backend on mount
   useEffect(() => {

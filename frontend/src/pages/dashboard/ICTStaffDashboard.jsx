@@ -792,7 +792,8 @@ export default function ICTStaffDashboard() {
 
   useEffect(() => {
     loadTasks();
-  }, [loadTasks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Load tasks only on mount
 
   function navigate(section) {
     setActiveSection(section);

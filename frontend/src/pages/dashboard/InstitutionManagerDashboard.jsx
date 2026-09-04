@@ -1384,7 +1384,7 @@ function SectionTaskAssignment({ userInstitution }) {
 
 // ─── SECTION: Reports ─────────────────────────────────────────────
 function SectionReports({ userInstitution }) {
-  const { myTickets, loading: queueLoading } = useQueue();
+  const { myTickets } = useQueue(); // Removed unused queueLoading
   const { reports: maintenanceReports } = useMaintenance();
   const { user } = useAuth();
   
