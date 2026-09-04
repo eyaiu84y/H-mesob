@@ -180,7 +180,7 @@ export const createAnnouncement = async (announcementData, currentUser) => {
       };
     }
 
-    // Create announcement
+    // Create announcement (automatically published)
     const { data: newAnnouncement, error } = await supabase
       .from('announcements')
       .insert({
@@ -190,7 +190,8 @@ export const createAnnouncement = async (announcementData, currentUser) => {
         target_roles: targetRoles || [],
         institution_id: scope === 'INSTITUTION' ? institutionId : null,
         published_by: currentUser.id,
-        is_active: false,
+        is_active: true, // Auto-publish on creation
+        published_at: new Date().toISOString(), // Set publish time
         expires_at: expiresAt || null,
         created_at: new Date().toISOString()
       })
@@ -205,12 +206,15 @@ export const createAnnouncement = async (announcementData, currentUser) => {
       };
     }
 
+    // Send notifications to target users
+    await notifyTargetUsers(newAnnouncement);
+
     // Log audit
-    await logAudit(currentUser.id, 'ANNOUNCEMENT_CREATE', `Created announcement: ${title}`);
+    await logAudit(currentUser.id, 'ANNOUNCEMENT_CREATE', `Created and published announcement: ${title}`);
 
     return {
       success: true,
-      message: 'Announcement created successfully',
+      message: 'Announcement created and published successfully',
       data: newAnnouncement
     };
 

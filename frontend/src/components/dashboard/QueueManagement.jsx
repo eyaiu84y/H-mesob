@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQueue } from '../../context/QueueContext';
 import { useServices } from '../../context/ServiceContext';
+import FeedbackRating from './FeedbackRating';
 
 // ─── Status badge styles ──────────────────────────────────────────
 const STATUS_STYLES = {
@@ -552,6 +553,21 @@ export default function QueueManagement() {
           >
             Leave Queue
           </button>
+        )}
+
+        {/* Feedback Rating - Only show for completed queue entries */}
+        {liveTicket.status === 'completed' && liveTicket.institutionId && liveTicket.serviceId && (
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-4 text-lg">Rate Your Experience</h3>
+            <FeedbackRating
+              queueEntryId={liveTicket.id}
+              institutionId={liveTicket.institutionId}
+              serviceId={liveTicket.serviceId}
+              institutionName={liveTicket.institutionName}
+              serviceName={liveTicket.serviceName}
+              onSuccess={handleBack}
+            />
+          </div>
         )}
       </div>
     );

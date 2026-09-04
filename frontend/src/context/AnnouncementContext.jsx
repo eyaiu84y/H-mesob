@@ -42,7 +42,18 @@ export function AnnouncementProvider({ children }) {
 
       const response = await api.post('/announcements', announcementData);
 
-      if (response.data.success && response.data.data) {
+      // Handle different response formats
+      if (response && response.success && response.data) {
+        const newAnnouncement = response.data;
+        
+        // Add to local state
+        setAnnouncements(prev => [newAnnouncement, ...prev]);
+
+        // Refresh from backend
+        await fetchAnnouncements();
+
+        return { success: true, announcement: newAnnouncement };
+      } else if (response && response.data && response.data.success && response.data.data) {
         const newAnnouncement = response.data.data;
         
         // Add to local state
@@ -53,7 +64,7 @@ export function AnnouncementProvider({ children }) {
 
         return { success: true, announcement: newAnnouncement };
       } else {
-        throw new Error(response.data.message || 'Failed to create announcement');
+        throw new Error(response?.data?.message || response?.message || 'Failed to create announcement');
       }
     } catch (err) {
       console.error('Failed to create announcement:', err);
@@ -64,6 +75,60 @@ export function AnnouncementProvider({ children }) {
       setLoading(false);
     }
   }, [fetchAnnouncements]);
+
+  // Update announcement
+  const updateAnnouncement = useCallback(async (announcementId, announcementData) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.patch(`/announcements/${announcementId}`, announcementData);
+
+      // Handle different response formats
+      if (response && response.success) {
+        // Refresh from backend to get updated data
+        await fetchAnnouncements();
+
+        return { success: true, message: 'Announcement updated successfully' };
+      } else {
+        throw new Error(response?.data?.message || response?.message || 'Failed to update announcement');
+      }
+    } catch (err) {
+      console.error('Failed to update announcement:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to update announcement';
+      setError(errorMessage);
+      return { success: false, message: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchAnnouncements]);
+
+  // Delete announcement
+  const deleteAnnouncement = useCallback(async (announcementId) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.delete(`/announcements/${announcementId}`);
+
+      // Handle different response formats
+      if (response && response.success) {
+        // Remove from local state
+        setAnnouncements(prev => prev.filter(a => a.id !== announcementId));
+
+        return { success: true, message: 'Announcement deleted successfully' };
+      } else {
+        throw new Error(response?.data?.message || response?.message || 'Failed to delete announcement');
+      }
+    } catch (err) {
+      console.error('Failed to delete announcement:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to delete announcement';
+      setError(errorMessage);
+      return { success: false, message: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Get announcements by scope
   const getAnnouncementsByScope = useCallback((scope) => {
@@ -79,6 +144,8 @@ export function AnnouncementProvider({ children }) {
         error,
         fetchAnnouncements,
         createAnnouncement,
+        updateAnnouncement,
+        deleteAnnouncement,
         getAnnouncementsByScope,
       }}
     >

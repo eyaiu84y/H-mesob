@@ -22,6 +22,7 @@ function transformQueueEntry(backendQueue) {
   return {
     id: backendQueue.id,
     institutionId: backendQueue.institution_id,
+    serviceId: backendQueue.service_id, // FIXED: Added serviceId for feedback
     institutionName: backendQueue.institutions?.name_en || 'Unknown Institution',
     serviceName: backendQueue.services?.title_en || backendQueue.services?.name || 'Unknown Service',
     token: backendQueue.queue_number,
