@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { useAnnouncements } from '../../context/AnnouncementContext';
-import { useMaintenance } from '../../context/MaintenanceContext';
+// import { useMaintenance } from '../../context/MaintenanceContext'; // Not used
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 
 // ─── Navigation sections ─────────────────────────────────────────
@@ -119,7 +119,7 @@ function SectionDashboard({ setActiveSection, tasks }) {
 }
 
 // ─── SECTION: My Tasks ────────────────────────────────────────────
-function SectionMyTasks({ tasks, setTasks, loadingTasks, reloadTasks }) {
+function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
   const [selectedTask, setSelectedTask] = useState(null);
   const [showResolutionModal, setShowResolutionModal] = useState(false);
   const [resolution, setResolution] = useState('');
@@ -130,10 +130,12 @@ function SectionMyTasks({ tasks, setTasks, loadingTasks, reloadTasks }) {
     if (selectedTask) {
       const updatedTask = tasks.find(t => t.id === selectedTask.id);
       if (updatedTask) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedTask(updatedTask);
       }
     }
-  }, [tasks, selectedTask?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks, selectedTask?.id]); // Intentionally using selectedTask?.id
 
   async function advanceStatus(id) {
     const task = tasks.find(t => t.id === id);
@@ -791,9 +793,10 @@ export default function ICTStaffDashboard() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Load tasks only on mount
+  }, []); // Load tasks only on mount - setState inside loadTasks is intentional
 
   function navigate(section) {
     setActiveSection(section);
@@ -808,7 +811,7 @@ export default function ICTStaffDashboard() {
   function renderSection() {
     switch (activeSection) {
       case 'Dashboard':           return <SectionDashboard setActiveSection={navigate} tasks={tasks} />;
-      case 'My Tasks':            return <SectionMyTasks user={user} tasks={tasks} setTasks={setTasks} loadingTasks={loadingTasks} reloadTasks={loadTasks} />;
+      case 'My Tasks':            return <SectionMyTasks user={user} tasks={tasks} loadingTasks={loadingTasks} reloadTasks={loadTasks} />;
       case 'Maintenance Reports': return <SectionMaintenanceReports user={user} tasks={tasks} />;
       case 'Announcements':       return <SectionAnnouncements />;
       case 'My Profile':          return <SectionMyProfile user={user} />;
