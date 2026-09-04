@@ -742,9 +742,10 @@ function SectionAnalytics() {
 
 // ─── SECTION: Announcements ───────────────────────────────────────
 function SectionAnnouncements() {
-  const { announcements, createAnnouncement: createAnnouncementAPI, loading, error } = useAnnouncements();
+  const { user } = useAuth();
+  const { announcements, createAnnouncement: createAnnouncementAPI, updateAnnouncement, deleteAnnouncement, loading, error } = useAnnouncements();
   const [selected, setSelected] = useState(null);
-  const [view, setView] = useState('list'); // 'list' | 'new'
+  const [view, setView] = useState('list'); // 'list' | 'new' | 'edit'
   const [form, setForm] = useState({ title: '', body: '', scope: 'INTERNAL', targetRoles: [] });
   const [formError, setFormError] = useState('');
 
@@ -774,29 +775,85 @@ function SectionAnnouncements() {
       announcementData.targetRoles = form.targetRoles;
     }
 
-    const result = await createAnnouncementAPI(announcementData);
+    let result;
+    if (view === 'edit' && selected) {
+      // Update existing announcement
+      result = await updateAnnouncement(selected, announcementData);
+    } else {
+      // Create new announcement
+      result = await createAnnouncementAPI(announcementData);
+    }
 
     if (result.success) {
       setForm({ title: '', body: '', scope: 'INTERNAL', targetRoles: [] });
       setView('list');
-      alert(`Announcement published successfully!`);
+      setSelected(null);
+      alert(view === 'edit' ? 'Announcement updated successfully!' : 'Announcement published successfully!');
     } else {
-      setFormError(result.message || 'Failed to create announcement.');
+      setFormError(result.message || `Failed to ${view === 'edit' ? 'update' : 'create'} announcement.`);
     }
   }
 
-  // New announcement form
-  if (view === 'new') {
+  function handleEdit(ann) {
+    setForm({
+      title: ann.title,
+      body: ann.content,
+      scope: ann.scope,
+      targetRoles: ann.target_roles || []
+    });
+    setSelected(ann.id);
+    setView('edit');
+  }
+
+  async function handleDelete(annId, annTitle) {
+    if (!confirm(`Are you sure you want to delete "${annTitle}"?\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    const result = await deleteAnnouncement(annId);
+    if (result.success) {
+      setSelected(null);
+      setView('list');
+      alert('Announcement deleted successfully!');
+    } else {
+      alert(result.message || 'Failed to delete announcement.');
+    }
+  }
+
+  // Check if current user can edit/delete an announcement
+  function canModify(ann) {
+    // Debug logging
+    console.log('canModify check:', {
+      userRole: user?.role,
+      announcementCreator: ann.creator?.id,
+      announcementPublishedBy: ann.published_by,
+      userId: user?.id
+    });
+
+    // Super Admin and MESOB Manager can modify all
+    if (['SUPER_ADMIN', 'MESOB_MANAGER'].includes(user?.role)) {
+      console.log('User is admin/manager - can modify all');
+      return true;
+    }
+    
+    // Others can only modify their own
+    const isOwner = ann.creator?.id === user?.id || ann.published_by === user?.id;
+    console.log('Is owner:', isOwner);
+    return isOwner;
+  }
+
+  // New/Edit announcement form
+  if (view === 'new' || view === 'edit') {
     return (
       <>
         <div className="mb-6">
-          <button onClick={() => { setView('list'); setFormError(''); }} className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
+          <button onClick={() => { setView('list'); setSelected(null); setFormError(''); }} className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
             Cancel
           </button>
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 max-w-2xl">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">New Announcement</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">{view === 'edit' ? 'Edit Announcement' : 'New Announcement'}</h2>
           <form onSubmit={submitAnnouncement} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Title <span className="text-red-500">*</span></label>
@@ -854,7 +911,7 @@ function SectionAnnouncements() {
             {formError && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">{formError}</div>}
             {error && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">{error}</div>}
             <button type="submit" disabled={loading} className="px-6 py-3 bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-semibold rounded-xl transition text-sm disabled:opacity-50">
-              {loading ? 'Publishing...' : 'Publish Announcement'}
+              {loading ? (view === 'edit' ? 'Updating...' : 'Publishing...') : (view === 'edit' ? 'Update Announcement' : 'Publish Announcement')}
             </button>
           </form>
         </div>
@@ -867,6 +924,8 @@ function SectionAnnouncements() {
     const ann = announcements.find(a => a.id === selected);
     if (!ann) return null;
 
+    const canEdit = canModify(ann);
+
     return (
       <>
         <div className="mb-6">
@@ -878,10 +937,36 @@ function SectionAnnouncements() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
             <h2 className="text-lg font-semibold text-gray-900">{ann.title}</h2>
-            {ann.is_active && <span className="badge bg-green-100 text-green-800 flex-shrink-0">Active</span>}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {ann.is_active && <span className="badge bg-green-100 text-green-800">Active</span>}
+              {canEdit && (
+                <>
+                  <button 
+                    onClick={() => handleEdit(ann)}
+                    className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                    title="Edit announcement"
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(ann.id, ann.title)}
+                    className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition"
+                    title="Delete announcement"
+                  >
+                    Delete
+                  </button>
+                </>
+              )}
+            </div>
           </div>
           <p className="text-sm text-gray-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
-          <p className="text-sm text-gray-700 leading-relaxed">{ann.content}</p>
+          <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{ann.content}</div>
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <p className="text-xs text-gray-500">
+              <strong>Scope:</strong> {ann.scope} 
+              {ann.target_roles && ann.target_roles.length > 0 && <span> ({ann.target_roles.join(', ')})</span>}
+            </p>
+          </div>
         </div>
       </>
     );
