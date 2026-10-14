@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import api from '../utils/api';
 
 const AnnouncementContext = createContext(null);
@@ -33,6 +33,12 @@ export function AnnouncementProvider({ children }) {
       setLoading(false);
     }
   }, []);
+
+  // Auto-fetch announcements on mount
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchAnnouncements();
+  }, [fetchAnnouncements]);
 
   // Create announcement
   const createAnnouncement = useCallback(async (announcementData) => {

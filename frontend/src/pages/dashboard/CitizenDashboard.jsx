@@ -8,14 +8,16 @@ import { useQueue } from '../../context/QueueContext';
 import { useApplications } from '../../context/ApplicationContext';
 import { useAnnouncements } from '../../context/AnnouncementContext';
 import { useFeedback } from '../../context/FeedbackContext';
-import { organizationsData } from '../../data/organizations';
+import { useServices } from '../../context/ServiceContext';
+import { useApp } from '../../context/AppContext';
 
 export default function CitizenDashboard() {
   const { user } = useAuth();
+  const { t } = useApp();
   const { getActiveTickets } = useQueue();
   const { applications, getActiveApplications, getCompletedApplications } = useApplications();
   const [activeSection, setActiveSection] = useState('dashboard');
-  const firstName = user?.name?.split(' ')[0] || 'Citizen';
+  const firstName = user?.name?.split(' ')[0] || t.citizen;
   const activeQueueCount = getActiveTickets().length;
   
   // Get application counts
@@ -23,18 +25,18 @@ export default function CitizenDashboard() {
   const completedApplications = getCompletedApplications().length;
 
   const navLinks = [
-    { label: 'My Dashboard', section: 'dashboard' },
-    { label: 'My Applications', section: 'applications' },
-    { label: 'My Feedback', section: 'feedback' },
-    { label: 'My Queue', section: 'queue' },
-    { label: 'Apply for Service', section: 'apply' },
-    { label: 'Announcements', section: 'announcements' },
-    { label: 'Profile & Documents', section: 'profile' },
+    { label: t.my_dashboard, section: 'dashboard' },
+    { label: t.my_applications, section: 'applications' },
+    { label: t.my_feedback, section: 'feedback' },
+    { label: t.my_queue, section: 'queue' },
+    { label: t.apply_for_service, section: 'apply' },
+    { label: t.announcements, section: 'announcements' },
+    { label: t.profile_documents, section: 'profile' },
   ];
 
   return (
     <DashboardLayout
-      title="My Account"
+      title={t.my_account}
       navLinks={navLinks.map(link => ({
         label: link.label,
         href: '#',
@@ -45,34 +47,34 @@ export default function CitizenDashboard() {
       }))}
       accentColor="green"
       letter="C"
-      subtitle="Citizen Portal"
+      subtitle={t.citizen_portal}
     >
       {/* My Dashboard Section */}
       {activeSection === 'dashboard' && (
         <>
           {/* Welcome banner */}
           <div className="bg-gradient-to-r from-[#1e3a8a] to-[#1e40af] rounded-2xl p-6 text-white mb-8">
-            <h2 className="text-xl font-semibold mb-1">Welcome back, {firstName}!</h2>
-            <p className="text-blue-100 text-sm">Track your applications and apply for services at MESOB Center.</p>
+            <h2 className="text-xl font-semibold mb-1">{t.welcome_back}, {firstName}!</h2>
+            <p className="text-blue-100 text-sm">{t.track_applications}</p>
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
             <div className="stat-card">
-              <p className="text-sm text-gray-500 mb-1">Active Applications</p>
+              <p className="text-sm text-gray-500 mb-1">{t.active_applications}</p>
               <p className="text-2xl font-bold">{activeApplications}</p>
             </div>
             <div className="stat-card">
-              <p className="text-sm text-gray-500 mb-1">Completed</p>
+              <p className="text-sm text-gray-500 mb-1">{t.completed_apps}</p>
               <p className="text-2xl font-bold">{completedApplications}</p>
             </div>
             <button onClick={() => setActiveSection('queue')} className="stat-card hover:border-blue-400 transition text-left">
-              <p className="text-sm text-gray-500 mb-1">Active Queues</p>
+              <p className="text-sm text-gray-500 mb-1">{t.active_queues}</p>
               <p className="text-2xl font-bold">{activeQueueCount}</p>
-              <p className="text-xs text-blue-600 mt-1 font-medium">View →</p>
+              <p className="text-xs text-blue-600 mt-1 font-medium">{t.view_details} →</p>
             </button>
             <div className="stat-card">
-              <p className="text-sm text-gray-500 mb-1">Total Applications</p>
+              <p className="text-sm text-gray-500 mb-1">{t.total_applications}</p>
               <p className="text-2xl font-bold">{applications.length}</p>
             </div>
           </div>
@@ -80,23 +82,23 @@ export default function CitizenDashboard() {
           {/* Applications table */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">Recent Applications</h2>
+              <h2 className="font-semibold text-gray-900">{t.recent_applications}</h2>
               <button
                 onClick={() => setActiveSection('applications')}
                 className="text-sm text-blue-600 hover:underline font-medium"
               >
-                View All
+                {t.view_all}
               </button>
             </div>
             <div className="table-container border-0 rounded-none">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Application ID</th>
-                    <th>Service</th>
-                    <th>Institution</th>
-                    <th>Status</th>
-                    <th>Submitted</th>
+                    <th>{t.application_id}</th>
+                    <th>{t.service}</th>
+                    <th>{t.institution}</th>
+                    <th>{t.status}</th>
+                    <th>{t.submitted}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -480,15 +482,31 @@ function MyApplicationsSection({ applications, setActiveSection }) {
               </div>
             )}
 
-            {/* Feedback Rating Section - Only show for completed applications */}
-            {app.status === 'Completed' && (
+            {/* Feedback Rating Section - Only show for completed applications with valid IDs */}
+            {app.status === 'Completed' && app.institutionId && app.serviceId && (
               <div className="border-t border-gray-100 pt-6">
                 <h3 className="font-semibold text-gray-900 mb-4">Rate This Service</h3>
                 <FeedbackRating
                   applicationId={app.id}
-                  institutionId={app.institution_id}
-                  serviceId={app.service_id}
+                  institutionId={app.institutionId}
+                  serviceId={app.serviceId}
+                  institutionName={app.institution}
+                  serviceName={app.service}
                 />
+              </div>
+            )}
+            
+            {/* Show info message for completed applications without valid IDs */}
+            {app.status === 'Completed' && (!app.institutionId || !app.serviceId) && (
+              <div className="border-t border-gray-100 pt-6">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-600">
+                  <p className="flex items-start gap-2">
+                    <svg className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Feedback is not available for this application as it is missing service information.</span>
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -605,6 +623,7 @@ function MyApplicationsSection({ applications, setActiveSection }) {
 // ─── Apply for Service Section Component ──────────────────────────
 function ApplyForServiceSection({ user, setActiveSection }) {
   const { createApplication } = useApplications();
+  const { institutions, getServicesByInstitution, loading: servicesLoading } = useServices();
   const [selectedInstitution, setSelectedInstitution] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -619,14 +638,19 @@ function ApplyForServiceSection({ user, setActiveSection }) {
   const [formErrors, setFormErrors] = useState({});
   const [submissionSuccess, setSubmissionSuccess] = useState(null);
 
-  const filteredInstitutions = organizationsData.filter(org => {
+  // Filter institutions based on search query
+  const filteredInstitutions = institutions.filter(inst => {
+    if (!searchQuery.trim()) return true;
+    
     const q = searchQuery.toLowerCase();
+    const instServices = getServicesByInstitution(inst.id);
+    
     return (
-      org.name_en.toLowerCase().includes(q) ||
-      org.name_am.toLowerCase().includes(q) ||
-      org.services.some(s => 
-        s.title_en.toLowerCase().includes(q) || 
-        s.title_am.toLowerCase().includes(q)
+      inst.name_en?.toLowerCase().includes(q) ||
+      inst.name_am?.toLowerCase().includes(q) ||
+      instServices.some(s => 
+        s.name?.toLowerCase().includes(q) || 
+        s.name_am?.toLowerCase().includes(q)
       )
     );
   });
@@ -663,18 +687,22 @@ function ApplyForServiceSection({ user, setActiveSection }) {
       phone: formData.phone,
       address: formData.address,
       additionalInfo: formData.additionalInfo,
-      serviceName: selectedService.title_en,
+      serviceName: selectedService.name,
       institutionName: selectedInstitution.name_en,
       serviceDetails: {
-        time: selectedService.time,
-        fee: selectedService.fee,
-        requiredDocs: selectedService.docs_en
+        time: selectedService.processing_time,
+        fee: selectedService.fee_amount,
+        requiredDocs: [] // Requirements will be fetched separately if needed
       }
     };
 
-    // Note: Since we're using mock data, we'll pass null for IDs
-    // The backend will need to handle this appropriately
-    const result = await createApplication(null, null, applicationData, []);
+    // Use real institution and service IDs from backend data
+    const result = await createApplication(
+      selectedService.id,
+      selectedInstitution.id, 
+      applicationData, 
+      []
+    );
     
     if (result.success) {
       setSubmissionSuccess(result.application);
@@ -774,7 +802,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-blue-100">
               <h2 className="text-xl font-bold text-gray-900 mb-1">Application Form</h2>
-              <p className="text-sm text-gray-600">{selectedService.title_en} - {selectedInstitution.name_en}</p>
+              <p className="text-sm text-gray-600">{selectedService.name} - {selectedInstitution.name_en}</p>
             </div>
 
             <form onSubmit={handleSubmitApplication} className="p-6 space-y-6">
@@ -856,13 +884,10 @@ function ApplyForServiceSection({ user, setActiveSection }) {
               </div>
 
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <p className="text-sm text-amber-800 font-medium mb-2">Required Documents:</p>
-                <ul className="text-sm text-amber-700 space-y-1">
-                  {selectedService.docs_en.map((doc, i) => (
-                    <li key={i}>• {doc}</li>
-                  ))}
-                </ul>
-                <p className="text-xs text-amber-600 mt-2">Please ensure you have these documents ready for submission.</p>
+                <p className="text-sm text-amber-800 font-medium mb-2">Application Information:</p>
+                <p className="text-sm text-amber-700">
+                  Please ensure you have all necessary documents ready for submission. You may be contacted by the institution for additional requirements.
+                </p>
               </div>
 
               <div className="flex gap-3 pt-4">
@@ -906,58 +931,37 @@ function ApplyForServiceSection({ user, setActiveSection }) {
         <div className="max-w-3xl mx-auto">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-100">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedService.title_en}</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedService.name}</h2>
               <p className="text-sm text-gray-600">{selectedInstitution.name_en}</p>
             </div>
 
             <div className="p-6 space-y-6">
-              {selectedService.description_en && (
+              {selectedService.description && (
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">Description</h3>
-                  <p className="text-sm text-gray-700 leading-relaxed">{selectedService.description_en}</p>
+                  <p className="text-sm text-gray-700 leading-relaxed">{selectedService.description}</p>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-blue-50 rounded-xl p-4">
                   <p className="text-sm text-gray-600 mb-1">Processing Time</p>
-                  <p className="font-semibold text-gray-900">{selectedService.time}</p>
+                  <p className="font-semibold text-gray-900">{selectedService.processing_time || 'N/A'}</p>
                 </div>
                 <div className="bg-green-50 rounded-xl p-4">
                   <p className="text-sm text-gray-600 mb-1">Service Fee</p>
-                  <p className="font-semibold text-gray-900">{selectedService.fee}</p>
+                  <p className="font-semibold text-gray-900">
+                    {selectedService.fee_amount ? `${selectedService.fee_amount} ETB` : 'Free'}
+                  </p>
                 </div>
               </div>
 
               <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Required Documents</h3>
-                <ul className="space-y-2">
-                  {selectedService.docs_en.map((doc, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                      <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {doc}
-                    </li>
-                  ))}
-                </ul>
+                <h3 className="font-semibold text-gray-900 mb-3">Service Information</h3>
+                <p className="text-sm text-gray-600">
+                  Please prepare all necessary documents before applying. You can check with the institution for specific requirements.
+                </p>
               </div>
-
-              {selectedService.officialUrl && selectedService.officialUrl !== '#' && (
-                <div className="border-t border-gray-100 pt-6">
-                  <a
-                    href={selectedService.officialUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                    Visit Official Service Website
-                  </a>
-                </div>
-              )}
 
               <div className="border-t border-gray-100 pt-6">
                 <button
@@ -979,6 +983,8 @@ function ApplyForServiceSection({ user, setActiveSection }) {
 
   // Services list view (after institution selected)
   if (selectedInstitution) {
+    const institutionServices = getServicesByInstitution(selectedInstitution.id);
+    
     return (
       <>
         <div className="mb-6">
@@ -995,21 +1001,20 @@ function ApplyForServiceSection({ user, setActiveSection }) {
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
           <div className="flex items-center gap-4">
-            <img
-              src={selectedInstitution.image}
-              alt={selectedInstitution.name_en}
-              className="w-16 h-16 object-contain rounded-xl bg-gray-50 p-2"
-              onError={(e) => { e.target.src = '/image/icon.png'; }}
-            />
+            <div className="w-16 h-16 flex items-center justify-center rounded-xl bg-blue-50">
+              <span className="text-2xl font-bold text-blue-600">
+                {selectedInstitution.name_en?.charAt(0) || 'I'}
+              </span>
+            </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900">{selectedInstitution.name_en}</h2>
-              <p className="text-sm text-gray-500">{selectedInstitution.services.length} services available</p>
+              <p className="text-sm text-gray-500">{institutionServices.length} services available</p>
             </div>
           </div>
-          {selectedInstitution.officialUrl && selectedInstitution.officialUrl !== '#' && (
+          {selectedInstitution.website_url && (
             <div className="mt-4 pt-4 border-t border-gray-100">
               <a
-                href={selectedInstitution.officialUrl}
+                href={selectedInstitution.website_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition"
@@ -1024,36 +1029,42 @@ function ApplyForServiceSection({ user, setActiveSection }) {
         </div>
 
         <div className="space-y-3">
-          {selectedInstitution.services.map((service, index) => (
-            <div
-              key={index}
-              onClick={() => setSelectedService(service)}
-              className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md hover:border-blue-200 transition cursor-pointer"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 mb-2">{service.title_en}</h3>
-                  <div className="flex gap-4 text-sm text-gray-600">
-                    <span className="flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {service.time}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {service.fee}
-                    </span>
-                  </div>
-                </div>
-                <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
+          {institutionServices.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No services available for this institution
             </div>
-          ))}
+          ) : (
+            institutionServices.map((service) => (
+              <div
+                key={service.id}
+                onClick={() => setSelectedService(service)}
+                className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md hover:border-blue-200 transition cursor-pointer"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 mb-2">{service.name}</h3>
+                    <div className="flex gap-4 text-sm text-gray-600">
+                      <span className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {service.processing_time || 'N/A'}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {service.fee_amount ? `${service.fee_amount} ETB` : 'Free'}
+                      </span>
+                    </div>
+                  </div>
+                  <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </>
     );
@@ -1084,31 +1095,52 @@ function ApplyForServiceSection({ user, setActiveSection }) {
       </div>
 
       {/* Institutions Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredInstitutions.length === 0 ? (
-          <div className="col-span-full text-center text-gray-400 py-12">
-            <p className="font-medium">No institutions found</p>
-            <p className="text-sm mt-1">Try a different search term</p>
-          </div>
-        ) : (
-          filteredInstitutions.map(org => (
-            <div
-              key={org.id}
-              onClick={() => setSelectedInstitution(org)}
-              className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition cursor-pointer"
-            >
-              <img
-                src={org.image}
-                alt={org.name_en}
-                className="w-full h-32 object-contain rounded-lg bg-gray-50 mb-4 p-2"
-                onError={(e) => { e.target.src = '/image/icon.png'; }}
-              />
-              <h3 className="font-semibold text-gray-900 mb-2 text-center">{org.name_en}</h3>
-              <p className="text-sm text-gray-500 text-center">{org.services.length} services</p>
+      {servicesLoading ? (
+        <div className="col-span-full text-center text-gray-500 py-12">
+          <div className="animate-pulse">Loading institutions...</div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredInstitutions.length === 0 ? (
+            <div className="col-span-full text-center text-gray-400 py-12">
+              <p className="font-medium">No institutions found</p>
+              <p className="text-sm mt-1">Try a different search term</p>
             </div>
-          ))
-        )}
-      </div>
+          ) : (
+            filteredInstitutions.map(inst => {
+              const instServices = getServicesByInstitution(inst.id);
+              return (
+                <div
+                  key={inst.id}
+                  onClick={() => setSelectedInstitution(inst)}
+                  className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition cursor-pointer"
+                >
+                  <div className="w-full h-32 flex items-center justify-center rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 mb-4">
+                    {inst.logo_url ? (
+                      <img
+                        src={inst.logo_url}
+                        alt={inst.name_en}
+                        className="max-w-full max-h-full object-contain p-2"
+                        onError={(e) => { 
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div className={inst.logo_url ? "hidden" : "flex"} style={{display: inst.logo_url ? 'none' : 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center'}}>
+                      <span className="text-4xl font-bold text-blue-600">
+                        {inst.name_en?.charAt(0) || 'I'}
+                      </span>
+                    </div>
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2 text-center">{inst.name_en}</h3>
+                  <p className="text-sm text-gray-500 text-center">{instServices.length} services</p>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
     </>
   );
 }

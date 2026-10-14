@@ -63,6 +63,7 @@ export const createApplication = async (applicationData, currentUser) => {
         application_number,
         status,
         submitted_at,
+        updated_at,
         services (
           id,
           title_en,
@@ -129,10 +130,12 @@ export const getApplications = async (filters, currentUser) => {
         application_number,
         status,
         submitted_at,
+        updated_at,
         reviewed_at,
         completed_at,
         citizen_id,
         assigned_to,
+        application_data,
         services (
           id,
           title_en,

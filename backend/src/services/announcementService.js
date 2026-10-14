@@ -13,7 +13,9 @@ export const getAnnouncements = async (filters, currentUser) => {
       .select(`
         id,
         title,
+        title_am,
         content,
+        content_am,
         scope,
         target_roles,
         is_active,
@@ -239,7 +241,7 @@ export const updateAnnouncement = async (announcementId, updates, currentUser) =
     // Get existing announcement
     const { data: existing } = await supabase
       .from('announcements')
-      .select('id, published_by, title')
+      .select('id, published_by, title, institution_id, scope')
       .eq('id', announcementId)
       .single();
 
@@ -250,13 +252,24 @@ export const updateAnnouncement = async (announcementId, updates, currentUser) =
       };
     }
 
-    // Authorization: only creator or admins can update
-    if (existing.published_by !== currentUser.id && 
-        !['SUPER_ADMIN', 'MESOB_MANAGER'].includes(currentUser.role)) {
-      return {
-        success: false,
-        message: 'You do not have permission to update this announcement.'
-      };
+    // Authorization checks
+    const isCreator = existing.published_by === currentUser.id;
+    const isSuperAdmin = ['SUPER_ADMIN', 'MESOB_MANAGER'].includes(currentUser.role);
+    const isInstitutionManager = currentUser.role === 'INSTITUTION_MANAGER';
+    const isOwnInstitution = existing.institution_id === currentUser.institution_id;
+    const isInstitutionScoped = existing.scope === 'INSTITUTION';
+    const isInternalScoped = existing.scope === 'INTERNAL';
+
+    // Super Admin and MESOB Manager can update any announcement
+    // Institution Manager can update: INTERNAL, own institution's INSTITUTION-scoped, or own announcements
+    // Creator can update their own announcement
+    if (!isCreator && !isSuperAdmin) {
+      if (!isInstitutionManager || (!isInternalScoped && !(isInstitutionScoped && isOwnInstitution))) {
+        return {
+          success: false,
+          message: 'You do not have permission to update this announcement.'
+        };
+      }
     }
 
     // Prepare update data
@@ -377,7 +390,7 @@ export const deleteAnnouncement = async (announcementId, currentUser) => {
     // Get announcement
     const { data: announcement } = await supabase
       .from('announcements')
-      .select('id, published_by, title')
+      .select('id, published_by, title, institution_id, scope')
       .eq('id', announcementId)
       .single();
 
@@ -388,13 +401,24 @@ export const deleteAnnouncement = async (announcementId, currentUser) => {
       };
     }
 
-    // Authorization
-    if (announcement.published_by !== currentUser.id && 
-        !['SUPER_ADMIN', 'MESOB_MANAGER'].includes(currentUser.role)) {
-      return {
-        success: false,
-        message: 'You do not have permission to delete this announcement.'
-      };
+    // Authorization checks
+    const isCreator = announcement.published_by === currentUser.id;
+    const isSuperAdmin = ['SUPER_ADMIN', 'MESOB_MANAGER'].includes(currentUser.role);
+    const isInstitutionManager = currentUser.role === 'INSTITUTION_MANAGER';
+    const isOwnInstitution = announcement.institution_id === currentUser.institution_id;
+    const isInstitutionScoped = announcement.scope === 'INSTITUTION';
+    const isInternalScoped = announcement.scope === 'INTERNAL';
+
+    // Super Admin and MESOB Manager can delete any announcement
+    // Institution Manager can delete: INTERNAL, own institution's INSTITUTION-scoped, or own announcements
+    // Creator can delete their own announcement
+    if (!isCreator && !isSuperAdmin) {
+      if (!isInstitutionManager || (!isInternalScoped && !(isInstitutionScoped && isOwnInstitution))) {
+        return {
+          success: false,
+          message: 'You do not have permission to delete this announcement.'
+        };
+      }
     }
 
     // Delete

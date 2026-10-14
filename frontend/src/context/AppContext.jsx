@@ -1,3 +1,4 @@
+
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from 'react';
 
@@ -63,12 +64,11 @@ export const translations = {
     hero_subtitle: 'Modern Ethiopian Services for Organized Benefit.',
     hero_desc: '47+ government services in one MESOB to make life simpler for you.',
     hero_search: 'Search for Services and Institutions',
-
     // about
     about_heading1: 'Serving Our',
     about_heading2: 'Community',
     about_heading3: 'with Excellence',
-    about_body: 'In one Mesob Center, we bring together essential government services, resources, and information into one seamless digital platform. Whether you are applying for permits, accessing public records, or exploring social services, our citizen-first hub is designed to make your experience faster, easier, and more transparent.',
+    about_body_home: 'In one Mesob Center, we bring together essential government services, resources, and information into one seamless digital platform. Whether you are applying for permits, accessing public records, or exploring social services, our citizen-first hub is designed to make your experience faster, easier, and more transparent.',
     about_btn1: 'Explore Services',
     about_btn2: 'Learn More',
     about_card1_title: 'Digital Services',
@@ -77,6 +77,36 @@ export const translations = {
     about_card2_desc: '24/7',
     about_card3_title: 'Quick Processing',
     about_card3_desc: 'Fast and efficient service',
+
+    // about us page
+    about_page_title: 'About Us',
+    about_page_subtitle: 'Your trusted partner for seamless government services in Hawassa',
+    about_heading: 'About Hawassa MESOB',
+    about_body: 'Hawassa MESOB Service Center is a pioneering one-stop service platform that integrates multiple government and organizational services into a single, accessible location. We are dedicated to transforming the way residents access essential services by eliminating bureaucracy, reducing wait times, and enhancing service delivery through digital innovation.',
+    about_feature1_title: 'One-Stop Service',
+    about_feature1_desc: 'All essential services in one location',
+    about_feature2_title: 'Trusted Partners',
+    about_feature2_desc: '12+ government organizations',
+    about_feature3_title: 'Fast & Efficient',
+    about_feature3_desc: 'Streamlined processes for quick service',
+
+    // mission
+    mission_title: 'Our Mission',
+    mission_body: 'To establish a seamless, efficient, and secure one-stop service center in Hawassa where residents can access essential government and organizational services in a single location, reducing bureaucracy, improving service efficiency, and fostering trust between residents and service providers.',
+    mission_point1: 'Provide seamless access to essential government services in one convenient location',
+    mission_point2: 'Reduce bureaucratic barriers and simplify service delivery processes',
+    mission_point3: 'Ensure secure, efficient, and transparent service operations',
+    mission_point4: 'Build trust and strengthen relationships between residents and service providers',
+
+    // vision
+    vision_title: 'Our Vision',
+    vision_body: 'To become a leading digital and physical service hub in Hawassa, integrating multiple organizations into a single, efficient, and secure platform that transforms public service delivery, enhances resident satisfaction, and contributes to the advancement of one-stop service centers in Ethiopia.',
+    vision_goal1_title: 'Leading Service Hub',
+    vision_goal1_desc: 'Be the benchmark for integrated service delivery in Hawassa and Ethiopia',
+    vision_goal2_title: 'Digital Innovation',
+    vision_goal2_desc: 'Transform service delivery through cutting-edge digital solutions',
+    vision_goal3_title: 'Resident Satisfaction',
+    vision_goal3_desc: 'Achieve the highest levels of citizen satisfaction and trust',
 
     // organizations
     org_title: 'SERVICE PROVIDER ORGANIZATIONS',
@@ -392,6 +422,22 @@ export const translations = {
     my_applications: 'My Applications',
     application_number: 'Application Number',
     application_date: 'Application Date',
+    
+    // ========== CITIZEN DASHBOARD ==========
+    my_dashboard: 'My Dashboard',
+    citizen_portal: 'Citizen Portal',
+    welcome_back: 'Welcome back',
+    track_applications: 'Track your applications and apply for services at MESOB Center.',
+    active_applications: 'Active Applications',
+    completed_apps: 'Completed',
+    active_queues: 'Active Queues',
+    recent_applications: 'Recent Applications',
+    application_id: 'Application ID',
+    submitted: 'Submitted',
+    my_feedback: 'My Feedback',
+    apply_for_service: 'Apply for Service',
+    browse_services: 'Browse available services',
+    profile_documents: 'Profile & Documents',
     application_status: 'Application Status',
     application_type: 'Application Type',
     submit_application: 'Submit Application',
@@ -559,7 +605,7 @@ export const translations = {
     about_heading1: 'ማህበረሰባችንን',
     about_heading2: 'በብቃት',
     about_heading3: 'እናገለግላለን',
-    about_body: 'በአንድ የመሶብ ማዕከል ውስጥ፣ አስፈላጊ የሆኑ የመንግሥት አገልግሎቶችን፣ ሀብቶችን እና መረጃዎችን ወደ አንድ ፕላትፎርም አዋህደናል። ፈቃዶችን ለማውጣት፣ የህዝብ መዝገቦችን ለማግኘት ወይም ማህበራዊ አገልግሎቶችን ለመጠቀም፣ ዜጋ ማዕከላዊ ፕላትፎርማችን ልምድዎን ፈጣን፣ ቀላል እና ግልፅ ያደርጋል።',
+    about_body_home: 'በአንድ የመሶብ ማዕከል ውስጥ፣ አስፈላጊ የሆኑ የመንግሥት አገልግሎቶችን፣ ሀብቶችን እና መረጃዎችን ወደ አንድ ፕላትፎርም አዋህደናል። ፈቃዶችን ለማውጣት፣ የህዝብ መዝገቦችን ለማግኘት ወይም ማህበራዊ አገልግሎቶችን ለመጠቀም፣ ዜጋ ማዕከላዊ ፕላትፎርማችን ልምድዎን ፈጣን፣ ቀላል እና ግልፅ ያደርጋል።',
     about_btn1: 'አገልግሎቶችን ይመልከቱ',
     about_btn2: 'ተጨማሪ ይወቁ',
     about_card1_title: 'ዲጂታል አገልግሎቶች',
@@ -568,6 +614,36 @@ export const translations = {
     about_card2_desc: '24/7',
     about_card3_title: 'ፈጣን ሂደት',
     about_card3_desc: 'ፈጣን እና ቀልጣፋ አገልግሎት',
+
+    // about us page
+    about_page_title: 'ስለ እኛ',
+    about_page_subtitle: 'በሃዋሳ ውስጥ ለቀላል የመንግስት አገልግሎቶች የታመነ አጋርዎ',
+    about_heading: 'ስለ ሃዋሳ መሶብ',
+    about_body: 'የሃዋሳ መሶብ አገልግሎት ማዕከል ብዙ የመንግስት እና የድርጅት አገልግሎቶችን ወደ አንድ ቦታ የሚያዋህድ አዲስ አንድ-ማቆሚያ አገልግሎት መድረክ ነው። ነዋሪዎች አስፈላጊ አገልግሎቶችን የሚያገኙበትን መንገድ ለመለወጥ ቁርጠኞች ነን፤ ቢሮክራሲን በማስወገድ፣ የጥበቃ ጊዜን በመቀነስ እና በዲጂታል ፈጠራ የአገልግሎት አሰጣጥን በማሻሻል።',
+    about_feature1_title: 'አንድ-ማቆሚያ አገልግሎት',
+    about_feature1_desc: 'ሁሉም አስፈላጊ አገልግሎቶች በአንድ ቦታ',
+    about_feature2_title: 'የታመኑ አጋሮች',
+    about_feature2_desc: '12+ የመንግስት ድርጅቶች',
+    about_feature3_title: 'ፈጣን እና ቀልጣፋ',
+    about_feature3_desc: 'ለፈጣን አገልግሎት የተሻሻሉ ሂደቶች',
+
+    // mission
+    mission_title: 'ተልዕኮአችን',
+    mission_body: 'በሃዋሳ ውስጥ ነዋሪዎች አስፈላጊ የመንግስት እና የድርጅት አገልግሎቶችን በአንድ ቦታ ማግኘት የሚችሉበት፣ ቢሮክራሲን የሚቀንስ፣ የአገልግሎት ቅልጥፍናን የሚያሻሽል እና በነዋሪዎች እና አገልግሎት ሰጪዎች መካከል እምነትን የሚያሳድግ ቀላል፣ ቀልጣፋ እና ደህንነቱ የተጠበቀ አንድ-ማቆሚያ አገልግሎት ማዕከል ማቋቋም።',
+    mission_point1: 'አስፈላጊ የመንግስት አገልግሎቶችን በአንድ ምቹ ቦታ ቀላል መዳረሻ መስጠት',
+    mission_point2: 'ቢሮክራሲያዊ መሰናክሎችን መቀነስ እና የአገልግሎት አሰጣጥ ሂደቶችን ማቃለል',
+    mission_point3: 'ደህንነቱ የተጠበቀ፣ ቀልጣፋ እና ግልፅ የአገልግሎት ስራዎችን ማረጋገጥ',
+    mission_point4: 'እምነትን መገንባት እና በነዋሪዎች እና አገልግሎት ሰጪዎች መካከል ግንኙነቶችን ማጠናከር',
+
+    // vision
+    vision_title: 'ራዕያችን',
+    vision_body: 'ብዙ ድርጅቶችን ወደ አንድ ቀልጣፋ እና ደህንነቱ የተጠበቀ መድረክ በማዋሃድ የህዝብ አገልግሎት አሰጣጥን የሚለውጥ፣ የነዋሪዎችን እርካታ የሚያሻሽል እና በኢትዮጵያ ውስጥ አንድ-ማቆሚያ አገልግሎት ማዕከሎችን እድገት አስተዋጽኦ የማድረግ መሪ ዲጂታል እና አካላዊ አገልግሎት ማዕከል በሃዋሳ መሆን።',
+    vision_goal1_title: 'መሪ አገልግሎት ማዕከል',
+    vision_goal1_desc: 'በሃዋሳ እና በኢትዮጵያ ውስጥ ለተቀናጀ አገልግሎት አሰጣጥ መመዘኛ መሆን',
+    vision_goal2_title: 'ዲጂታል ፈጠራ',
+    vision_goal2_desc: 'በዘመናዊ ዲጂታል መፍትሄዎች አገልግሎት አሰጣጥን መለወጥ',
+    vision_goal3_title: 'የነዋሪዎች እርካታ',
+    vision_goal3_desc: 'ከፍተኛውን የዜጎች እርካታ እና እምነት ማሳካት',
 
     // organizations
     org_title: 'አገልግሎት ሰጪ ድርጅቶች',
@@ -882,6 +958,22 @@ export const translations = {
     my_applications: 'ማመልከቻዎቼ',
     application_number: 'የማመልከቻ ቁጥር',
     application_date: 'የማመልከቻ ቀን',
+    
+    // ========== CITIZEN DASHBOARD ==========
+    my_dashboard: 'የኔ ዳሽቦርድ',
+    citizen_portal: 'የዜጋ መግቢያ',
+    welcome_back: 'እንደገና እንኳን ደህና መጡ',
+    track_applications: 'ማመልከቻዎችዎን ይከታተሉ እና በመሶብ ማዕከል አገልግሎቶችን ያመልክቱ።',
+    active_applications: 'ንቁ ማመልከቻዎች',
+    completed_apps: 'የተጠናቀቁ',
+    active_queues: 'ንቁ ወረፈቶች',
+    recent_applications: 'የቅርብ ጊዜ ማመልከቻዎች',
+    application_id: 'የማመልከቻ መለያ',
+    submitted: 'ቀርቧል',
+    my_feedback: 'ግብረመልሴ',
+    apply_for_service: 'ለአገልግሎት ማመልከቻ',
+    browse_services: 'የሚገኙ አገልግሎቶችን ያስሱ',
+    profile_documents: 'መገለጫ እና ሰነዶች',
     application_status: 'የማመልከቻ ሁኔታ',
     application_type: 'የማመልከቻ ዓይነት',
     submit_application: 'ማመልከቻ አስገባ',

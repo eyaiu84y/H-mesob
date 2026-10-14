@@ -291,7 +291,9 @@ export const getUserProfile = async (userId) => {
 
     return {
       success: true,
-      data: user
+      data: {
+        user
+      }
     };
 
   } catch (error) {

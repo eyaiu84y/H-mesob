@@ -1,4 +1,5 @@
 import { supabase } from '../config/supabase.js';
+import { sendQueueCallSMS, sendQueueJoinSMS, logSMSNotification } from './smsService.js';
 
 /**
  * Join queue
@@ -191,6 +192,49 @@ export const joinQueue = async (queueData, currentUser) => {
       'QUEUE_JOIN',
       `Joined queue with token ${queueNumber}`
     );
+
+    // Send SMS confirmation (don't let this block success)
+    try {
+      if (currentUser.phone) {
+        // Count pending tokens before this one to get position
+        const { count } = await supabase
+          .from('queue_entries')
+          .select('id', { count: 'exact', head: true })
+          .eq('institution_id', institutionId)
+          .eq('status', 'PENDING')
+          .lt('created_at', new Date().toISOString());
+
+        const position = (count || 0) + 1;
+
+        // Send SMS
+        const smsResult = await sendQueueJoinSMS(
+          currentUser.phone,
+          queueNumber,
+          newQueue.institutions?.name_en || 'MESOB Center',
+          position,
+          'en' // or 'am' for Amharic
+        );
+
+        // Log SMS attempt
+        await logSMSNotification(
+          currentUser.id,
+          currentUser.phone,
+          `Queue join: ${queueNumber}`,
+          smsResult.success ? 'SUCCESS' : 'FAILED',
+          smsResult.data
+        );
+
+        if (smsResult.success) {
+          console.log('✅ Queue join SMS sent to citizen:', currentUser.phone);
+        } else {
+          console.log('⚠️ Queue join SMS failed (non-critical):', smsResult.message);
+        }
+      } else {
+        console.log('⚠️ No phone number for citizen (SMS skipped)');
+      }
+    } catch (smsError) {
+      console.error('⚠️ Failed to send queue join SMS (non-critical):', smsError);
+    }
 
     return {
       success: true,
@@ -798,6 +842,56 @@ export const callNext = async (queueId, currentUser) => {
       console.log('✅ Notification sent to citizen');
     } catch (notifError) {
       console.error('⚠️ Failed to send notification (non-critical):', notifError);
+    }
+
+    // Send SMS notification when citizen is called (don't let this block success)
+    try {
+      // Fetch citizen phone number and name
+      const { data: citizen, error: citizenError } = await supabase
+        .from('users')
+        .select('phone, full_name')
+        .eq('id', queue.citizen_id)
+        .single();
+
+      if (!citizenError && citizen && citizen.phone) {
+        // Fetch institution name
+        const { data: institution } = await supabase
+          .from('institutions')
+          .select('name_en, name_am')
+          .eq('id', queue.institution_id)
+          .single();
+
+        const institutionName = institution?.name_en || 'MESOB Center';
+
+        console.log('[SMS] Preparing to send queue call SMS to:', citizen.phone);
+
+        // Send SMS notification (in English by default, can add language preference later)
+        const smsResult = await sendQueueCallSMS(
+          citizen.phone,
+          queue.queue_number,
+          institutionName,
+          'en' // Change to 'am' for Amharic
+        );
+
+        // Log SMS attempt to database
+        await logSMSNotification(
+          queue.citizen_id,
+          citizen.phone,
+          `Queue ${queue.queue_number} called at ${institutionName}`,
+          smsResult.success ? 'SUCCESS' : 'FAILED',
+          smsResult.data
+        );
+
+        if (smsResult.success) {
+          console.log('✅ SMS sent successfully to citizen:', citizen.phone);
+        } else {
+          console.log('⚠️ SMS failed (non-critical):', smsResult.message);
+        }
+      } else {
+        console.log('⚠️ No phone number for citizen (SMS skipped)');
+      }
+    } catch (smsError) {
+      console.error('⚠️ Failed to send SMS (non-critical):', smsError);
     }
 
     // Log audit (don't let this block success)

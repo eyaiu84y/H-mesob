@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth, ROLE_LABELS, ROLE_BADGE } from '../../context/AuthContext';
 import { useAnnouncements } from '../../context/AnnouncementContext';
 import { useServices } from '../../context/ServiceContext';
+import { useQueue } from '../../context/QueueContext';
+import { useMaintenance } from '../../context/MaintenanceContext';
 import { organizationsData } from '../../data/organizations';
 import { useApp } from '../../context/AppContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
@@ -1686,6 +1688,335 @@ function SectionSystemSettings() {
   );
 }
 
+// ─── Maintenance Report Tab Component ─────────────────────────────────────
+function MaintenanceReportTab() {
+  const { reports } = useMaintenance();
+  const { institutions } = useServices();
+
+  // Calculate maintenance statistics
+  const stats = {
+    total: reports.length,
+    reported: reports.filter(r => r.status === 'REPORTED' || r.status === 'Submitted').length,
+    assigned: reports.filter(r => r.status === 'ASSIGNED' || r.status === 'Assigned').length,
+    inProgress: reports.filter(r => r.status === 'IN_PROGRESS' || r.status === 'In Progress').length,
+    resolved: reports.filter(r => r.status === 'RESOLVED' || r.status === 'Completed').length,
+  };
+
+  // Group by institution
+  const byInstitution = {};
+  reports.forEach(r => {
+    const instId = r.institutionId || r.institution_id;
+    if (!byInstitution[instId]) {
+      byInstitution[instId] = { reported: 0, assigned: 0, inProgress: 0, resolved: 0 };
+    }
+    const status = r.status.toLowerCase();
+    if (status === 'reported' || status === 'submitted') byInstitution[instId].reported++;
+    else if (status === 'assigned') byInstitution[instId].assigned++;
+    else if (status === 'in_progress' || status === 'in progress') byInstitution[instId].inProgress++;
+    else if (status === 'resolved' || status === 'completed') byInstitution[instId].resolved++;
+  });
+
+  // Group by priority
+  const byPriority = {
+    LOW: reports.filter(r => (r.priority || '').toUpperCase() === 'LOW').length,
+    NORMAL: reports.filter(r => (r.priority || '').toUpperCase() === 'NORMAL').length,
+    HIGH: reports.filter(r => (r.priority || '').toUpperCase() === 'HIGH').length,
+    CRITICAL: reports.filter(r => (r.priority || '').toUpperCase() === 'CRITICAL').length,
+  };
+
+  return (
+    <>
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+        <div className="stat-card">
+          <p className="text-sm text-gray-500 mb-1">Total Reports</p>
+          <p className="text-2xl font-bold">{stats.total}</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-sm text-gray-500 mb-1">Reported</p>
+          <p className="text-2xl font-bold text-gray-600">{stats.reported}</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-sm text-gray-500 mb-1">Assigned</p>
+          <p className="text-2xl font-bold text-blue-600">{stats.assigned}</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-sm text-gray-500 mb-1">In Progress</p>
+          <p className="text-2xl font-bold text-orange-600">{stats.inProgress}</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-sm text-gray-500 mb-1">Resolved</p>
+          <p className="text-2xl font-bold text-green-600">{stats.resolved}</p>
+        </div>
+      </div>
+
+      {/* Priority Distribution */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <div className="stat-card border-l-4 border-gray-400">
+          <p className="text-sm text-gray-500 mb-1">Low Priority</p>
+          <p className="text-xl font-bold">{byPriority.LOW}</p>
+        </div>
+        <div className="stat-card border-l-4 border-blue-400">
+          <p className="text-sm text-gray-500 mb-1">Normal Priority</p>
+          <p className="text-xl font-bold">{byPriority.NORMAL}</p>
+        </div>
+        <div className="stat-card border-l-4 border-orange-400">
+          <p className="text-sm text-gray-500 mb-1">High Priority</p>
+          <p className="text-xl font-bold">{byPriority.HIGH}</p>
+        </div>
+        <div className="stat-card border-l-4 border-red-400">
+          <p className="text-sm text-gray-500 mb-1">Critical Priority</p>
+          <p className="text-xl font-bold">{byPriority.CRITICAL}</p>
+        </div>
+      </div>
+
+      {/* Maintenance by Institution */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-900">Maintenance by Institution</h3>
+        </div>
+        <div className="table-container border-0 rounded-none">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Institution</th>
+                <th>Reported</th>
+                <th>Assigned</th>
+                <th>In Progress</th>
+                <th>Resolved</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.keys(byInstitution).length > 0 ? (
+                Object.entries(byInstitution).map(([instId, counts]) => {
+                  const inst = institutions.find(i => i.id === instId);
+                  const total = counts.reported + counts.assigned + counts.inProgress + counts.resolved;
+                  return (
+                    <tr key={instId}>
+                      <td className="font-medium">{inst?.name_en || 'Unknown Institution'}</td>
+                      <td><span className="badge bg-gray-100 text-gray-800">{counts.reported}</span></td>
+                      <td><span className="badge bg-blue-100 text-blue-800">{counts.assigned}</span></td>
+                      <td><span className="badge bg-orange-100 text-orange-800">{counts.inProgress}</span></td>
+                      <td><span className="badge bg-green-100 text-green-800">{counts.resolved}</span></td>
+                      <td className="font-bold">{total}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="6" className="text-center text-gray-400 py-8">
+                    No maintenance data available
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Recent Maintenance Reports */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-900">Recent Maintenance Reports</h3>
+        </div>
+        <div className="table-container border-0 rounded-none">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Report Number</th>
+                <th>Title</th>
+                <th>Institution</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Reported</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reports.slice(0, 10).map(r => {
+                const inst = institutions.find(i => i.id === (r.institutionId || r.institution_id));
+                return (
+                  <tr key={r.id}>
+                    <td className="font-medium">{r.reportNumber || 'N/A'}</td>
+                    <td>{r.title || r.problem_description || r.problemDescription || r.description || 'Maintenance Issue'}</td>
+                    <td>{inst?.name_en || 'Unknown'}</td>
+                    <td>
+                      <span className={`badge ${
+                        (r.priority || '').toUpperCase() === 'CRITICAL' ? 'bg-red-100 text-red-800' :
+                        (r.priority || '').toUpperCase() === 'HIGH' ? 'bg-orange-100 text-orange-800' :
+                        (r.priority || '').toUpperCase() === 'NORMAL' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {r.priority || 'NORMAL'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`badge ${
+                        r.status === 'REPORTED' || r.status === 'Submitted' ? 'bg-gray-100 text-gray-800' :
+                        r.status === 'ASSIGNED' || r.status === 'Assigned' ? 'bg-blue-100 text-blue-800' :
+                        r.status === 'IN_PROGRESS' || r.status === 'In Progress' ? 'bg-orange-100 text-orange-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {r.status}
+                      </span>
+                    </td>
+                    <td>{r.reportedAtTimestamp ? new Date(r.reportedAtTimestamp).toLocaleDateString() : 'N/A'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Queue Report Tab Component ─────────────────────────────────────
+function QueueReportTab() {
+  const { myTickets } = useQueue();
+  const { institutions } = useServices();
+
+  // Calculate queue statistics
+  const stats = {
+    total: myTickets.length,
+    pending: myTickets.filter(q => q.status === 'PENDING' || q.status === 'pending').length,
+    inProgress: myTickets.filter(q => q.status === 'IN_PROGRESS' || q.status === 'called').length,
+    completed: myTickets.filter(q => q.status === 'COMPLETED' || q.status === 'completed').length,
+    cancelled: myTickets.filter(q => q.status === 'CANCELLED' || q.status === 'cancelled').length,
+  };
+
+  // Group by institution
+  const byInstitution = {};
+  myTickets.forEach(q => {
+    const instId = q.institutionId || q.institution_id;
+    if (!byInstitution[instId]) {
+      byInstitution[instId] = { pending: 0, inProgress: 0, completed: 0, cancelled: 0 };
+    }
+    const status = q.status.toLowerCase();
+    if (status === 'pending') byInstitution[instId].pending++;
+    else if (status === 'in_progress' || status === 'called') byInstitution[instId].inProgress++;
+    else if (status === 'completed') byInstitution[instId].completed++;
+    else if (status === 'cancelled') byInstitution[instId].cancelled++;
+  });
+
+  return (
+    <>
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+        <div className="stat-card">
+          <p className="text-sm text-gray-500 mb-1">Total Queue</p>
+          <p className="text-2xl font-bold">{stats.total}</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-sm text-gray-500 mb-1">Pending</p>
+          <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-sm text-gray-500 mb-1">In Progress</p>
+          <p className="text-2xl font-bold text-blue-600">{stats.inProgress}</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-sm text-gray-500 mb-1">Completed</p>
+          <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-sm text-gray-500 mb-1">Cancelled</p>
+          <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
+        </div>
+      </div>
+
+      {/* Queue by Institution */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-900">Queue by Institution</h3>
+        </div>
+        <div className="table-container border-0 rounded-none">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Institution</th>
+                <th>Pending</th>
+                <th>In Progress</th>
+                <th>Completed</th>
+                <th>Cancelled</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.keys(byInstitution).length > 0 ? (
+                Object.entries(byInstitution).map(([instId, counts]) => {
+                  const inst = institutions.find(i => i.id === instId);
+                  const total = counts.pending + counts.inProgress + counts.completed + counts.cancelled;
+                  return (
+                    <tr key={instId}>
+                      <td className="font-medium">{inst?.name_en || 'Unknown Institution'}</td>
+                      <td><span className="badge bg-yellow-100 text-yellow-800">{counts.pending}</span></td>
+                      <td><span className="badge bg-blue-100 text-blue-800">{counts.inProgress}</span></td>
+                      <td><span className="badge bg-green-100 text-green-800">{counts.completed}</span></td>
+                      <td><span className="badge bg-red-100 text-red-800">{counts.cancelled}</span></td>
+                      <td className="font-bold">{total}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="6" className="text-center text-gray-400 py-8">
+                    No queue data available
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Recent Queue Entries */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-900">Recent Queue Entries</h3>
+        </div>
+        <div className="table-container border-0 rounded-none">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Queue Number</th>
+                <th>Citizen</th>
+                <th>Institution</th>
+                <th>Status</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {myTickets.slice(0, 10).map(q => {
+                const inst = institutions.find(i => i.id === (q.institutionId || q.institution_id));
+                return (
+                  <tr key={q.id}>
+                    <td className="font-medium">{q.queueNumber || q.queue_number || 'N/A'}</td>
+                    <td>{q.citizenName || 'Citizen'}</td>
+                    <td>{inst?.name_en || 'Unknown'}</td>
+                    <td>
+                      <span className={`badge ${
+                        q.status === 'PENDING' || q.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        q.status === 'IN_PROGRESS' || q.status === 'called' ? 'bg-blue-100 text-blue-800' :
+                        q.status === 'COMPLETED' || q.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {q.status}
+                      </span>
+                    </td>
+                    <td>{q.createdAt ? new Date(q.createdAt).toLocaleDateString() : 'N/A'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── SECTION: Reports ─────────────────────────────────────────────
 function SectionReports() {
   const { getUsers } = useAuth();
@@ -1759,17 +2090,9 @@ function SectionReports() {
         </>
       )}
 
-      {activeTab === 'queue' && (
-        <div className="p-8 bg-white rounded-2xl border border-gray-100 shadow-sm text-center text-gray-400">
-          Queue report data will be available after backend integration. System-wide queue data is currently managed at the operational level.
-        </div>
-      )}
+      {activeTab === 'queue' && <QueueReportTab />}
 
-      {activeTab === 'maintenance' && (
-        <div className="p-8 bg-white rounded-2xl border border-gray-100 shadow-sm text-center text-gray-400">
-          Maintenance report data will be available after backend integration. Maintenance reports are managed by Technicians and Institution Managers.
-        </div>
-      )}
+      {activeTab === 'maintenance' && <MaintenanceReportTab />}
 
       <div className="mt-4 p-4 bg-purple-50 border border-purple-100 rounded-xl text-sm text-purple-900">
         <strong>Reports:</strong> System-wide reporting. Payment, appointment, and grievance reports are not part of the approved system scope.

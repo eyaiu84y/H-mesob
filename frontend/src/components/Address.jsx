@@ -28,7 +28,7 @@ export default function Address() {
                 <div className="text-2xl">📞</div>
                 <div>
                   <p className="font-semibold text-gray-900 dark:text-white">{t.addr_phone_label}</p>
-                  <p className="text-gray-700 dark:text-gray-300">+251-xx-xxxxxx</p>
+                  <p className="text-gray-700 dark:text-gray-300">+251928003080</p>
                   <p className="text-gray-700 dark:text-gray-300">+251-xx-xxx-xxxx (Fax)</p>
                 </div>
               </div>

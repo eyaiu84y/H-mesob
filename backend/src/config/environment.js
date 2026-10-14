@@ -19,13 +19,7 @@ export const config = {
   // JWT
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
-  jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
-  
-  // Telegram (to be configured later)
-  telegram: {
-    botToken: process.env.TELEGRAM_BOT_TOKEN,
-    chatId: process.env.TELEGRAM_CHAT_ID
-  }
+  jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d'
 };
 
 // Validate required environment variables

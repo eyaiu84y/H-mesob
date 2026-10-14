@@ -39,11 +39,34 @@ function transformApplication(backendApp) {
     applicationNumber: backendApp.application_number,
     referenceNumber: backendApp.application_number, // Same as application_number
     status: mapBackendStatusToFrontend(backendApp.status),
-    submittedDate: backendApp.submitted_at ? new Date(backendApp.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
-    lastUpdated: backendApp.updated_at ? new Date(backendApp.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
-    service: backendApp.services?.title_en || backendApp.services?.name || 'Unknown Service',
-    serviceName_am: backendApp.services?.title_am || backendApp.services?.name_am,
-    institution: backendApp.institutions?.name_en || 'Unknown Institution',
+    submittedDate: backendApp.submitted_at ? new Date(backendApp.submitted_at).toLocaleString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit',
+      hour12: true,
+      timeZone: 'Africa/Addis_Ababa'
+    }) : 'N/A',
+    lastUpdated: backendApp.updated_at ? new Date(backendApp.updated_at).toLocaleString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit',
+      hour12: true,
+      timeZone: 'Africa/Addis_Ababa'
+    }) : 'N/A',
+    // Raw date fields for filtering
+    submitted_at: backendApp.submitted_at,
+    updated_at: backendApp.updated_at,
+    created_at: backendApp.submitted_at, // Alias for compatibility
+    service: backendApp.services?.title_en || backendApp.services?.name || backendApp.application_data?.serviceName || 'Unknown Service',
+serviceName_am: backendApp.services?.title_am || backendApp.services?.name_am,
+institution: backendApp.institutions?.name_en || backendApp.application_data?.institutionName || 'Unknown Institution',
+
     institutionName_am: backendApp.institutions?.name_am,
     citizenName: backendApp.users?.full_name,
     citizenEmail: backendApp.users?.email,
@@ -130,15 +153,32 @@ export function ApplicationProvider({ children }) {
       const appData = response?.data?.data || response?.data || response;
       
       if (appData && appData.id) {
-        const newApp = transformApplication(appData);
+        // Transform partial data as fallback
+        const partialApp = transformApplication(appData);
 
-        // Add to local state
-        setApplications(prev => [newApp, ...prev]);
-
-        // Refresh from backend to get complete data
-        await fetchApplications();
-
-        return { success: true, application: newApp };
+        // Fetch complete application data with joined service/institution info
+        try {
+          // Make direct API call instead of calling getApplication to avoid circular dependency
+          const completeResponse = await api.get(`/applications/${appData.id}`);
+          const completeData = completeResponse?.data?.data || completeResponse?.data || completeResponse;
+          
+          if (completeData && completeData.id) {
+            const completeApp = transformApplication(completeData);
+            setApplications(prev => [completeApp, ...prev]);
+            await fetchApplications();
+            return { success: true, application: completeApp };
+          } else {
+            console.warn('Could not fetch complete application data, using partial data');
+            setApplications(prev => [partialApp, ...prev]);
+            await fetchApplications();
+            return { success: true, application: partialApp };
+          }
+        } catch (fetchError) {
+          console.error('Failed to fetch complete application data:', fetchError);
+          setApplications(prev => [partialApp, ...prev]);
+          await fetchApplications();
+          return { success: true, application: partialApp };
+        }
       } else {
         throw new Error('Failed to create application');
       }
@@ -197,7 +237,16 @@ export function ApplicationProvider({ children }) {
         setApplications(prev =>
           prev.map(app =>
             app.id === applicationId
-              ? { ...app, status: newStatus, lastUpdated: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
+              ? { ...app, status: newStatus, lastUpdated: new Date().toLocaleString('en-US', { 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: 'numeric', 
+                  hour: '2-digit', 
+                  minute: '2-digit', 
+                  second: '2-digit',
+                  hour12: true,
+                  timeZone: 'Africa/Addis_Ababa'
+                }) }
               : app
           )
         );

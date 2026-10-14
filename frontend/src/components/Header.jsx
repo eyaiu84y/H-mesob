@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
 const LANGUAGES = [
@@ -9,9 +9,20 @@ const LANGUAGES = [
 
 export default function Header() {
   const { isDark, toggleTheme, lang, switchLang, t } = useApp();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const langRef = useRef(null);
+
+  // Track scroll position for backdrop blur and opacity transition
+  useEffect(() => {
+    function handleScroll() {
+      setIsScrolled(window.scrollY > 20);
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Close language dropdown when clicking outside
   useEffect(() => {
@@ -24,58 +35,92 @@ export default function Header() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  // FDRE Mesob Center header navigation items matching https://mesobcenter.et/
   const navLinks = [
-    { href: '#Home',            label: t.nav_home },
-    { href: '#organizations',   label: t.nav_organizations },
-    { href: '#news',            label: t.nav_news },
-    { href: '#about',           label: t.nav_about },
+    { href: '/', type: 'link', label: t.nav_home || 'Home', id: 'home' },
+    { href: '/#organizations', type: 'scroll', label: t.nav_organizations || 'Organizations', id: 'organizations' },
+    { href: '/#popular-services', type: 'scroll', label: lang === 'am' ? 'አገልግሎቶች' : 'Services', id: 'services' },
+    { href: '/#contact', type: 'scroll', label: t.nav_contact || 'Contact', id: 'contact' },
+    { href: '/service-catalogue', type: 'link', label: lang === 'am' ? 'የአገልግሎት ዝርዝር' : 'Service Catalogue', id: 'catalogue' },
+    { href: '/about-us', type: 'link', label: t.nav_about || 'About Us', id: 'about' },
   ];
 
   const currentLang = LANGUAGES.find((l) => l.code === lang) || LANGUAGES[0];
 
+  // Check if a link is active based on current path
+  const isLinkActive = (link) => {
+    if (link.id === 'home') return location.pathname === '/' && !location.hash;
+    if (link.id === 'catalogue') return location.pathname === '/service-catalogue';
+    if (link.id === 'about') return location.pathname === '/about-us';
+    if (link.type === 'scroll' && location.pathname === '/') {
+      return location.hash === link.href.replace('/', '');
+    }
+    return false;
+  };
+
+  // FDRE Mesob Center signature gradient: #314ea1 (FDRE Blue) -> #1e3a8a (Deep Navy) -> #f4b51a (FDRE Gold)
+  const fdreGradient = isScrolled
+    ? 'linear-gradient(135deg, rgba(49, 78, 161, 0.90) 0%, rgba(30, 58, 138, 0.85) 50%, rgba(244, 181, 26, 0.80) 100%)'
+    : 'linear-gradient(135deg, rgba(49, 78, 161, 0.95) 0%, rgba(30, 58, 138, 0.92) 50%, rgba(244, 181, 26, 0.88) 100%)';
+
   return (
-    <header className="fixed w-full z-50 transition-all duration-300 backdrop-blur-sm shadow-lg bg-mesob-gradient text-white">
+    <header
+      className="fixed w-full z-50 transition-all duration-300 backdrop-blur-sm shadow-lg text-white"
+      style={{ background: fdreGradient }}
+    >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
 
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 cursor-pointer group py-3">
-            <div
-              className="w-16 h-16 overflow-hidden flex items-center justify-center"
-              style={{ transform: 'rotate(157.05deg) translateZ(0px)' }}
-            >
+          {/* Logo - upright circular Mesob emblem matching https://mesobcenter.et/ */}
+          <Link to="/" className="flex items-center space-x-2 cursor-pointer group py-2">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center">
               <img
                 src="https://mesobcenter.et/Companies/Logo.png"
                 alt="Mesob Logo"
-                className="w-12 h-12 object-contain transition-all duration-300 group-hover:drop-shadow-lg block"
+                className="w-10 h-10 sm:w-11 sm:h-11 object-contain transition-all duration-300 group-hover:scale-105 group-hover:drop-shadow-lg"
               />
             </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex space-x-6 items-center text-white">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="font-medium transition-all duration-300 px-3 py-2 rounded-lg hover:opacity-80 text-white"
-              >
-                {link.label}
-              </a>
-            ))}
+          <nav className="hidden lg:flex space-x-5 xl:space-x-7 items-center text-white">
+            {navLinks.map((link) => {
+              const active = isLinkActive(link);
+              const linkClasses = `font-medium text-sm xl:text-base transition-colors duration-200 px-2.5 py-1.5 rounded-lg ${
+                active
+                  ? 'text-[#f4b51a] font-semibold drop-shadow-sm'
+                  : 'text-white hover:text-[#f4b51a]'
+              }`;
 
+              return link.type === 'link' ? (
+                <Link key={link.href} to={link.href} className={linkClasses}>
+                  {link.label}
+                </Link>
+              ) : (
+                <a key={link.href} href={link.href} className={linkClasses}>
+                  {link.label}
+                </a>
+              );
+            })}
+
+            {/* Login button */}
             <Link
               to="/login"
-              className="font-medium transition-all duration-300 px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white"
+              className={`font-medium text-sm xl:text-base transition-all duration-200 px-3.5 py-1.5 rounded-lg border border-white/20 hover:border-[#f4b51a]/60 ${
+                location.pathname === '/login'
+                  ? 'bg-white/30 text-[#f4b51a] font-semibold'
+                  : 'bg-white/15 hover:bg-white/25 text-white hover:text-[#f4b51a]'
+              }`}
             >
-              {t.nav_login}
+              {t.nav_login || 'Login'}
             </Link>
 
             {/* ── Theme Toggle ── */}
             <button
               onClick={toggleTheme}
               title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 text-white hover:bg-white/30 transition-all duration-300 shadow-md hover:shadow-lg"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 text-white hover:bg-white/30 hover:text-[#f4b51a] transition-all duration-200 shadow-sm"
+              aria-label="Toggle theme"
             >
               {isDark ? (
                 /* Sun icon */
@@ -99,7 +144,7 @@ export default function Header() {
             <div className="relative" ref={langRef}>
               <button
                 onClick={() => setLangOpen((o) => !o)}
-                className="flex items-center space-x-1 px-3 py-1.5 rounded-full bg-white/20 text-white hover:bg-white/30 font-medium transition-all duration-300 shadow-sm hover:shadow-md"
+                className="flex items-center space-x-1 px-3 py-1.5 rounded-full bg-white/20 text-white hover:bg-white/30 hover:text-[#f4b51a] font-medium text-sm transition-all duration-200 shadow-sm"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none"
                   viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"
@@ -109,7 +154,7 @@ export default function Header() {
                   <path d="M2 12h20"/>
                 </svg>
                 <span>{currentLang.label}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 ml-1 opacity-70 transition-transform duration-200 ${langOpen ? 'rotate-180' : ''}`}
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 ml-1 opacity-80 transition-transform duration-200 ${langOpen ? 'rotate-180' : ''}`}
                   fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"
                   strokeLinecap="round" strokeLinejoin="round">
                   <path d="m6 9 6 6 6-6"/>
@@ -123,11 +168,11 @@ export default function Header() {
                     <button
                       key={l.code}
                       onClick={() => { switchLang(l.code); setLangOpen(false); }}
-                      className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-150
-                        ${lang === l.code
-                          ? 'bg-blue-600 text-white'
+                      className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${
+                        lang === l.code
+                          ? 'bg-[#314ea1] text-[#f4b51a] font-semibold'
                           : 'text-gray-800 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-gray-700'
-                        }`}
+                      }`}
                     >
                       {l.label}
                     </button>
@@ -139,8 +184,9 @@ export default function Header() {
 
           {/* Mobile menu button */}
           <button
-            className="lg:hidden p-2 text-white"
+            className="lg:hidden p-2 text-white hover:text-[#f4b51a] transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label="Toggle navigation menu"
           >
             {mobileOpen ? (
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none"
@@ -160,29 +206,49 @@ export default function Header() {
 
         {/* ── Mobile Menu ── */}
         {mobileOpen && (
-          <div className="lg:hidden pb-4 flex flex-col space-y-1 border-t border-white/20 pt-3">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className="font-medium px-3 py-2 rounded-lg hover:bg-white/20 text-white transition"
-              >
-                {link.label}
-              </a>
-            ))}
+          <div
+            className="lg:hidden pb-4 flex flex-col space-y-1 border-t border-white/20 pt-3 rounded-b-2xl"
+            style={{ background: 'linear-gradient(135deg, rgba(49, 78, 161, 0.98) 0%, rgba(30, 58, 138, 0.95) 50%, rgba(244, 181, 26, 0.92) 100%)' }}
+          >
+            {navLinks.map((link) => {
+              const active = isLinkActive(link);
+              const linkClasses = `font-medium px-3 py-2 rounded-lg transition-colors ${
+                active ? 'text-[#f4b51a] font-semibold bg-white/10' : 'text-white hover:text-[#f4b51a] hover:bg-white/10'
+              }`;
+
+              return link.type === 'link' ? (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={linkClasses}
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={linkClasses}
+                >
+                  {link.label}
+                </a>
+              );
+            })}
+
             <Link
               to="/login"
               onClick={() => setMobileOpen(false)}
-              className="font-medium px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white"
+              className="font-medium px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white hover:text-[#f4b51a] transition"
             >
-              {t.nav_login}
+              {t.nav_login || 'Login'}
             </Link>
 
             {/* Mobile theme toggle */}
             <button
               onClick={toggleTheme}
-              className="text-left font-medium px-3 py-2 rounded-lg hover:bg-white/20 text-white transition flex items-center gap-2"
+              className="text-left font-medium px-3 py-2 rounded-lg hover:bg-white/20 text-white hover:text-[#f4b51a] transition flex items-center gap-2"
             >
               {isDark ? '☀️ Light Mode' : '🌙 Dark Mode'}
             </button>
@@ -193,11 +259,11 @@ export default function Header() {
                 <button
                   key={l.code}
                   onClick={() => { switchLang(l.code); setMobileOpen(false); }}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all
-                    ${lang === l.code
-                      ? 'bg-white text-blue-700'
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    lang === l.code
+                      ? 'bg-[#314ea1] text-[#f4b51a] font-bold border border-[#f4b51a]'
                       : 'bg-white/20 text-white hover:bg-white/30'
-                    }`}
+                  }`}
                 >
                   {l.label}
                 </button>
@@ -209,3 +275,4 @@ export default function Header() {
     </header>
   );
 }
+

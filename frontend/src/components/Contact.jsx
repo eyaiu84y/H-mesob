@@ -26,14 +26,14 @@ export default function Contact() {
                 <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-2xl">📧</div>
                 <div>
                   <p className="font-semibold text-gray-900 dark:text-white">{t.contact_email_label}</p>
-                  <p className="text-gray-700 dark:text-gray-300">info@mesobcenter.et</p>
+                  <p className="text-gray-700 dark:text-gray-300">hawassamesob2018@gmail.com</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-2xl">📞</div>
                 <div>
                   <p className="font-semibold text-gray-900 dark:text-white">{t.contact_phone_label}</p>
-                  <p className="text-gray-700 dark:text-gray-300">+251-XXX-XXXXXX</p>
+                  <p className="text-gray-700 dark:text-gray-300">+251928003080</p>
                 </div>
               </div>
             </div>

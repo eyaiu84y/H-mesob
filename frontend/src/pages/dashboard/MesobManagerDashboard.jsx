@@ -181,7 +181,7 @@ function SectionDashboard({ setActiveSection }) {
         </div>
       </div>
 
-      <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-sm text-red-800">
+      <div className="p-4 bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200 rounded-xl text-sm text-teal-900">
         <strong>MESOB Manager:</strong> Monitor institution operations, queue conditions, applications, and maintenance across Hawassa MESOB. System administration belongs to Super Admin.
       </div>
     </>
@@ -227,7 +227,7 @@ function SectionInstitutionMonitoring() {
           </div>
           {inst?.description_en && (
             <div className="p-4 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-700">
-              <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-2">About</p>
+              <p className="text-xs font-semibold text-teal-700 uppercase tracking-wider mb-2">About</p>
               <p>{inst.description_en}</p>
             </div>
           )}
@@ -267,7 +267,7 @@ function SectionInstitutionMonitoring() {
           </table>
         </div>
       </div>
-      <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-sm text-red-800">
+      <div className="p-4 bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200 rounded-xl text-sm text-teal-900">
         <strong>Institution Monitoring:</strong> View operational metrics for each institution. Institution creation and configuration belong to Super Admin.
       </div>
     </>
@@ -289,9 +289,38 @@ function SectionQueueMonitoring() {
         <p className="text-sm text-gray-500">Monitor queue conditions across MESOB institutions.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Waiting</p><p className="text-2xl font-bold">{waiting}</p></div>
-        <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Processing</p><p className="text-2xl font-bold">{processing}</p></div>
-        <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Completed</p><p className="text-2xl font-bold text-green-600">{completed}</p></div>
+        <div className="stat-card bg-gradient-to-br from-amber-100 to-orange-100 border-amber-300 shadow-lg shadow-amber-100">
+          <div className="inline-block px-3 py-1 rounded-lg bg-white border border-amber-200 mb-2">
+            <p className="text-sm text-amber-800 font-semibold">Waiting</p>
+          </div>
+          <p className="text-3xl font-bold text-amber-900">{waiting}</p>
+          <div className="mt-2 flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-amber-600"></div>
+            <p className="text-xs text-amber-700 font-medium">In queue</p>
+          </div>
+        </div>
+        <div className="stat-card bg-gradient-to-br from-blue-100 to-cyan-100 border-blue-300 shadow-lg shadow-blue-100">
+          <div className="inline-block px-3 py-1 rounded-lg bg-white border border-blue-200 mb-2">
+            <p className="text-sm text-blue-800 font-semibold">Processing</p>
+          </div>
+          <p className="text-3xl font-bold text-blue-900">{processing}</p>
+          <div className="mt-2 flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></div>
+            <p className="text-xs text-blue-700 font-medium">Being served</p>
+          </div>
+        </div>
+        <div className="stat-card bg-gradient-to-br from-emerald-100 to-teal-100 border-emerald-300 shadow-lg shadow-emerald-100">
+          <div className="inline-block px-3 py-1 rounded-lg bg-white border border-emerald-200 mb-2">
+            <p className="text-sm text-emerald-800 font-semibold">Completed</p>
+          </div>
+          <p className="text-3xl font-bold text-emerald-900">{completed}</p>
+          <div className="mt-2 flex items-center gap-1">
+            <svg className="w-3 h-3 text-emerald-700" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+            </svg>
+            <p className="text-xs text-emerald-700 font-medium">Done</p>
+          </div>
+        </div>
       </div>
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -325,7 +354,7 @@ function SectionQueueMonitoring() {
           </div>
         )}
       </div>
-      <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800">
+      <div className="p-4 bg-gradient-to-r from-cyan-50 to-sky-50 border border-cyan-200 rounded-xl text-sm text-cyan-900">
         <strong>Note:</strong> Showing all queue items across MESOB institutions.
       </div>
     </>
@@ -347,9 +376,38 @@ function SectionApplicationMonitoring() {
         <p className="text-sm text-gray-500">Monitor application workload across MESOB institutions.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Pending / Waiting</p><p className="text-2xl font-bold">{pending}</p></div>
-        <div className="stat-card"><p className="text-sm text-gray-500 mb-1">In Progress</p><p className="text-2xl font-bold">{inProg}</p></div>
-        <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Completed</p><p className="text-2xl font-bold text-green-600">{done}</p></div>
+        <div className="stat-card bg-gradient-to-br from-amber-100 to-orange-100 border-amber-300 shadow-lg shadow-amber-100">
+          <div className="inline-block px-3 py-1 rounded-lg bg-white border border-amber-200 mb-2">
+            <p className="text-sm text-amber-800 font-semibold">Pending / Waiting</p>
+          </div>
+          <p className="text-3xl font-bold text-amber-900">{pending}</p>
+          <div className="mt-2 flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-amber-600"></div>
+            <p className="text-xs text-amber-700 font-medium">Awaiting review</p>
+          </div>
+        </div>
+        <div className="stat-card bg-gradient-to-br from-blue-100 to-cyan-100 border-blue-300 shadow-lg shadow-blue-100">
+          <div className="inline-block px-3 py-1 rounded-lg bg-white border border-blue-200 mb-2">
+            <p className="text-sm text-blue-800 font-semibold">In Progress</p>
+          </div>
+          <p className="text-3xl font-bold text-blue-900">{inProg}</p>
+          <div className="mt-2 flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></div>
+            <p className="text-xs text-blue-700 font-medium">Under review</p>
+          </div>
+        </div>
+        <div className="stat-card bg-gradient-to-br from-emerald-100 to-teal-100 border-emerald-300 shadow-lg shadow-emerald-100">
+          <div className="inline-block px-3 py-1 rounded-lg bg-white border border-emerald-200 mb-2">
+            <p className="text-sm text-emerald-800 font-semibold">Completed</p>
+          </div>
+          <p className="text-3xl font-bold text-emerald-900">{done}</p>
+          <div className="mt-2 flex items-center gap-1">
+            <svg className="w-3 h-3 text-emerald-700" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+            </svg>
+            <p className="text-xs text-emerald-700 font-medium">Approved</p>
+          </div>
+        </div>
       </div>
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -432,7 +490,7 @@ function SectionMaintenanceOversight() {
           </table>
         </div>
       </div>
-      <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-sm text-red-800">
+      <div className="p-4 bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200 rounded-xl text-sm text-teal-900">
         <strong>Maintenance Oversight:</strong> Monitor technical tasks and reports across all MESOB institutions. Task assignment is performed by Institution Managers.
       </div>
     </>
@@ -479,8 +537,8 @@ function SectionReports() {
             onClick={() => setActiveReport(tab.key)}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150 ${
               activeReport === tab.key
-                ? 'bg-[#1e3a8a] text-white shadow-sm'
-                : 'bg-white border border-gray-200 text-gray-700 hover:border-gray-300'
+                ? 'bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-lg shadow-teal-200'
+                : 'bg-white border border-gray-200 text-gray-700 hover:border-teal-300 hover:text-teal-700'
             }`}
           >
             {tab.label}
@@ -492,9 +550,38 @@ function SectionReports() {
       {activeReport === 'queue' && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Waiting</p><p className="text-2xl font-bold">{qWaiting}</p></div>
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Processing</p><p className="text-2xl font-bold">{qProcessing}</p></div>
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Completed</p><p className="text-2xl font-bold text-green-600">{qCompleted}</p></div>
+            <div className="stat-card bg-gradient-to-br from-amber-100 to-orange-100 border-amber-300 shadow-lg shadow-amber-100">
+              <div className="inline-block px-3 py-1 rounded-lg bg-white border border-amber-200 mb-2">
+                <p className="text-sm text-amber-800 font-semibold">Waiting</p>
+              </div>
+              <p className="text-3xl font-bold text-amber-900">{qWaiting}</p>
+              <div className="mt-2 flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-amber-600"></div>
+                <p className="text-xs text-amber-700 font-medium">In queue</p>
+              </div>
+            </div>
+            <div className="stat-card bg-gradient-to-br from-blue-100 to-cyan-100 border-blue-300 shadow-lg shadow-blue-100">
+              <div className="inline-block px-3 py-1 rounded-lg bg-white border border-blue-200 mb-2">
+                <p className="text-sm text-blue-800 font-semibold">Processing</p>
+              </div>
+              <p className="text-3xl font-bold text-blue-900">{qProcessing}</p>
+              <div className="mt-2 flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></div>
+                <p className="text-xs text-blue-700 font-medium">Being served</p>
+              </div>
+            </div>
+            <div className="stat-card bg-gradient-to-br from-emerald-100 to-teal-100 border-emerald-300 shadow-lg shadow-emerald-100">
+              <div className="inline-block px-3 py-1 rounded-lg bg-white border border-emerald-200 mb-2">
+                <p className="text-sm text-emerald-800 font-semibold">Completed</p>
+              </div>
+              <p className="text-3xl font-bold text-emerald-900">{qCompleted}</p>
+              <div className="mt-2 flex items-center gap-1">
+                <svg className="w-3 h-3 text-emerald-700" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                </svg>
+                <p className="text-xs text-emerald-700 font-medium">Done</p>
+              </div>
+            </div>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
             <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">Queue Activity – MESOB-wide</h3></div>
@@ -533,9 +620,38 @@ function SectionReports() {
       {activeReport === 'application' && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Pending / Waiting</p><p className="text-2xl font-bold">{appPending}</p></div>
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">In Progress</p><p className="text-2xl font-bold">{appInProg}</p></div>
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Completed</p><p className="text-2xl font-bold text-green-600">{appDone}</p></div>
+            <div className="stat-card bg-gradient-to-br from-amber-100 to-orange-100 border-amber-300 shadow-lg shadow-amber-100">
+              <div className="inline-block px-3 py-1 rounded-lg bg-white border border-amber-200 mb-2">
+                <p className="text-sm text-amber-800 font-semibold">Pending / Waiting</p>
+              </div>
+              <p className="text-3xl font-bold text-amber-900">{appPending}</p>
+              <div className="mt-2 flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-amber-600"></div>
+                <p className="text-xs text-amber-700 font-medium">Awaiting review</p>
+              </div>
+            </div>
+            <div className="stat-card bg-gradient-to-br from-blue-100 to-cyan-100 border-blue-300 shadow-lg shadow-blue-100">
+              <div className="inline-block px-3 py-1 rounded-lg bg-white border border-blue-200 mb-2">
+                <p className="text-sm text-blue-800 font-semibold">In Progress</p>
+              </div>
+              <p className="text-3xl font-bold text-blue-900">{appInProg}</p>
+              <div className="mt-2 flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></div>
+                <p className="text-xs text-blue-700 font-medium">Under review</p>
+              </div>
+            </div>
+            <div className="stat-card bg-gradient-to-br from-emerald-100 to-teal-100 border-emerald-300 shadow-lg shadow-emerald-100">
+              <div className="inline-block px-3 py-1 rounded-lg bg-white border border-emerald-200 mb-2">
+                <p className="text-sm text-emerald-800 font-semibold">Completed</p>
+              </div>
+              <p className="text-3xl font-bold text-emerald-900">{appDone}</p>
+              <div className="mt-2 flex items-center gap-1">
+                <svg className="w-3 h-3 text-emerald-700" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                </svg>
+                <p className="text-xs text-emerald-700 font-medium">Approved</p>
+              </div>
+            </div>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
             <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">Application Report – MESOB-wide</h3></div>
@@ -652,7 +768,7 @@ function SectionReports() {
         </>
       )}
 
-      <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-sm text-red-800">
+      <div className="p-4 bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200 rounded-xl text-sm text-teal-900">
         <strong>Reports:</strong> MESOB-wide operational reporting. Payment, appointment, and grievance reports are not part of the approved system scope.
       </div>
     </>
@@ -666,10 +782,56 @@ function SectionAnalytics() {
   const { applications } = useApplications();
   const { reports } = useMaintenance();
   const [filterInst, setFilterInst] = useState('');
+  const [detailView, setDetailView] = useState(null); // { type, status, institutionId }
 
   const displayInsts = filterInst
     ? institutions.filter(o => o.id === filterInst)
     : institutions;
+
+  // Handle badge click
+  const showDetails = (type, status, institutionId) => {
+    setDetailView({ type, status, institutionId });
+  };
+
+  const closeDetails = () => {
+    setDetailView(null);
+  };
+
+  // Get filtered data for detail modal
+  const getDetailData = () => {
+    if (!detailView) return [];
+    
+    const { type, status, institutionId } = detailView;
+    const inst = institutions.find(i => i.id === institutionId);
+    
+    if (type === 'queue') {
+      let filtered = myTickets.filter(t => t.institutionId === institutionId);
+      if (status === 'waiting') filtered = filtered.filter(t => t.status === 'waiting' || t.status === 'PENDING');
+      else if (status === 'serving') filtered = filtered.filter(t => t.status === 'called' || t.status === 'IN_PROGRESS');
+      else if (status === 'done') filtered = filtered.filter(t => t.status === 'completed' || t.status === 'COMPLETED');
+      return filtered.map(t => ({ ...t, institutionName: inst?.name_en }));
+    }
+    
+    if (type === 'app') {
+      let filtered = applications.filter(a => a.institutionId === institutionId);
+      if (status === 'new') filtered = filtered.filter(a => a.status === 'SUBMITTED' || a.status === 'Submitted');
+      else if (status === 'review') filtered = filtered.filter(a => a.status === 'UNDER_REVIEW' || a.status === 'Under Review');
+      else if (status === 'approved') filtered = filtered.filter(a => a.status === 'APPROVED' || a.status === 'Approved');
+      else if (status === 'completed') filtered = filtered.filter(a => a.status === 'COMPLETED' || a.status === 'Completed');
+      return filtered.map(a => ({ ...a, institutionName: inst?.name_en }));
+    }
+    
+    if (type === 'maint') {
+      let filtered = reports.filter(r => r.institution === (inst?.name_en || inst?.name));
+      if (status === 'open') filtered = filtered.filter(r => r.status === 'Submitted' || r.status === 'REPORTED');
+      else if (status === 'assigned') filtered = filtered.filter(r => r.status === 'Assigned' || r.status === 'ASSIGNED');
+      else if (status === 'progress') filtered = filtered.filter(r => r.status === 'In Progress' || r.status === 'IN_PROGRESS');
+      else if (status === 'resolved') filtered = filtered.filter(r => r.status === 'Completed' || r.status === 'RESOLVED');
+      return filtered.map(r => ({ ...r, institutionName: inst?.name_en }));
+    }
+    
+    return [];
+  };
 
   const totalQueue = myTickets.filter(t => t.status === 'waiting' || t.status === 'called').length;
   const totalApps = applications.length;
@@ -706,25 +868,199 @@ function SectionAnalytics() {
 
       {/* Per-institution breakdown */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-900">Institution Performance Breakdown</h3>
+        <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-teal-50 to-cyan-50">
+          <h3 className="font-semibold text-gray-900 text-lg">📊 Institution Performance Breakdown</h3>
+          <p className="text-sm text-gray-600 mt-1">Real-time operational metrics across all institutions</p>
         </div>
-        <div className="table-container border-0 rounded-none">
-          <table className="data-table">
-            <thead><tr><th>Institution</th><th>Queue</th><th>Applications</th><th>Maintenance</th><th>Status</th></tr></thead>
-            <tbody>
-              {displayInsts.map(inst => {
-                const instQueue = myTickets.filter(t => t.institutionId === inst.id && (t.status === 'waiting' || t.status === 'called')).length;
-                const instApps = applications.filter(app => app.institutionId === inst.id).length;
-                const instMaint = reports.filter(r => r.institution === (inst?.name_en || inst?.name) && r.status !== 'Completed' && r.status !== 'COMPLETED').length;
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Institution</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-l border-gray-200">Queue</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Queue Breakdown</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-l border-gray-200">Apps</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Application Breakdown</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-l border-gray-200">Maint.</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Maintenance Breakdown</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-l border-gray-200">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {displayInsts.map((inst, idx) => {
+                // Queue stats
+                const instQueueData = myTickets.filter(t => t.institutionId === inst.id);
+                const queueWaiting = instQueueData.filter(t => t.status === 'waiting' || t.status === 'PENDING').length;
+                const queueCalled = instQueueData.filter(t => t.status === 'called' || t.status === 'IN_PROGRESS').length;
+                const queueCompleted = instQueueData.filter(t => t.status === 'completed' || t.status === 'COMPLETED').length;
+                const instQueue = queueWaiting + queueCalled;
+                
+                // Application stats
+                const instAppData = applications.filter(app => app.institutionId === inst.id);
+                const appSubmitted = instAppData.filter(a => a.status === 'SUBMITTED' || a.status === 'Submitted').length;
+                const appReview = instAppData.filter(a => a.status === 'UNDER_REVIEW' || a.status === 'Under Review').length;
+                const appApproved = instAppData.filter(a => a.status === 'APPROVED' || a.status === 'Approved').length;
+                const appCompleted = instAppData.filter(a => a.status === 'COMPLETED' || a.status === 'Completed').length;
+                const instApps = instAppData.length;
+                
+                // Maintenance stats
+                const instReports = reports.filter(r => r.institution === (inst?.name_en || inst?.name));
+                const maintOpen = instReports.filter(r => r.status === 'Submitted' || r.status === 'REPORTED').length;
+                const maintAssigned = instReports.filter(r => r.status === 'Assigned' || r.status === 'ASSIGNED').length;
+                const maintInProgress = instReports.filter(r => r.status === 'In Progress' || r.status === 'IN_PROGRESS').length;
+                const maintResolved = instReports.filter(r => r.status === 'Completed' || r.status === 'RESOLVED').length;
+                const instMaint = maintOpen + maintAssigned + maintInProgress;
+                
                 const status = instQueue > 5 ? 'Busy' : 'Normal';
+                const rowBg = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                
                 return (
-                  <tr key={inst.id}>
-                    <td className="font-medium">{inst?.name_en || inst?.name}</td>
-                    <td>{instQueue}</td>
-                    <td>{instApps}</td>
-                    <td>{instMaint}</td>
-                    <td><StatusBadge status={status} /></td>
+                  <tr key={inst.id} className={`${rowBg} hover:bg-teal-50 transition-colors duration-150`}>
+                    {/* Institution */}
+                    <td className="px-4 py-4">
+                      <div className="font-semibold text-gray-900">{inst?.name_en || inst?.name}</div>
+                      <div className="text-xs text-gray-500">{inst?.name_am}</div>
+                    </td>
+                    
+                    {/* Queue Total */}
+                    <td className="px-4 py-4 text-center font-black text-3xl bg-gradient-to-br from-yellow-50 to-amber-50 border-l-4 border-yellow-400">
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-amber-600">{instQueue}</span>
+                    </td>
+                    
+                    {/* Queue Detail */}
+                    <td className="px-4 py-4">
+                      <div className="flex flex-wrap gap-2">
+                        {queueWaiting > 0 && (
+                          <button
+                            onClick={() => showDetails('queue', 'waiting', inst.id)}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-yellow-100 to-amber-100 border-2 border-yellow-400 rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all cursor-pointer"
+                          >
+                            <span className="text-xs font-bold text-yellow-800">⏳ Waiting</span>
+                            <span className="text-base font-extrabold text-yellow-900">{queueWaiting}</span>
+                          </button>
+                        )}
+                        {queueCalled > 0 && (
+                          <button
+                            onClick={() => showDetails('queue', 'serving', inst.id)}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 border-2 border-blue-400 rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all cursor-pointer"
+                          >
+                            <span className="text-xs font-bold text-blue-800">🔔 Serving</span>
+                            <span className="text-base font-extrabold text-blue-900">{queueCalled}</span>
+                          </button>
+                        )}
+                        {queueCompleted > 0 && (
+                          <button
+                            onClick={() => showDetails('queue', 'done', inst.id)}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-green-100 to-emerald-100 border-2 border-green-400 rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all cursor-pointer"
+                          >
+                            <span className="text-xs font-bold text-green-800">✅ Done</span>
+                            <span className="text-base font-extrabold text-green-900">{queueCompleted}</span>
+                          </button>
+                        )}
+                        {instQueueData.length === 0 && <span className="text-xs text-gray-400 italic">No queue data</span>}
+                      </div>
+                    </td>
+                    
+                    {/* Applications Total */}
+                    <td className="px-4 py-4 text-center font-black text-3xl bg-gradient-to-br from-indigo-50 to-purple-50 border-l-4 border-indigo-400">
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">{instApps}</span>
+                    </td>
+                    
+                    {/* Applications Detail */}
+                    <td className="px-4 py-4">
+                      <div className="flex flex-wrap gap-2">
+                        {appSubmitted > 0 && (
+                          <button
+                            onClick={() => showDetails('app', 'new', inst.id)}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-slate-100 to-gray-100 border-2 border-slate-400 rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all cursor-pointer"
+                          >
+                            <span className="text-xs font-bold text-slate-800">📝 New</span>
+                            <span className="text-base font-extrabold text-slate-900">{appSubmitted}</span>
+                          </button>
+                        )}
+                        {appReview > 0 && (
+                          <button
+                            onClick={() => showDetails('app', 'review', inst.id)}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-indigo-100 to-purple-100 border-2 border-indigo-400 rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all cursor-pointer"
+                          >
+                            <span className="text-xs font-bold text-indigo-800">🔍 Review</span>
+                            <span className="text-base font-extrabold text-indigo-900">{appReview}</span>
+                          </button>
+                        )}
+                        {appApproved > 0 && (
+                          <button
+                            onClick={() => showDetails('app', 'approved', inst.id)}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-green-100 to-lime-100 border-2 border-green-500 rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all cursor-pointer"
+                          >
+                            <span className="text-xs font-bold text-green-800">👍 Approved</span>
+                            <span className="text-base font-extrabold text-green-900">{appApproved}</span>
+                          </button>
+                        )}
+                        {appCompleted > 0 && (
+                          <button
+                            onClick={() => showDetails('app', 'completed', inst.id)}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-teal-100 to-cyan-100 border-2 border-teal-500 rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all cursor-pointer"
+                          >
+                            <span className="text-xs font-bold text-teal-800">✨ Completed</span>
+                            <span className="text-base font-extrabold text-teal-900">{appCompleted}</span>
+                          </button>
+                        )}
+                        {instAppData.length === 0 && <span className="text-xs text-gray-400 italic">No applications</span>}
+                      </div>
+                    </td>
+                    
+                    {/* Maintenance Total */}
+                    <td className="px-4 py-4 text-center font-black text-3xl bg-gradient-to-br from-orange-50 to-red-50 border-l-4 border-orange-400">
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600">{instMaint}</span>
+                    </td>
+                    
+                    {/* Maintenance Detail */}
+                    <td className="px-4 py-4">
+                      <div className="flex flex-wrap gap-2">
+                        {maintOpen > 0 && (
+                          <button
+                            onClick={() => showDetails('maint', 'open', inst.id)}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-red-100 to-pink-100 border-2 border-red-400 rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all cursor-pointer"
+                          >
+                            <span className="text-xs font-bold text-red-800">🆕 Open</span>
+                            <span className="text-base font-extrabold text-red-900">{maintOpen}</span>
+                          </button>
+                        )}
+                        {maintAssigned > 0 && (
+                          <button
+                            onClick={() => showDetails('maint', 'assigned', inst.id)}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-100 to-sky-100 border-2 border-blue-500 rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all cursor-pointer"
+                          >
+                            <span className="text-xs font-bold text-blue-800">👤 Assigned</span>
+                            <span className="text-base font-extrabold text-blue-900">{maintAssigned}</span>
+                          </button>
+                        )}
+                        {maintInProgress > 0 && (
+                          <button
+                            onClick={() => showDetails('maint', 'progress', inst.id)}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-orange-100 to-amber-100 border-2 border-orange-500 rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all cursor-pointer"
+                          >
+                            <span className="text-xs font-bold text-orange-800">⚙️ Progress</span>
+                            <span className="text-base font-extrabold text-orange-900">{maintInProgress}</span>
+                          </button>
+                        )}
+                        {maintResolved > 0 && (
+                          <button
+                            onClick={() => showDetails('maint', 'resolved', inst.id)}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-100 to-green-100 border-2 border-emerald-500 rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all cursor-pointer"
+                          >
+                            <span className="text-xs font-bold text-emerald-800">✔️ Resolved</span>
+                            <span className="text-base font-extrabold text-emerald-900">{maintResolved}</span>
+                          </button>
+                        )}
+                        {instReports.length === 0 && <span className="text-xs text-gray-400 italic">No reports</span>}
+                      </div>
+                    </td>
+                    
+                    {/* Overall Status */}
+                    <td className="px-4 py-4 text-center border-l border-gray-200">
+                      <StatusBadge status={status} />
+                    </td>
                   </tr>
                 );
               })}
@@ -733,7 +1069,169 @@ function SectionAnalytics() {
         </div>
       </div>
 
-      <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-sm text-red-800">
+      {/* Detail Modal */}
+      {detailView && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={closeDetails}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-teal-600 to-cyan-600 text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold">
+                  {detailView.type === 'queue' ? '🎫 Queue Details' : detailView.type === 'app' ? '📄 Application Details' : '🔧 Maintenance Details'}
+                </h3>
+                <p className="text-sm text-teal-100 mt-1">
+                  {institutions.find(i => i.id === detailView.institutionId)?.name_en} - {detailView.status.toUpperCase()} Status
+                </p>
+              </div>
+              <button onClick={closeDetails} className="text-white hover:bg-white/20 rounded-lg p-2 transition">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              {getDetailData().length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b-2 border-gray-200">
+                        {detailView.type === 'queue' && (
+                          <>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Queue #</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Citizen</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Service</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Registered Time</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Called Time</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Completed Time</th>
+                          </>
+                        )}
+                        {detailView.type === 'app' && (
+                          <>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">App #</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Citizen</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Service</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Submitted Time</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Completed Time</th>
+                          </>
+                        )}
+                        {detailView.type === 'maint' && (
+                          <>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Report #</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Title</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Priority</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Reported Time</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Resolved Time</th>
+                          </>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {getDetailData().map((item, idx) => (
+                        <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          {detailView.type === 'queue' && (
+                            <>
+                              <td className="px-4 py-3 font-medium">{item.queueNumber || item.queue_number || 'N/A'}</td>
+                              <td className="px-4 py-3">{item.citizenName || 'Citizen'}</td>
+                              <td className="px-4 py-3">{item.serviceName || 'Service'}</td>
+                              <td className="px-4 py-3"><span className="badge bg-blue-100 text-blue-800">{item.status}</span></td>
+                              <td className="px-4 py-3 text-sm">
+                                {item.createdAt ? new Date(item.createdAt).toLocaleString('en-US', {
+                                  year: 'numeric', month: 'short', day: 'numeric',
+                                  hour: '2-digit', minute: '2-digit', second: '2-digit',
+                                  hour12: true, timeZone: 'Africa/Addis_Ababa'
+                                }) : '-'}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {item.started_at || item.startedAt ? new Date(item.started_at || item.startedAt).toLocaleString('en-US', {
+                                  year: 'numeric', month: 'short', day: 'numeric',
+                                  hour: '2-digit', minute: '2-digit', second: '2-digit',
+                                  hour12: true, timeZone: 'Africa/Addis_Ababa'
+                                }) : '-'}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {item.completed_at || item.completedAt ? new Date(item.completed_at || item.completedAt).toLocaleString('en-US', {
+                                  year: 'numeric', month: 'short', day: 'numeric',
+                                  hour: '2-digit', minute: '2-digit', second: '2-digit',
+                                  hour12: true, timeZone: 'Africa/Addis_Ababa'
+                                }) : '-'}
+                              </td>
+                            </>
+                          )}
+                          {detailView.type === 'app' && (
+                            <>
+                              <td className="px-4 py-3 font-medium">{item.applicationNumber || 'N/A'}</td>
+                              <td className="px-4 py-3">{item.citizenName || 'Citizen'}</td>
+                              <td className="px-4 py-3">{item.service || 'Service'}</td>
+                              <td className="px-4 py-3"><span className="badge bg-indigo-100 text-indigo-800">{item.status}</span></td>
+                              <td className="px-4 py-3 text-sm">
+                                {item.submitted_at ? new Date(item.submitted_at).toLocaleString('en-US', {
+                                  year: 'numeric', month: 'short', day: 'numeric',
+                                  hour: '2-digit', minute: '2-digit', second: '2-digit',
+                                  hour12: true, timeZone: 'Africa/Addis_Ababa'
+                                }) : item.submittedDate || '-'}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {item.completed_at || item.completedAt ? new Date(item.completed_at || item.completedAt).toLocaleString('en-US', {
+                                  year: 'numeric', month: 'short', day: 'numeric',
+                                  hour: '2-digit', minute: '2-digit', second: '2-digit',
+                                  hour12: true, timeZone: 'Africa/Addis_Ababa'
+                                }) : '-'}
+                              </td>
+                            </>
+                          )}
+                          {detailView.type === 'maint' && (
+                            <>
+                              <td className="px-4 py-3 font-medium">{item.reportNumber || 'N/A'}</td>
+                              <td className="px-4 py-3">{item.title || item.problemDescription || 'No title'}</td>
+                              <td className="px-4 py-3"><span className="badge bg-orange-100 text-orange-800">{item.priority || 'NORMAL'}</span></td>
+                              <td className="px-4 py-3"><span className="badge bg-green-100 text-green-800">{item.status}</span></td>
+                              <td className="px-4 py-3 text-sm">
+                                {item.reportedAtTimestamp ? new Date(item.reportedAtTimestamp).toLocaleString('en-US', {
+                                  year: 'numeric', month: 'short', day: 'numeric',
+                                  hour: '2-digit', minute: '2-digit', second: '2-digit',
+                                  hour12: true, timeZone: 'Africa/Addis_Ababa'
+                                }) : '-'}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {item.resolved_at || item.resolvedAt ? new Date(item.resolved_at || item.resolvedAt).toLocaleString('en-US', {
+                                  year: 'numeric', month: 'short', day: 'numeric',
+                                  hour: '2-digit', minute: '2-digit', second: '2-digit',
+                                  hour12: true, timeZone: 'Africa/Addis_Ababa'
+                                }) : '-'}
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-400">
+                  <p className="text-lg font-medium">No data available</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+              <p className="text-sm text-gray-600">
+                Total: <span className="font-bold text-gray-900">{getDetailData().length}</span> items
+              </p>
+              <button onClick={closeDetails} className="px-4 py-2 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-lg hover:shadow-lg transition">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="p-4 bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200 rounded-xl text-sm text-teal-900">
         <strong>Analytics:</strong> Operational metrics for monitoring purposes. Financial and payment analytics are not part of the approved system scope.
       </div>
     </>
@@ -898,7 +1396,7 @@ function SectionAnnouncements() {
               </div>
             )}
             
-            <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-sm text-red-800">
+            <div className="p-4 bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200 rounded-xl text-sm text-teal-900">
               <strong>Scope: {form.scope}</strong>
               {form.scope === 'PUBLIC' && <p className="mt-1">This announcement will be visible to all users including citizens.</p>}
               {form.scope === 'INTERNAL' && <p className="mt-1">This announcement will be visible only to staff (not citizens).</p>}
@@ -907,7 +1405,7 @@ function SectionAnnouncements() {
             
             {formError && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">{formError}</div>}
             {error && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">{error}</div>}
-            <button type="submit" disabled={loading} className="px-6 py-3 bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-semibold rounded-xl transition text-sm disabled:opacity-50">
+            <button type="submit" disabled={loading} className="px-6 py-3 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-teal-200 text-sm disabled:opacity-50">
               {loading ? (view === 'edit' ? 'Updating...' : 'Publishing...') : (view === 'edit' ? 'Update Announcement' : 'Publish Announcement')}
             </button>
           </form>
@@ -940,7 +1438,7 @@ function SectionAnnouncements() {
                 <>
                   <button 
                     onClick={() => handleEdit(ann)}
-                    className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                    className="px-3 py-1.5 text-sm text-teal-700 hover:bg-teal-50 rounded-lg transition font-medium"
                     title="Edit announcement"
                   >
                     Edit
@@ -977,7 +1475,7 @@ function SectionAnnouncements() {
           <h2 className="text-lg font-semibold text-gray-900 mb-1">Announcements</h2>
           <p className="text-sm text-gray-500">MESOB-wide operational announcements and notifications.</p>
         </div>
-        <button onClick={() => { setView('new'); setSelected(null); setFormError(''); }} className="px-4 py-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition">
+        <button onClick={() => { setView('new'); setSelected(null); setFormError(''); }} className="px-4 py-2 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white text-sm font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-teal-200">
           + New Announcement
         </button>
       </div>
@@ -1026,13 +1524,13 @@ function SectionMyProfile({ user }) {
       </div>
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6 max-w-lg">
         <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
-          <div className="w-14 h-14 rounded-2xl bg-red-600 text-white flex items-center justify-center text-xl font-bold flex-shrink-0">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-600 to-cyan-600 text-white flex items-center justify-center text-xl font-bold flex-shrink-0 shadow-lg">
             {user?.name?.charAt(0) || 'M'}
           </div>
           <div>
             <p className="font-semibold text-gray-900">{user?.name}</p>
             <p className="text-sm text-gray-500">{user?.email}</p>
-            <span className="badge bg-red-100 text-red-800 mt-1">MESOB Manager</span>
+            <span className="badge bg-gradient-to-r from-teal-100 to-cyan-100 text-teal-800 mt-1 border border-teal-200">MESOB Manager</span>
           </div>
         </div>
         <div className="space-y-4 text-sm">
@@ -1042,7 +1540,7 @@ function SectionMyProfile({ user }) {
           <div className="flex justify-between"><span className="text-gray-500">Scope</span><span className="font-medium text-gray-900">Hawassa MESOB</span></div>
         </div>
       </div>
-      <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-sm text-red-800">
+      <div className="p-4 bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200 rounded-xl text-sm text-teal-900">
         <strong>Note:</strong> To update your profile or change your password, contact the Super Admin.
       </div>
     </>
@@ -1085,7 +1583,7 @@ export default function MesobManagerDashboard() {
         <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200${sidebarOpen ? ' open' : ''}`}>
           <div className="p-5 border-b border-gray-100">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold text-lg">M</div>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-600 to-cyan-600 text-white flex items-center justify-center font-bold text-lg shadow-md">M</div>
               <div>
                 <p className="font-semibold text-gray-900 text-sm">MESOB Center</p>
                 <p className="text-xs text-gray-500">MESOB Manager</p>
@@ -1125,7 +1623,7 @@ export default function MesobManagerDashboard() {
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
-              <span className="badge bg-red-100 text-red-800">MESOB Manager</span>
+              <span className="badge bg-gradient-to-r from-teal-100 to-cyan-100 text-teal-800 border border-teal-200">MESOB Manager</span>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-gray-900">{user?.name}</p>
                 <p className="text-xs text-gray-500">{user?.email}</p>

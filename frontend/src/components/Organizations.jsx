@@ -96,17 +96,36 @@ export default function Organizations() {
 
   return (
     <>
-      <section id="organizations" className="py-16 bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-gray-900 dark:text-white">{t.org_title}</h2>
-            <p className="text-gray-600 dark:text-gray-400 mt-3">{t.org_subtitle}</p>
+      <section id="organizations" className="py-20 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 relative overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-100 dark:bg-blue-900/10 rounded-full blur-3xl opacity-30"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-100 dark:bg-purple-900/10 rounded-full blur-3xl opacity-30"></div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="text-center mb-16">
+            <div className="inline-block mb-4">
+              <span className="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-sm font-semibold uppercase tracking-wider">
+                {lang === 'am' ? 'የመንግስት ተቋማት' : 'Government Organizations'}
+              </span>
+            </div>
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+              {t.org_title}
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+              {t.org_subtitle}
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-            {organizationsData.map((org) => (
-              <div key={org.id} className={`org-card org-color-${org.id}`}
-                onClick={() => setSelectedOrg(org)}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
+            {organizationsData.map((org, index) => (
+              <div 
+                key={org.id} 
+                className={`org-card org-color-${org.id} transform hover:scale-105 transition-all duration-300`}
+                onClick={() => setSelectedOrg(org)}
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
                 <img src={org.image} alt={orgName(org, lang)}
                   onError={(e) => { e.target.src = '/image/icon.png'; }} />
                 <h5>{orgName(org, lang)}</h5>

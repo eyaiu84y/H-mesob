@@ -73,14 +73,18 @@ export const getAllServices = async (filters = {}) => {
       .select(`
         id,
         institution_id,
+        code,
         title_en,
         title_am,
         description_en,
         description_am,
         processing_time,
         service_fee,
+        service_url,
         is_active,
         created_at,
+        updated_at,
+        metadata,
         institutions (
           id,
           name_en,
@@ -110,19 +114,29 @@ export const getAllServices = async (filters = {}) => {
       };
     }
 
-    // Map database fields to expected API format
+    // Map database fields to expected API format - keep original field names for frontend compatibility
     const mappedData = (data || []).map(service => ({
       id: service.id,
       institution_id: service.institution_id,
+      code: service.code,
+      title_en: service.title_en,
+      title_am: service.title_am,
+      description_en: service.description_en,
+      description_am: service.description_am,
+      processing_time: service.processing_time,
+      service_fee: service.service_fee,
+      service_url: service.service_url,
+      is_active: service.is_active,
+      created_at: service.created_at,
+      updated_at: service.updated_at,
+      metadata: service.metadata,
+      institutions: service.institutions,
+      // Legacy field mappings for backward compatibility
       name: service.title_en,
       name_am: service.title_am,
       description: service.description_en,
-      description_am: service.description_am,
-      processing_time: service.processing_time,
       fee_amount: service.service_fee,
-      status: service.is_active ? 'ACTIVE' : 'INACTIVE',
-      created_at: service.created_at,
-      institutions: service.institutions
+      status: service.is_active ? 'ACTIVE' : 'INACTIVE'
     }));
 
     return {

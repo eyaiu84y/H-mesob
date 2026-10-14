@@ -17,7 +17,14 @@ export function FeedbackProvider({ children }) {
       setLoading(true);
       setError(null);
 
+      console.log('=== SUBMITTING FEEDBACK ===');
+      console.log('feedbackData:', JSON.stringify(feedbackData, null, 2));
+
       const response = await api.post('/feedback', feedbackData);
+
+      console.log('=== FEEDBACK RESPONSE ===');
+      console.log('response:', JSON.stringify(response, null, 2));
+      console.log('========================');
 
       if (response.success) {
         // Add new feedback to local state

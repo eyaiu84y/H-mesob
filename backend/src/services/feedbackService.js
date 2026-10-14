@@ -20,77 +20,139 @@ import { supabase } from '../config/supabase.js';
  */
 export async function submitFeedback(feedbackData) {
   try {
+    console.log('=== submitFeedback called ===');
+    console.log('feedbackData:', JSON.stringify(feedbackData, null, 2));
+
     // Validate rating
     if (!feedbackData.rating || feedbackData.rating < 1 || feedbackData.rating > 5) {
+      console.error('Invalid rating:', feedbackData.rating);
       throw new Error('Rating must be between 1 and 5');
     }
 
     // Ensure rating is an integer
     const rating = Math.floor(Number(feedbackData.rating));
     if (rating < 1 || rating > 5) {
+      console.error('Rating out of range after conversion:', rating);
       throw new Error('Rating must be an integer between 1 and 5');
     }
 
+    console.log('Checking citizen...');
     // Verify citizen exists and is active
     const { data: citizen, error: citizenError } = await supabase
       .from('users')
       .select('id, role, status')
       .eq('id', feedbackData.citizen_id)
       .eq('role', 'CITIZEN')
-      .single();
+      .maybeSingle();
 
-    if (citizenError || !citizen) {
+    if (citizenError) {
+      console.error('Citizen query error:', citizenError);
+      throw new Error(`Database error checking citizen: ${citizenError.message}`);
+    }
+
+    if (!citizen) {
+      console.error('Citizen not found:', feedbackData.citizen_id);
       throw new Error('Citizen not found');
     }
 
     if (citizen.status !== 'ACTIVE') {
+      console.error('Citizen not active:', citizen.status);
       throw new Error('Citizen account is not active');
     }
 
+    console.log('Checking institution...');
     // Verify institution exists
     const { data: institution, error: instError } = await supabase
       .from('institutions')
       .select('id')
       .eq('id', feedbackData.institution_id)
-      .single();
+      .maybeSingle();
 
-    if (instError || !institution) {
+    if (instError) {
+      console.error('Institution query error:', instError);
+      throw new Error(`Database error checking institution: ${instError.message}`);
+    }
+
+    if (!institution) {
+      console.error('Institution not found:', feedbackData.institution_id);
       throw new Error('Institution not found');
     }
 
+    console.log('Checking service...');
     // Verify service exists and belongs to institution
     const { data: service, error: serviceError } = await supabase
       .from('services')
       .select('id, institution_id')
       .eq('id', feedbackData.service_id)
-      .single();
+      .maybeSingle();
 
-    if (serviceError || !service) {
+    if (serviceError) {
+      console.error('Service query error:', serviceError);
+      throw new Error(`Database error checking service: ${serviceError.message}`);
+    }
+
+    if (!service) {
+      console.error('Service not found:', feedbackData.service_id);
       throw new Error('Service not found');
     }
 
     if (service.institution_id !== feedbackData.institution_id) {
+      console.error('Service institution mismatch:', {
+        serviceInstitution: service.institution_id,
+        providedInstitution: feedbackData.institution_id
+      });
       throw new Error('Service does not belong to the specified institution');
     }
 
-    // Check for duplicate feedback
+    console.log('Checking for duplicates...');
+    // Check for duplicate feedback based on application_id or queue_entry_id
     let duplicateQuery = supabase
       .from('service_feedback')
       .select('id')
-      .eq('citizen_id', feedbackData.citizen_id);
+      .eq('citizen_id', feedbackData.citizen_id)
+      .eq('service_id', feedbackData.service_id);
 
     if (feedbackData.application_id) {
       duplicateQuery = duplicateQuery.eq('application_id', feedbackData.application_id);
     } else if (feedbackData.queue_entry_id) {
       duplicateQuery = duplicateQuery.eq('queue_entry_id', feedbackData.queue_entry_id);
+    } else {
+      // If neither application nor queue entry is specified, 
+      // check if feedback already exists for this citizen-service combination
+      const { data: generalFeedback, error: generalError } = await supabase
+        .from('service_feedback')
+        .select('id')
+        .eq('citizen_id', feedbackData.citizen_id)
+        .eq('service_id', feedbackData.service_id)
+        .is('application_id', null)
+        .is('queue_entry_id', null)
+        .maybeSingle();
+
+      if (generalError && generalError.code !== 'PGRST116') {
+        console.error('Error checking for general feedback:', generalError);
+        throw new Error('Failed to check for existing feedback');
+      }
+
+      if (generalFeedback) {
+        console.error('General feedback already exists for this service');
+        throw new Error('You have already rated this service');
+      }
     }
 
-    const { data: existingFeedback } = await duplicateQuery.single();
+    const { data: existingFeedback, error: duplicateError } = await duplicateQuery.maybeSingle();
+
+    // Ignore "no rows" error (PGRST116) - it means no duplicate exists, which is good
+    if (duplicateError && duplicateError.code !== 'PGRST116') {
+      console.error('Error checking for duplicate feedback:', duplicateError);
+      throw new Error('Failed to check for existing feedback');
+    }
 
     if (existingFeedback) {
+      console.error('Duplicate feedback found:', existingFeedback.id);
       throw new Error('You have already rated this service');
     }
 
+    console.log('Inserting feedback...');
     // Create feedback
     const { data: feedback, error: insertError } = await supabase
       .from('service_feedback')
@@ -120,9 +182,10 @@ export async function submitFeedback(feedbackData) {
 
     if (insertError) {
       console.error('Error inserting feedback:', insertError);
-      throw new Error('Failed to submit feedback');
+      throw new Error(`Failed to submit feedback: ${insertError.message}`);
     }
 
+    console.log('Feedback created successfully:', feedback.id);
     return feedback;
   } catch (error) {
     console.error('Error in submitFeedback:', error);

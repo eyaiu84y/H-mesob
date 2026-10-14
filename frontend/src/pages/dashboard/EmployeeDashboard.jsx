@@ -4,8 +4,9 @@ import { useNotifications } from '../../context/NotificationContext';
 import { useMaintenance } from '../../context/MaintenanceContext';
 import { useAnnouncements } from '../../context/AnnouncementContext';
 import { useApplications } from '../../context/ApplicationContext';
+import { useQueue } from '../../context/QueueContext';
+import { useServices } from '../../context/ServiceContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
-import { organizationsData } from '../../data/organizations';
 import EmployeeQueueManagement from '../../components/dashboard/EmployeeQueueManagement';
 
 // ─── Navigation sections ────────────────────────────────────────
@@ -97,9 +98,10 @@ function SectionMyQueue() {
 
 // ─── SECTION: Search Applications ───────────────────────────────
 function SectionSearchApplications() {
-  const { applications } = useApplications();
+  const { applications, updateApplicationStatus } = useApplications();
   const [query, setQuery] = useState('');
   const [selectedApp, setSelectedApp] = useState(null);
+  const [updating, setUpdating] = useState(false);
 
   const filtered = applications.filter(app => {
     const q = query.toLowerCase();
@@ -111,6 +113,28 @@ function SectionSearchApplications() {
       (app.status && app.status.toLowerCase().includes(q))
     );
   });
+
+  // Status update handler
+  const handleStatusUpdate = async (newStatus) => {
+    if (!selectedApp || updating) return;
+    
+    setUpdating(true);
+    try {
+      const result = await updateApplicationStatus(selectedApp.id, newStatus);
+      if (result.success) {
+        // Update local state
+        setSelectedApp({ ...selectedApp, status: newStatus });
+        alert(`Application status updated to: ${newStatus}`);
+      } else {
+        alert(result.message || 'Failed to update status');
+      }
+    } catch (err) {
+      console.error('Status update error:', err);
+      alert('An error occurred while updating status');
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   // Application detail view
   if (selectedApp) {
@@ -210,6 +234,62 @@ function SectionSearchApplications() {
               </div>
             </div>
           )}
+
+          {/* Action Buttons */}
+          <div className="border-t border-gray-100 pt-6 mt-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
+            <div className="flex gap-3 flex-wrap">
+              {selectedApp.status === 'Submitted' && (
+                <button
+                  onClick={() => handleStatusUpdate('Under Review')}
+                  disabled={updating}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-sm transition"
+                >
+                  {updating ? 'Updating...' : 'Start Review'}
+                </button>
+              )}
+              
+              {selectedApp.status === 'Under Review' && (
+                <>
+                  <button
+                    onClick={() => handleStatusUpdate('Approved')}
+                    disabled={updating}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-sm transition"
+                  >
+                    {updating ? 'Updating...' : 'Approve'}
+                  </button>
+                  <button
+                    onClick={() => handleStatusUpdate('Rejected')}
+                    disabled={updating}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-sm transition"
+                  >
+                    {updating ? 'Updating...' : 'Reject'}
+                  </button>
+                  <button
+                    onClick={() => handleStatusUpdate('Pending Documents')}
+                    disabled={updating}
+                    className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-sm transition"
+                  >
+                    {updating ? 'Updating...' : 'Request Documents'}
+                  </button>
+                </>
+              )}
+              
+              {selectedApp.status === 'Approved' && (
+                <button
+                  onClick={() => handleStatusUpdate('Completed')}
+                  disabled={updating}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-sm transition"
+                >
+                  {updating ? 'Updating...' : 'Mark as Completed'}
+                </button>
+              )}
+              
+              {(selectedApp.status === 'Completed' || selectedApp.status === 'Rejected' || selectedApp.status === 'Cancelled') && (
+                <p className="text-sm text-gray-500 italic">This application has been finalized.</p>
+              )}
+            </div>
+          </div>
         </div>
       </>
     );
@@ -290,18 +370,14 @@ function SectionSearchApplications() {
 // ─── SECTION: Service Requirements ───────────────────────────────
 function SectionServiceRequirements() {
   const { user } = useAuth();
+  const { institutions, getServicesByInstitution } = useServices();
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Find institution by matching various fields
-  const institution = organizationsData.find(org => 
-    org.name_en === user?.institution ||
-    org.name_am === user?.institution ||
-    org.id === user?.institution ||
-    org.name_en?.toLowerCase().includes(user?.institution?.toLowerCase()) ||
-    (user?.institution_name && org.name_en === user.institution_name)
-  );
+  // Find institution by user's institution_id
+  const institution = institutions.find(inst => inst.id === user?.institution_id);
   
-  const services = institution?.services || [];
+  // Get services for this institution from ServiceContext
+  const services = institution ? getServicesByInstitution(institution.id) : [];
 
   // Filter services by search query
   const filteredServices = services.filter(service => {
@@ -310,7 +386,7 @@ function SectionServiceRequirements() {
     return (
       service.title_en?.toLowerCase().includes(q) ||
       service.title_am?.toLowerCase().includes(q) ||
-      service.docs_en?.some(doc => doc.toLowerCase().includes(q))
+      service.description_en?.toLowerCase().includes(q)
     );
   });
 
@@ -356,9 +432,9 @@ function SectionServiceRequirements() {
                     `Your institution is not configured yet.`
                   }
                 </p>
-                {user?.institution && !institution && (
+                {user?.institution_id && !institution && (
                   <p className="text-xs text-gray-400 mt-2">
-                    Your institution: {user.institution}
+                    Institution ID: {user.institution_id}
                   </p>
                 )}
               </>
@@ -380,11 +456,11 @@ function SectionServiceRequirements() {
                 <div className="flex gap-4 text-sm ml-4">
                   <div>
                     <p className="text-xs text-gray-500">Time</p>
-                    <p className="font-medium text-gray-700">{service.time}</p>
+                    <p className="font-medium text-gray-700">{service.processing_time || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Fee</p>
-                    <p className="font-medium text-gray-700">{service.fee}</p>
+                    <p className="font-medium text-gray-700">{service.service_fee || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -392,22 +468,25 @@ function SectionServiceRequirements() {
               <div className="mt-4">
                 <p className="text-xs font-medium text-gray-700 mb-2">Required Documents:</p>
                 <ul className="text-sm text-gray-600 space-y-1">
-                  {service.docs_en?.map((doc, docIdx) => (
+                  {service.required_documents_en?.map((doc, docIdx) => (
                     <li key={docIdx} className="flex items-start gap-2">
                       <span className="text-blue-600 mt-1">•</span>
                       <span>{doc}</span>
                     </li>
                   ))}
+                  {(!service.required_documents_en || service.required_documents_en.length === 0) && (
+                    <li className="text-gray-400 italic">No specific documents required</li>
+                  )}
                 </ul>
               </div>
               
-              {service.docs_am && service.docs_am.length > 0 && (
+              {service.required_documents_am && service.required_documents_am.length > 0 && (
                 <details className="mt-4">
                   <summary className="text-xs font-medium text-gray-700 cursor-pointer hover:text-blue-600">
                     የሚፈለጉ ሰነዶች (Amharic)
                   </summary>
                   <ul className="text-sm text-gray-600 space-y-1 mt-2">
-                    {service.docs_am.map((doc, docIdx) => (
+                    {service.required_documents_am.map((doc, docIdx) => (
                       <li key={docIdx} className="flex items-start gap-2">
                         <span className="text-blue-600 mt-1">•</span>
                         <span>{doc}</span>
@@ -922,19 +1001,450 @@ function SectionMaintenanceReport() {
 
 // ─── SECTION: Reports ───────────────────────────────────────────
 function SectionReports() {
+  const { user } = useAuth();
+  const { applications } = useApplications();
+  const { reports } = useMaintenance();
+  const { myTickets, getInstitutionQueue } = useQueue();
+  const [dateRange, setDateRange] = useState('this_month');
+  const [reportType, setReportType] = useState('overview');
+
+  // Safety checks
+  const safeApplications = Array.isArray(applications) ? applications : [];
+  const safeReports = Array.isArray(reports) ? reports : [];
+  const safeTickets = Array.isArray(myTickets) ? myTickets : [];
+
+  // Filter data by employee's institution
+  const myInstitutionApps = safeApplications.filter(
+    app => app.institutionId === user?.institution_id
+  );
+  
+  const myReports = safeReports.filter(
+    report => report.reportedById === user?.id
+  );
+
+  // Queue data for employee's institution
+  const myInstitutionQueues = user?.institution_id 
+    ? getInstitutionQueue(user.institution_id)
+    : safeTickets.filter(t => t.institutionId === user?.institution_id);
+
+  // Calculate date ranges
+  const today = new Date();
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - today.getDay());
+  
+  // Filter by date range
+  const filterByDateRange = (items, dateField = 'created_at') => {
+    if (!items || items.length === 0) return [];
+    
+    if (dateRange === 'today') {
+      return items.filter(item => {
+        if (!item[dateField]) return false;
+        const itemDate = new Date(item[dateField]);
+        return itemDate.toDateString() === today.toDateString();
+      });
+    } else if (dateRange === 'this_week') {
+      return items.filter(item => {
+        if (!item[dateField]) return false;
+        const itemDate = new Date(item[dateField]);
+        return itemDate >= startOfWeek;
+      });
+    } else if (dateRange === 'this_month') {
+      return items.filter(item => {
+        if (!item[dateField]) return false;
+        const itemDate = new Date(item[dateField]);
+        return itemDate >= startOfMonth;
+      });
+    }
+    return items; // all_time
+  };
+
+  // Calculate statistics for applications
+  const filteredApps = filterByDateRange(myInstitutionApps);
+  const appStats = {
+    total: filteredApps.length,
+    pending: filteredApps.filter(a => a.status === 'PENDING' || a.status === 'Pending').length,
+    inProgress: filteredApps.filter(a => a.status === 'IN_PROGRESS' || a.status === 'In Progress' || a.status === 'Processing').length,
+    completed: filteredApps.filter(a => a.status === 'COMPLETED' || a.status === 'Completed').length,
+    rejected: filteredApps.filter(a => a.status === 'REJECTED' || a.status === 'Rejected').length,
+  };
+
+  // Calculate statistics for maintenance reports
+  const filteredReports = filterByDateRange(myReports, 'reportedAtTimestamp');
+  const reportStats = {
+    total: filteredReports.length,
+    pending: filteredReports.filter(r => r.status === 'PENDING' || r.status === 'Pending' || r.status === 'Submitted').length,
+    assigned: filteredReports.filter(r => r.status === 'ASSIGNED' || r.status === 'Assigned').length,
+    inProgress: filteredReports.filter(r => r.status === 'IN_PROGRESS' || r.status === 'In Progress').length,
+    completed: filteredReports.filter(r => r.status === 'COMPLETED' || r.status === 'Completed').length,
+  };
+
+  // Calculate statistics for queue
+  const filteredQueues = filterByDateRange(myInstitutionQueues, 'createdAt');
+  const queueStats = {
+    total: filteredQueues.length,
+    waiting: filteredQueues.filter(q => q.status === 'waiting').length,
+    called: filteredQueues.filter(q => q.status === 'called').length,
+    completed: filteredQueues.filter(q => q.status === 'completed').length,
+    cancelled: filteredQueues.filter(q => q.status === 'cancelled').length,
+  };
+
   return (
     <>
       <div className="mb-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-1">Reports</h2>
-        <p className="text-sm text-gray-500">View and generate reports.</p>
+        <p className="text-sm text-gray-500">View your performance metrics and statistics.</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-        <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <p className="font-medium text-gray-500">Reports Coming Soon</p>
-        <p className="text-sm text-gray-400 mt-1">Report generation will be available soon.</p>
+      {/* Filters */}
+      <div className="mb-6 flex flex-wrap gap-3">
+        <select
+          value={dateRange}
+          onChange={e => setDateRange(e.target.value)}
+          className="px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 outline-none text-sm bg-white"
+        >
+          <option value="today">Today</option>
+          <option value="this_week">This Week</option>
+          <option value="this_month">This Month</option>
+          <option value="all_time">All Time</option>
+        </select>
+
+        <select
+          value={reportType}
+          onChange={e => setReportType(e.target.value)}
+          className="px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 outline-none text-sm bg-white"
+        >
+          <option value="overview">Overview</option>
+          <option value="queue">Queue Management</option>
+          <option value="applications">Applications</option>
+          <option value="maintenance">Maintenance Reports</option>
+        </select>
+      </div>
+
+      {/* Overview Report */}
+      {reportType === 'overview' && (
+        <>
+          {/* Applications Section */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-6">
+            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Applications Overview
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <p className="text-2xl font-bold text-gray-900">{appStats.total}</p>
+                <p className="text-xs text-gray-500 mt-1">Total</p>
+              </div>
+              <div className="text-center p-3 bg-amber-50 rounded-lg">
+                <p className="text-2xl font-bold text-amber-600">{appStats.pending}</p>
+                <p className="text-xs text-amber-600 mt-1">Pending</p>
+              </div>
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <p className="text-2xl font-bold text-blue-600">{appStats.inProgress}</p>
+                <p className="text-xs text-blue-600 mt-1">In Progress</p>
+              </div>
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <p className="text-2xl font-bold text-green-600">{appStats.completed}</p>
+                <p className="text-xs text-green-600 mt-1">Completed</p>
+              </div>
+              <div className="text-center p-3 bg-red-50 rounded-lg">
+                <p className="text-2xl font-bold text-red-600">{appStats.rejected}</p>
+                <p className="text-xs text-red-600 mt-1">Rejected</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Queue Management Section */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-6">
+            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Queue Management
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <p className="text-2xl font-bold text-gray-900">{queueStats.total}</p>
+                <p className="text-xs text-gray-500 mt-1">Total</p>
+              </div>
+              <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                <p className="text-2xl font-bold text-yellow-600">{queueStats.waiting}</p>
+                <p className="text-xs text-yellow-600 mt-1">Waiting</p>
+              </div>
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <p className="text-2xl font-bold text-blue-600">{queueStats.called}</p>
+                <p className="text-xs text-blue-600 mt-1">Being Served</p>
+              </div>
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <p className="text-2xl font-bold text-green-600">{queueStats.completed}</p>
+                <p className="text-xs text-green-600 mt-1">Completed</p>
+              </div>
+              <div className="text-center p-3 bg-red-50 rounded-lg">
+                <p className="text-2xl font-bold text-red-600">{queueStats.cancelled}</p>
+                <p className="text-xs text-red-600 mt-1">Cancelled</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Maintenance Reports Section */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-6">
+            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              My Maintenance Reports
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <p className="text-2xl font-bold text-gray-900">{reportStats.total}</p>
+                <p className="text-xs text-gray-500 mt-1">Total</p>
+              </div>
+              <div className="text-center p-3 bg-amber-50 rounded-lg">
+                <p className="text-2xl font-bold text-amber-600">{reportStats.pending}</p>
+                <p className="text-xs text-amber-600 mt-1">Pending</p>
+              </div>
+              <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <p className="text-2xl font-bold text-purple-600">{reportStats.assigned}</p>
+                <p className="text-xs text-purple-600 mt-1">Assigned</p>
+              </div>
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <p className="text-2xl font-bold text-blue-600">{reportStats.inProgress}</p>
+                <p className="text-xs text-blue-600 mt-1">In Progress</p>
+              </div>
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <p className="text-2xl font-bold text-green-600">{reportStats.completed}</p>
+                <p className="text-xs text-green-600 mt-1">Completed</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Insights */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
+              <h4 className="text-lg font-semibold mb-2">Applications Performance</h4>
+              <p className="text-3xl font-bold mb-2">
+                {appStats.total > 0 
+                  ? Math.round((appStats.completed / appStats.total) * 100) 
+                  : 0}%
+              </p>
+              <p className="text-sm opacity-90">Completion Rate</p>
+              <p className="text-xs opacity-75 mt-2">
+                {appStats.completed} completed out of {appStats.total} total applications
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white shadow-lg">
+              <h4 className="text-lg font-semibold mb-2">Maintenance Activity</h4>
+              <p className="text-3xl font-bold mb-2">
+                {reportStats.total > 0 
+                  ? Math.round((reportStats.completed / reportStats.total) * 100) 
+                  : 0}%
+              </p>
+              <p className="text-sm opacity-90">Resolution Rate</p>
+              <p className="text-xs opacity-75 mt-2">
+                {reportStats.completed} resolved out of {reportStats.total} total reports
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+              <h4 className="text-lg font-semibold mb-2">Queue Performance</h4>
+              <p className="text-3xl font-bold mb-2">
+                {queueStats.total > 0 
+                  ? Math.round((queueStats.completed / queueStats.total) * 100) 
+                  : 0}%
+              </p>
+              <p className="text-sm opacity-90">Service Rate</p>
+              <p className="text-xs opacity-75 mt-2">
+                {queueStats.completed} served out of {queueStats.total} total
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Applications Detailed Report */}
+      {reportType === 'applications' && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h3 className="font-semibold text-gray-900">Applications Report</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Showing {filteredApps.length} applications for {dateRange.replace('_', ' ')}
+            </p>
+          </div>
+          <div className="table-container border-0 rounded-none">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Application Number</th>
+                  <th>Service</th>
+                  <th>Citizen</th>
+                  <th>Status</th>
+                  <th>Submitted</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredApps.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="text-center text-gray-400 py-8">
+                      No applications found for this period
+                    </td>
+                  </tr>
+                ) : (
+                  filteredApps.slice(0, 50).map(app => (
+                    <tr key={app.id}>
+                      <td className="font-medium">{app.application_number || app.id.slice(0, 8)}</td>
+                      <td>{app.services?.title_en || 'N/A'}</td>
+                      <td>{app.users?.full_name || 'Unknown'}</td>
+                      <td><StatusBadge status={app.status} /></td>
+                      <td>{new Date(app.created_at).toLocaleDateString()}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Maintenance Detailed Report */}
+      {reportType === 'maintenance' && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h3 className="font-semibold text-gray-900">Maintenance Reports</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Showing {filteredReports.length} reports for {dateRange.replace('_', ' ')}
+            </p>
+          </div>
+          <div className="table-container border-0 rounded-none">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Report Number</th>
+                  <th>Problem Type</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Assigned To</th>
+                  <th>Submitted</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredReports.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center text-gray-400 py-8">
+                      No maintenance reports found for this period
+                    </td>
+                  </tr>
+                ) : (
+                  filteredReports.slice(0, 50).map(report => (
+                    <tr key={report.id}>
+                      <td className="font-medium">{report.reportNumber}</td>
+                      <td>{report.problemType}</td>
+                      <td>
+                        <span className={`badge ${
+                          report.priority === 'CRITICAL' ? 'bg-red-100 text-red-800' :
+                          report.priority === 'HIGH' ? 'bg-orange-100 text-orange-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {report.priority}
+                        </span>
+                      </td>
+                      <td><StatusBadge status={report.status} /></td>
+                      <td>{report.assignedTo || <span className="text-gray-400">—</span>}</td>
+                      <td>{report.date}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Queue Detailed Report */}
+      {reportType === 'queue' && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h3 className="font-semibold text-gray-900">Queue Management Report</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Showing {filteredQueues.length} queue entries for {dateRange.replace('_', ' ')}
+            </p>
+          </div>
+          <div className="table-container border-0 rounded-none">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Token Number</th>
+                  <th>Service</th>
+                  <th>Status</th>
+                  <th>Registered At</th>
+                  <th>Called At</th>
+                  <th>Completed At</th>
+                  <th>Wait Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredQueues.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center text-gray-400 py-8">
+                      No queue entries found for this period
+                    </td>
+                  </tr>
+                ) : (
+                  filteredQueues.slice(0, 50).map(queue => {
+                    const waitTime = queue.calledAt 
+                      ? Math.round((new Date(queue.calledAt) - new Date(queue.createdAt)) / 1000 / 60)
+                      : null;
+                    
+                    return (
+                      <tr key={queue.id}>
+                        <td className="font-medium">{queue.token}</td>
+                        <td>{queue.serviceName}</td>
+                        <td>
+                          <span className={`badge ${
+                            queue.status === 'waiting' ? 'bg-yellow-100 text-yellow-800' :
+                            queue.status === 'called' ? 'bg-blue-100 text-blue-800' :
+                            queue.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {queue.status === 'waiting' ? 'Waiting' :
+                             queue.status === 'called' ? 'Being Served' :
+                             queue.status === 'completed' ? 'Completed' : 'Cancelled'}
+                          </span>
+                        </td>
+                        <td>{new Date(queue.createdAt).toLocaleString('en-US', { 
+                          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                        })}</td>
+                        <td>{queue.calledAt 
+                          ? new Date(queue.calledAt).toLocaleString('en-US', { 
+                              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                            })
+                          : <span className="text-gray-400">—</span>
+                        }</td>
+                        <td>{queue.completedAt 
+                          ? new Date(queue.completedAt).toLocaleString('en-US', { 
+                              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                            })
+                          : <span className="text-gray-400">—</span>
+                        }</td>
+                        <td>{waitTime !== null 
+                          ? `${waitTime} min${waitTime !== 1 ? 's' : ''}` 
+                          : <span className="text-gray-400">—</span>
+                        }</td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800">
+        <strong>About Reports:</strong> View statistics and detailed reports of applications and maintenance requests. Use filters to customize the data view by date range and report type.
       </div>
     </>
   );

@@ -14,6 +14,8 @@ import { FeedbackProvider } from './context/FeedbackContext';
 import HomePage from './pages/HomePage';
 import ServiceCataloguePage from './pages/ServiceCataloguePage';
 import GovernmentServicePage from './pages/GovernmentServicePage';
+import OnlineServicesPage from './pages/OnlineServicesPage';
+import AboutUsPage from './pages/AboutUsPage';
 
 // Auth pages
 import LoginPage from './pages/dashboard/LoginPage';
@@ -57,12 +59,24 @@ export default function App() {
                 <Routes>
                   {/* Public */}
                   <Route path="/" element={<HomePage />} />
+                  <Route path="/about-us" element={<AboutUsPage />} />
+                  <Route path="/online-services" element={<OnlineServicesPage />} />
                   <Route path="/service-catalogue" element={<ServiceCataloguePage />} />
                   <Route path="/government-service" element={<GovernmentServicePage />} />
 
                   {/* Auth */}
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/signup" element={<SignupPage />} />
+
+                  {/* General Dashboard Route - redirects based on role */}
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <RequireAuth allowedRoles={['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'ict_staff', 'citizen']}>
+                        <CitizenDashboard />
+                      </RequireAuth>
+                    }
+                  />
 
                   {/* Dashboards */}
                   <Route

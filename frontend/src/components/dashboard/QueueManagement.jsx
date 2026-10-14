@@ -98,7 +98,7 @@ function TicketCard({ ticket, onView, onCancel }) {
 
 // ─── Main QueueManagement component ───────────────────────────────
 export default function QueueManagement() {
-  const { getActiveTickets, getTicketHistory, registerForQueue, cancelTicket } = useQueue();
+  const { getActiveTickets, getTicketHistory, registerForQueue, cancelTicket, myTickets } = useQueue();
   const { institutions, getServicesByInstitution } = useServices();
 
   // Steps: 'overview' | 'select-institution' | 'select-service' | 'confirm' | 'token-display'
@@ -457,7 +457,6 @@ export default function QueueManagement() {
   // ─── STEP: Token Display ────────────────────────────────────────
   if (step === 'token-display' && newTicket) {
     // Find the latest version of this ticket from context (for live updates)
-    const { myTickets } = useQueue(); // eslint-disable-line react-hooks/rules-of-hooks
     const liveTicket = myTickets.find(t => t.id === newTicket.id) || newTicket;
 
     return (

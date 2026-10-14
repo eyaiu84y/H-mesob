@@ -7,8 +7,6 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "bot": "node src/bot/start.js",
-    "bot:dev": "node --watch src/bot/start.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "generate-passwords": "node src/utils/generatePasswordHashes.js",
     "verify-db": "echo \"Run: psql -f backend/database/verify_production_database.sql\""
@@ -23,6 +21,7 @@
   "license": "ISC",
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
+    "africastalking": "^0.8.4",
     "axios": "^1.20.0",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
@@ -30,8 +29,7 @@
     "express": "^4.18.2",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.0",
-    "node-telegram-bot-api": "^2.1.0"
+    "morgan": "^1.10.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

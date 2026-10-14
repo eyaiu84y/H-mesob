@@ -53,6 +53,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
   const { announcements } = useAnnouncements();
   const { reports } = useMaintenance();
   const { myTickets } = useQueue();
+  const { applications } = useApplications();
   const { user } = useAuth();
   
   // Get institution ID for filtering
@@ -69,9 +70,28 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
     item.status === 'waiting' || item.status === 'called'
   ).length;
   
-  const activeApps = 0; // TODO: Will come from application tracking system
-  const institutionTasks = (reports || []).filter(t => t.institution === userInstitution);
-  const openMaint = institutionTasks.filter(t => t.status !== 'Completed').length;
+  // Calculate application statistics - filter by institution and count pending/in-progress
+  const activeApps = useMemo(() => {
+    if (!institutionId) return 0;
+    
+    // Filter applications for this institution and count pending/in-progress statuses
+    const institutionApps = applications.filter(app => {
+      const appInstitutionId = app.institution_id || app.institutionId;
+      return appInstitutionId === institutionId;
+    });
+    
+    // Count applications that are pending or in progress
+    const pendingStatuses = ['SUBMITTED', 'UNDER_REVIEW', 'PENDING_DOCUMENTS'];
+    return institutionApps.filter(app => 
+      pendingStatuses.includes(app.status?.toUpperCase())
+    ).length;
+  }, [applications, institutionId]);
+  
+  // Calculate maintenance statistics - reports are already filtered by backend for institution manager
+  const openMaint = useMemo(() => {
+    return (reports || []).filter(r => r.status !== 'Completed' && r.status !== 'Resolved').length;
+  }, [reports]);
+  
   const unread = announcements.filter(a => !a.is_read).length;
 
   return (
@@ -1384,8 +1404,9 @@ function SectionTaskAssignment({ userInstitution }) {
 
 // ─── SECTION: Reports ─────────────────────────────────────────────
 function SectionReports({ userInstitution }) {
-  const { myTickets } = useQueue(); // Removed unused queueLoading
+  const { myTickets } = useQueue();
   const { reports: maintenanceReports } = useMaintenance();
+  const { applications } = useApplications();
   const { user } = useAuth();
   
   // Get institution ID for filtering
@@ -1409,18 +1430,31 @@ function SectionReports({ userInstitution }) {
     return completedDate === today;
   }).length;
   
-  // Calculate maintenance statistics
-  const institutionMaintenance = (maintenanceReports || []).filter(
-    t => t.institution === userInstitution
-  );
-  const maintDone = institutionMaintenance.filter(
-    t => t.status === 'Completed' || t.status === 'COMPLETED'
+  // Calculate maintenance statistics - reports are already filtered by backend for institution manager
+  const maintDone = (maintenanceReports || []).filter(
+    t => t.status === 'Completed' || t.status === 'COMPLETED' || t.status === 'Resolved'
   ).length;
   
-  // TODO: Application statistics (when applications API is ready)
-  const completed = 0;
-  const pending = 0;
-  const inProg = 0;
+  // Calculate application statistics from real data
+  const institutionApplications = useMemo(() => {
+    if (!institutionId) return [];
+    return applications.filter(app => {
+      const appInstitutionId = app.institution_id || app.institutionId;
+      return appInstitutionId === institutionId;
+    });
+  }, [applications, institutionId]);
+  
+  const completed = institutionApplications.filter(app => 
+    app.status?.toUpperCase() === 'COMPLETED'
+  ).length;
+  
+  const pending = institutionApplications.filter(app => 
+    app.status?.toUpperCase() === 'SUBMITTED' || app.status?.toUpperCase() === 'PENDING_DOCUMENTS'
+  ).length;
+  
+  const inProg = institutionApplications.filter(app => 
+    app.status?.toUpperCase() === 'UNDER_REVIEW' || app.status?.toUpperCase() === 'IN_PROGRESS'
+  ).length;
 
   return (
     <>
@@ -1445,23 +1479,54 @@ function SectionReports({ userInstitution }) {
         <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">Maintenance Task Summary</h3></div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
-            <thead><tr><th>Task ID</th><th>Task</th><th>Priority</th><th>Assigned To</th><th>Status</th><th>Report</th></tr></thead>
+            <thead><tr><th>Report Number</th><th>Problem Type</th><th>Priority</th><th>Assigned To</th><th>Status</th><th>Submitted</th></tr></thead>
             <tbody>
-              <tr>
-                <td colSpan={6} className="text-center text-gray-400 py-8">
-                  <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <p className="font-medium text-gray-500">No report data available yet</p>
-                  <p className="text-sm text-gray-400 mt-1">Reports will be generated when queue, applications, and maintenance data is available</p>
-                </td>
-              </tr>
+              {!maintenanceReports || maintenanceReports.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center text-gray-400 py-8">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <p className="font-medium text-gray-500">No maintenance reports yet</p>
+                    <p className="text-sm text-gray-400 mt-1">Maintenance reports will appear here once submitted</p>
+                  </td>
+                </tr>
+              ) : (
+                maintenanceReports.slice(0, 10).map(report => (
+                  <tr key={report.id}>
+                    <td className="font-medium">{report.reportNumber}</td>
+                    <td>{report.problemType}</td>
+                    <td>
+                      <span className={`badge ${
+                        report.priority === 'CRITICAL' ? 'bg-red-100 text-red-800' :
+                        report.priority === 'HIGH' ? 'bg-orange-100 text-orange-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {report.priority}
+                      </span>
+                    </td>
+                    <td>{report.assignedTo || <span className="text-gray-400">Unassigned</span>}</td>
+                    <td>
+                      <span className={`badge ${
+                        report.status === 'Completed' || report.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                        report.status === 'In Progress' || report.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
+                        report.status === 'Assigned' || report.status === 'ASSIGNED' ? 'bg-purple-100 text-purple-800' :
+                        'bg-amber-100 text-amber-800'
+                      }`}>
+                        {report.status}
+                      </span>
+                    </td>
+                    <td>{report.date}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
       <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl text-sm text-orange-800">
-        <strong>Reports:</strong> View operational summaries for your institution. Reports will be generated from queue, application, and maintenance data once the backend APIs are integrated.
+        <strong>Reports:</strong> View operational summaries for your institution including queue performance, application status, and maintenance tasks. Data is automatically filtered to show only your institution's information.
       </div>
     </>
   );
@@ -1749,10 +1814,21 @@ function SectionAnnouncements({ userInstitution }) {
     // Normalize role to uppercase for comparison (backend returns lowercase)
     const userRole = authUser.role?.toUpperCase();
     
-    // Institution Manager can only modify their own announcements
+    // Institution Manager can modify any announcement visible to them:
+    // - INTERNAL scope (all managers can see/edit internal announcements)
+    // - INSTITUTION scope for their own institution
+    // - Their own announcements (any scope)
     if (userRole === 'INSTITUTION_MANAGER') {
       const isOwner = ann.creator?.id === authUser?.id || ann.published_by === authUser?.id;
-      return isOwner;
+      const isInternalScope = ann.scope === 'INTERNAL';
+      const isInstitutionScoped = ann.scope === 'INSTITUTION';
+      const isOwnInstitution = ann.institutions?.id === authUser?.institution_id || ann.institution_id === authUser?.institution_id;
+      
+      // Can modify if:
+      // 1. They created it, OR
+      // 2. It's INTERNAL (all staff can edit internal), OR
+      // 3. It's INSTITUTION-scoped for their institution
+      return isOwner || isInternalScope || (isInstitutionScoped && isOwnInstitution);
     }
     
     return false;

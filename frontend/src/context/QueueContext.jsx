@@ -16,8 +16,30 @@ function mapBackendStatusToFrontend(backendStatus) {
 }
 
 // ─── Transform backend queue to frontend format ───────────────────
-function transformQueueEntry(backendQueue) {
+function transformQueueEntry(backendQueue, allQueues = []) {
   const status = mapBackendStatusToFrontend(backendQueue.status);
+  
+  // Find the currently serving token for this institution/service combination
+  let currentServing = 'N/A';
+  if (allQueues && allQueues.length > 0) {
+    const servingEntry = allQueues.find(q => 
+      q.institution_id === backendQueue.institution_id &&
+      q.service_id === backendQueue.service_id &&
+      q.status === 'IN_PROGRESS'
+    );
+    currentServing = servingEntry ? servingEntry.queue_number : 'None';
+  }
+  
+  // Calculate people ahead (only count PENDING entries with lower queue numbers)
+  let peopleAhead = 0;
+  if (status === 'waiting' && allQueues && allQueues.length > 0) {
+    peopleAhead = allQueues.filter(q =>
+      q.institution_id === backendQueue.institution_id &&
+      q.service_id === backendQueue.service_id &&
+      q.status === 'PENDING' &&
+      q.queue_number < backendQueue.queue_number
+    ).length;
+  }
   
   return {
     id: backendQueue.id,
@@ -27,8 +49,8 @@ function transformQueueEntry(backendQueue) {
     serviceName: backendQueue.services?.title_en || backendQueue.services?.name || 'Unknown Service',
     token: backendQueue.queue_number,
     status,
-    currentServing: 'N/A', // Will be calculated from backend data
-    peopleAhead: 0, // Will be calculated from backend data
+    currentServing,
+    peopleAhead,
     createdAt: backendQueue.created_at,
     calledAt: backendQueue.started_at,
     completedAt: backendQueue.completed_at,
@@ -70,7 +92,7 @@ export function QueueProvider({ children }) {
       console.log('Response.data:', response.data);
       
       if (response.success && response.data) {
-        const transformed = response.data.map(transformQueueEntry);
+        const transformed = response.data.map(q => transformQueueEntry(q, response.data));
         console.log('Transformed queues:', transformed);
         setMyTickets(transformed);
       } else {
@@ -120,12 +142,13 @@ export function QueueProvider({ children }) {
 
       // api.post() returns { success, data, message } directly (not wrapped in response.data)
       if (response.success && response.data) {
-        const newTicket = transformQueueEntry(response.data);
+        // Transform with empty array since we don't have full queue data yet
+        const newTicket = transformQueueEntry(response.data, [response.data]);
 
         // Add to local state
         setMyTickets(prev => [newTicket, ...prev]);
 
-        // Refresh from backend to get updated queue position
+        // Refresh from backend to get updated queue position and currentServing
         await fetchQueues();
 
         return newTicket;
