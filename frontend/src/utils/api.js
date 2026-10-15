@@ -35,6 +35,7 @@ export function saveToken(token) {
 export function removeToken() {
   try {
     localStorage.removeItem('mesob_token');
+    localStorage.removeItem('mesob_auth');
   } catch (error) {
     console.error('Failed to remove token:', error);
   }

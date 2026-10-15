@@ -117,17 +117,17 @@ export default function FeedbackRating({
 
   if (isSuccess) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-8 text-center">
+        <div className="w-16 h-16 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">Thank You!</h3>
-        <p className="text-gray-600 mb-4">
-          You rated our service <strong>{submittedRating}/5 Stars</strong>. Your feedback helps us improve!
+        <h3 className="text-xl font-bold text-slate-900 mb-2">Thank You!</h3>
+        <p className="text-slate-600 mb-4 text-sm">
+          You rated our service <strong>{submittedRating}/5 Stars</strong>. Your feedback helps us improve government services!
         </p>
-        <div className="flex gap-2 justify-center text-yellow-400 text-2xl mb-4">
+        <div className="flex gap-2 justify-center text-[#f4b51a] text-2xl mb-5">
           {[1, 2, 3, 4, 5].map(star => (
             <span key={star}>
               {star <= submittedRating ? '⭐' : '☆'}
@@ -136,7 +136,7 @@ export default function FeedbackRating({
         </div>
         <button
           onClick={onCancel || (() => setIsSuccess(false))}
-          className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition"
+          className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] rounded-xl shadow-xs transition cursor-pointer"
         >
           Close
         </button>
@@ -145,14 +145,14 @@ export default function FeedbackRating({
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">Rate Your Experience</h3>
-      <p className="text-sm text-gray-600 mb-1">{serviceName}</p>
-      <p className="text-xs text-gray-500 mb-6">{institutionName}</p>
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
+      <h3 className="text-lg font-bold text-slate-900 mb-1">Rate Your Experience</h3>
+      <p className="text-sm font-semibold text-[#1e3a8a] mb-0.5">{serviceName}</p>
+      <p className="text-xs text-slate-500 mb-6">{institutionName}</p>
 
       {/* Rating Question */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-3">
+        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3">
           How satisfied are you with this service?
         </label>
 
@@ -165,12 +165,12 @@ export default function FeedbackRating({
               onMouseEnter={() => setHoveredRating(star)}
               onMouseLeave={() => setHoveredRating(0)}
               disabled={isSubmitting}
-              className="text-4xl transition-all transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-400 rounded disabled:opacity-50"
+              className="text-4xl transition-all transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#314ea1]/20 rounded disabled:opacity-50 cursor-pointer"
             >
               {star <= (hoveredRating || selectedRating) ? (
-                <span className="text-yellow-400">⭐</span>
+                <span className="text-[#f4b51a]">⭐</span>
               ) : (
-                <span className="text-gray-300">☆</span>
+                <span className="text-slate-300">☆</span>
               )}
             </button>
           ))}
@@ -179,16 +179,16 @@ export default function FeedbackRating({
         {/* Rating Labels */}
         {(selectedRating > 0 || hoveredRating > 0) && (
           <div className="text-center">
-            <span className="inline-block px-4 py-2 bg-blue-50 text-blue-700 rounded-lg font-medium text-sm">
+            <span className="inline-block px-4 py-2 bg-amber-50 text-amber-900 border border-amber-200/80 rounded-xl font-bold text-sm shadow-2xs">
               ⭐ {hoveredRating || selectedRating}/5 — {getRatingMeaning(hoveredRating || selectedRating)}
             </span>
           </div>
         )}
 
         {/* All Rating Meanings */}
-        <div className="mt-4 grid grid-cols-5 gap-2 text-xs text-center text-gray-500">
+        <div className="mt-4 grid grid-cols-5 gap-2 text-xs text-center text-slate-500">
           {ratings.map(({ value, label }) => (
-            <div key={value} className={selectedRating === value ? 'font-semibold text-blue-600' : ''}>
+            <div key={value} className={selectedRating === value ? 'font-bold text-[#314ea1]' : ''}>
               <div>{value}★</div>
               <div>{label}</div>
             </div>
@@ -198,7 +198,7 @@ export default function FeedbackRating({
 
       {/* Optional Comment */}
       <div className="mb-6">
-        <label htmlFor="feedback-comment" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="feedback-comment" className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">
           Additional Comments (Optional)
         </label>
         <textarea
@@ -207,14 +207,14 @@ export default function FeedbackRating({
           onChange={(e) => setComment(e.target.value)}
           disabled={isSubmitting}
           rows={3}
-          className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-400 outline-none transition text-sm disabled:bg-gray-50 disabled:cursor-not-allowed"
+          className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
           placeholder="Tell us more about your experience (optional)"
         />
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+        <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">
           {error}
         </div>
       )}
@@ -224,7 +224,7 @@ export default function FeedbackRating({
         <button
           onClick={handleSubmit}
           disabled={isSubmitting || selectedRating === 0}
-          className="flex-1 px-6 py-2.5 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 px-6 py-3 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white text-sm font-semibold rounded-xl shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {isSubmitting ? 'Submitting...' : 'Submit Rating'}
         </button>
@@ -232,7 +232,7 @@ export default function FeedbackRating({
           <button
             onClick={onCancel}
             disabled={isSubmitting}
-            className="px-6 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 bg-slate-100 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-200 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             Cancel
           </button>

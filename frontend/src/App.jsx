@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth, ROLE_ROUTES } from './context/AuthContext';
 import { ServiceProvider } from './context/ServiceContext';
 import { QueueProvider } from './context/QueueContext';
 import { ApplicationProvider } from './context/ApplicationContext';
@@ -44,6 +44,13 @@ function LoadingFallback() {
   );
 }
 
+// General Dashboard Route - redirects based on role to avoid duplicate route rendering
+function DashboardRedirect() {
+  const { user } = useAuth();
+  const dest = (user && ROLE_ROUTES[user.role]) || '/dashboard/citizen';
+  return <Navigate to={dest} replace />;
+}
+
 export default function App() {
   return (
     <AppProvider>
@@ -73,7 +80,7 @@ export default function App() {
                     path="/dashboard"
                     element={
                       <RequireAuth allowedRoles={['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'ict_staff', 'citizen']}>
-                        <CitizenDashboard />
+                        <DashboardRedirect />
                       </RequireAuth>
                     }
                   />

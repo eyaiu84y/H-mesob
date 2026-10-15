@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth, ROLE_ROUTES } from '../../context/AuthContext';
+import { useAuth, ROLE_ROUTES, ROLE_LABELS } from '../../context/AuthContext';
 import PasswordInput from '../../components/PasswordInput';
 
 // PUBLIC SIGNUP: Only Citizen role allowed
 // Staff roles (Employee, Technician, Institution Manager, MESOB Manager, Super Admin)
 // can only be created by Super Admin through User Management dashboard
 export default function SignupPage() {
-  const { signup, isLoggedIn, user } = useAuth();
+  const { signup, logout, isLoggedIn, user } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName]             = useState('');
@@ -15,13 +15,6 @@ export default function SignupPage() {
   const [password, setPassword]     = useState('');
   const [confirm, setConfirm]       = useState('');
   const [error, setError]           = useState('');
-
-  // Redirect if already logged in
-  useEffect(() => {
-    if (isLoggedIn && user) {
-      navigate(ROLE_ROUTES[user.role] || '/', { replace: true });
-    }
-  }, [isLoggedIn, user, navigate]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -82,6 +75,45 @@ export default function SignupPage() {
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+          {/* Active session warning banner if user is currently logged in */}
+          {isLoggedIn && user && (
+            <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0 font-bold text-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-900">
+                    Already signed in as {user.name}
+                  </p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    Current Role: <span className="font-semibold">{ROLE_LABELS[user.role] || user.role}</span> ({user.email})
+                  </p>
+                  <p className="text-xs text-amber-600 mt-1">
+                    To register a new citizen account, sign out first or fill out the form below.
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={logout}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white transition shadow-sm"
+                    >
+                      Sign Out
+                    </button>
+                    <Link
+                      to={ROLE_ROUTES[user.role] || '/'}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 transition"
+                    >
+                      Go to {ROLE_LABELS[user.role] || 'Your'} Dashboard →
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
 
             {/* Full Name */}

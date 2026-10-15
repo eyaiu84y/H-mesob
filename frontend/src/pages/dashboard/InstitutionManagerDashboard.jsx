@@ -30,21 +30,28 @@ const SECTIONS = [
 
 // ─── Badge helpers ────────────────────────────────────────────────
 function PriorityBadge({ priority }) {
-  const cls = { High: 'badge bg-red-100 text-red-800', Medium: 'badge bg-amber-100 text-amber-800', Normal: 'badge bg-gray-100 text-gray-700' }[priority] || 'badge bg-gray-100 text-gray-700';
+  const cls = {
+    High: 'badge bg-rose-50 text-rose-800 border border-rose-200',
+    Medium: 'badge bg-amber-50 text-amber-800 border border-amber-200',
+    Normal: 'badge bg-slate-100 text-slate-700 border border-slate-200'
+  }[priority] || 'badge bg-slate-100 text-slate-700 border border-slate-200';
   return <span className={cls}>{priority}</span>;
 }
 
 function StatusBadge({ status }) {
   const cls = {
-    Pending: 'badge bg-amber-100 text-amber-800',
-    Waiting: 'badge bg-amber-100 text-amber-800',
-    Assigned: 'badge bg-amber-100 text-amber-800',
-    'In Progress': 'badge bg-blue-100 text-blue-800',
-    Processing: 'badge bg-blue-100 text-blue-800',
-    Completed: 'badge bg-green-100 text-green-800',
-    Submitted: 'badge bg-green-100 text-green-800',
-    Active: 'badge bg-green-100 text-green-800',
-  }[status] || 'badge bg-gray-100 text-gray-700';
+    Pending: 'badge bg-amber-50 text-amber-800 border border-amber-200',
+    Waiting: 'badge bg-amber-50 text-amber-800 border border-amber-200',
+    Assigned: 'badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold',
+    'In Progress': 'badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold',
+    Processing: 'badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold',
+    Completed: 'badge bg-emerald-50 text-emerald-800 border border-emerald-200',
+    Submitted: 'badge bg-blue-50 text-[#1e3a8a] border border-blue-200',
+    Active: 'badge bg-emerald-50 text-emerald-800 border border-emerald-200',
+    Approved: 'badge bg-emerald-50 text-emerald-800 border border-emerald-200',
+    Rejected: 'badge bg-rose-50 text-rose-800 border border-rose-200',
+    Cancelled: 'badge bg-rose-50 text-rose-800 border border-rose-200',
+  }[status] || 'badge bg-slate-100 text-slate-700 border border-slate-200';
   return <span className={cls}>{status}</span>;
 }
 
@@ -97,90 +104,92 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
   return (
     <>
       {/* Institution banner */}
-      <div className="mb-6 p-4 bg-orange-50 border border-orange-100 rounded-xl flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg bg-orange-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">I</div>
+      <div className="mb-6 p-4 bg-blue-50/80 border border-blue-200/80 rounded-2xl flex items-center gap-3.5 shadow-xs">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-base flex-shrink-0 shadow-xs border border-[#314ea1]/20">
+          I
+        </div>
         <div>
-          <p className="text-xs text-orange-600 font-semibold uppercase tracking-wide">Assigned Institution</p>
-          <p className="text-sm font-semibold text-orange-900">{userInstitution || 'Not Assigned'}</p>
+          <p className="text-xs text-[#314ea1] font-bold uppercase tracking-wider">Assigned Institution</p>
+          <p className="text-sm font-bold text-slate-900 mt-0.5">{userInstitution || 'Not Assigned'}</p>
         </div>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
         <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Queue Status</p>
-          <p className="text-2xl font-bold">{activeQueue}</p>
-          <p className="text-xs text-amber-600 mt-1">Active tickets</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Queue Status</p>
+          <p className="text-2xl font-bold text-slate-900">{activeQueue}</p>
+          <p className="text-xs text-amber-700 font-medium mt-1">Active tickets</p>
         </div>
         <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Applications</p>
-          <p className="text-2xl font-bold">{activeApps}</p>
-          <p className="text-xs text-gray-500 mt-1">Pending / in progress</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Applications</p>
+          <p className="text-2xl font-bold text-slate-900">{activeApps}</p>
+          <p className="text-xs text-slate-400 mt-1">Pending / in progress</p>
         </div>
         <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Maintenance</p>
-          <p className="text-2xl font-bold">{openMaint}</p>
-          <p className="text-xs text-gray-500 mt-1">Open tasks</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Maintenance</p>
+          <p className="text-2xl font-bold text-slate-900">{openMaint}</p>
+          <p className="text-xs text-slate-400 mt-1">Open tasks</p>
         </div>
         <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Announcements</p>
-          <p className="text-2xl font-bold">{unread}</p>
-          <p className="text-xs text-gray-500 mt-1">Unread</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Announcements</p>
+          <p className="text-2xl font-bold text-slate-900">{unread}</p>
+          <p className="text-xs text-slate-400 mt-1">Unread</p>
         </div>
       </div>
 
       {/* Queue overview */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">Queue Overview</h2>
-          <button onClick={() => setActiveSection('Queue Management')} className="text-sm text-blue-600 hover:underline font-medium">View all</button>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <h2 className="font-semibold text-slate-900">Queue Overview</h2>
+          <button onClick={() => setActiveSection('Queue Management')} className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold transition">View all</button>
         </div>
         {activeQueue > 0 ? (
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-sm text-gray-600">Active Tickets</span>
-              <span className="text-2xl font-bold text-gray-900">{activeQueue}</span>
+              <span className="text-sm text-slate-600 font-medium">Active Tickets</span>
+              <span className="text-2xl font-bold text-slate-900">{activeQueue}</span>
             </div>
-            <p className="text-xs text-gray-500">Citizens are currently in queue at your institution.</p>
+            <p className="text-xs text-slate-500">Citizens are currently in queue at your institution.</p>
           </div>
         ) : (
-          <div className="p-6 text-center text-gray-400">
-            <svg className="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="p-6 text-center text-slate-400 py-10">
+            <svg className="w-12 h-12 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
-            <p className="text-sm">No active queue items</p>
-            <p className="text-xs mt-1">Queue tickets will appear here when citizens check in.</p>
+            <p className="text-sm font-medium text-slate-700">No active queue items</p>
+            <p className="text-xs text-slate-400 mt-1">Queue tickets will appear here when citizens check in.</p>
           </div>
         )}
       </div>
 
       {/* Applications overview */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">Applications Overview</h2>
-          <button onClick={() => setActiveSection('Applications')} className="text-sm text-blue-600 hover:underline font-medium">View all</button>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <h2 className="font-semibold text-slate-900">Applications Overview</h2>
+          <button onClick={() => setActiveSection('Applications')} className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold transition">View all</button>
         </div>
         {activeApps > 0 ? (
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-sm text-gray-600">Pending / In Progress</span>
-              <span className="text-2xl font-bold text-gray-900">{activeApps}</span>
+              <span className="text-sm text-slate-600 font-medium">Pending / In Progress</span>
+              <span className="text-2xl font-bold text-slate-900">{activeApps}</span>
             </div>
-            <p className="text-xs text-gray-500">Applications waiting for review or currently being processed.</p>
+            <p className="text-xs text-slate-500">Applications waiting for review or currently being processed.</p>
           </div>
         ) : (
-          <div className="p-6 text-center text-gray-400">
-            <svg className="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="p-6 text-center text-slate-400 py-10">
+            <svg className="w-12 h-12 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <p className="text-sm">No pending applications</p>
-            <p className="text-xs mt-1">New applications will appear here when citizens submit them.</p>
+            <p className="text-sm font-medium text-slate-700">No pending applications</p>
+            <p className="text-xs text-slate-400 mt-1">New applications will appear here when citizens submit them.</p>
           </div>
         )}
       </div>
 
-      <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl text-sm text-orange-800">
-        <strong>Institution Manager:</strong> Monitor your institution's queue, applications, maintenance, and task assignments. You manage {userInstitution || 'your assigned institution'} only.
+      <div className="p-4 bg-blue-50/80 border border-blue-200/80 rounded-2xl text-sm text-[#1e3a8a] shadow-xs">
+        <strong className="font-semibold">Institution Manager:</strong> Monitor your institution's queue, applications, maintenance, and task assignments. You manage {userInstitution || 'your assigned institution'} only.
       </div>
     </>
   );
@@ -215,51 +224,51 @@ function SectionQueueManagement({ userInstitution }) {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Queue Management</h2>
-        <p className="text-sm text-gray-500">Monitor the service queue for {userInstitution || 'your institution'}.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">Queue Management</h2>
+        <p className="text-sm text-slate-500">Monitor the service queue for {userInstitution || 'your institution'}.</p>
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Waiting</p>
-          <p className="text-2xl font-bold text-yellow-600">{waitingCount}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Waiting</p>
+          <p className="text-2xl font-bold text-amber-600">{waitingCount}</p>
         </div>
         <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Processing</p>
-          <p className="text-2xl font-bold text-blue-600">{processingCount}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Processing</p>
+          <p className="text-2xl font-bold text-[#1e3a8a]">{processingCount}</p>
         </div>
         <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Completed Today</p>
-          <p className="text-2xl font-bold text-green-600">{completedTodayCount}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Completed Today</p>
+          <p className="text-2xl font-bold text-emerald-600">{completedTodayCount}</p>
         </div>
       </div>
       
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">Queue — {userInstitution || 'Institution'}</h3>
-          <span className="text-sm text-gray-500">{queueItems.length} total</span>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <h3 className="font-semibold text-slate-900">Queue — {userInstitution || 'Institution'}</h3>
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">{queueItems.length} total</span>
         </div>
         
         {loading ? (
-          <div className="p-6 text-center text-gray-400 py-12">
+          <div className="p-6 text-center text-slate-400 py-12">
             <p className="text-sm">Loading queue data...</p>
           </div>
         ) : queueItems.length === 0 ? (
-          <div className="p-6 text-center text-gray-400 py-12">
-            <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="p-6 text-center text-slate-400 py-12">
+            <svg className="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
-            <p className="text-sm font-medium mb-2">No Active Queue Items</p>
-            <p className="text-xs">Queue items will appear here when citizens register for services at your institution.</p>
+            <p className="text-sm font-medium text-slate-700 mb-1">No Active Queue Items</p>
+            <p className="text-xs text-slate-400">Queue items will appear here when citizens register for services at your institution.</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-slate-100">
             {queueItems.map((item) => {
               const statusColors = {
-                waiting: 'bg-yellow-100 text-yellow-800',
-                called: 'bg-blue-100 text-blue-800',
-                completed: 'bg-green-100 text-green-800',
-                cancelled: 'bg-red-100 text-red-800'
+                waiting: 'bg-amber-50 text-amber-800 border border-amber-200',
+                called: 'bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold',
+                completed: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
+                cancelled: 'bg-rose-50 text-rose-800 border border-rose-200'
               };
               
               const statusLabels = {
@@ -270,25 +279,25 @@ function SectionQueueManagement({ userInstitution }) {
               };
               
               return (
-                <div key={item.id} className="px-6 py-4 hover:bg-gray-50 transition">
+                <div key={item.id} className="px-6 py-4 hover:bg-slate-50/70 transition">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-sm shadow-xs border border-[#314ea1]/20">
                         {item.token}
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">{item.serviceName}</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="font-semibold text-slate-900">{item.serviceName}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">
                           Registered at {new Date(item.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusColors[item.status]}`}>
+                      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[item.status]}`}>
                         {statusLabels[item.status]}
                       </span>
                       {item.assignedTo && (
-                        <p className="text-xs text-gray-500 mt-1">Assigned to employee</p>
+                        <p className="text-xs text-slate-400 mt-1">Assigned to employee</p>
                       )}
                     </div>
                   </div>
@@ -299,7 +308,7 @@ function SectionQueueManagement({ userInstitution }) {
         )}
       </div>
       
-      <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl text-sm text-orange-800">
+      <div className="p-4 bg-blue-50/60 border border-blue-100 rounded-xl text-sm text-blue-900">
         <strong>Queue Management:</strong> Monitor queue status for your institution. Queue items are processed by assigned Employees.
       </div>
     </>
@@ -338,7 +347,7 @@ function SectionApplications({ userInstitution }) {
         <div className="mb-6">
           <button
             onClick={() => setSelectedApp(null)}
-            className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1"
+            className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold flex items-center gap-1.5 transition"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -347,84 +356,76 @@ function SectionApplications({ userInstitution }) {
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <div className="border-b border-gray-100 pb-4 mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Application Details</h2>
-            <p className="text-sm text-gray-500 mt-1">Application #{selectedApp.applicationNumber || selectedApp.id}</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 sm:p-8">
+          <div className="border-b border-slate-100 pb-5 mb-6">
+            <h2 className="text-xl font-bold text-slate-900">Application Details</h2>
+            <p className="text-sm text-slate-500 mt-1">Application #{selectedApp.applicationNumber || selectedApp.id}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <label className="text-sm font-medium text-gray-500">Status</label>
-              <div className="mt-1">
-                <span className={`badge ${
-                  selectedApp.status === 'Submitted' ? 'bg-blue-100 text-blue-800' :
-                  selectedApp.status === 'Under Review' ? 'bg-amber-100 text-amber-800' :
-                  selectedApp.status === 'Approved' ? 'bg-green-100 text-green-800' :
-                  selectedApp.status === 'Rejected' ? 'bg-red-100 text-red-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {selectedApp.status}
-                </span>
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Status</label>
+              <div className="mt-1.5">
+                <StatusBadge status={selectedApp.status} />
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Submitted</label>
-              <p className="mt-1 text-gray-900">{selectedApp.submittedDate}</p>
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Submitted</label>
+              <p className="mt-1 font-medium text-slate-900">{selectedApp.submittedDate}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Service</label>
-              <p className="mt-1 text-gray-900">{selectedApp.service}</p>
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Service</label>
+              <p className="mt-1 font-medium text-slate-900">{selectedApp.service}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Institution</label>
-              <p className="mt-1 text-gray-900">{selectedApp.institution}</p>
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Institution</label>
+              <p className="mt-1 font-medium text-slate-900">{selectedApp.institution}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Last Updated</label>
-              <p className="mt-1 text-gray-900">{selectedApp.lastUpdated}</p>
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Last Updated</label>
+              <p className="mt-1 font-medium text-slate-900">{selectedApp.lastUpdated}</p>
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Citizen Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">Name</label>
-                <p className="mt-1 text-gray-900">{selectedApp.citizenName || 'N/A'}</p>
+          <div className="border-t border-slate-100 pt-6 mb-6">
+            <h3 className="text-base font-bold text-slate-900 mb-4">Citizen Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+                <label className="text-xs text-slate-500">Name</label>
+                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.citizenName || 'N/A'}</p>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Email</label>
-                <p className="mt-1 text-gray-900">{selectedApp.citizenEmail || 'N/A'}</p>
+              <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+                <label className="text-xs text-slate-500">Email</label>
+                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.citizenEmail || 'N/A'}</p>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Phone</label>
-                <p className="mt-1 text-gray-900">{selectedApp.citizenPhone || 'N/A'}</p>
+              <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+                <label className="text-xs text-slate-500">Phone</label>
+                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.citizenPhone || 'N/A'}</p>
               </div>
             </div>
           </div>
 
           {selectedApp.applicationData && (
-            <div className="border-t border-gray-100 pt-6 mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Application Data</h3>
-              <div className="bg-gray-50 rounded-lg p-4">
+            <div className="border-t border-slate-100 pt-6 mb-6">
+              <h3 className="text-base font-bold text-slate-900 mb-4">Application Data</h3>
+              <div className="bg-slate-50/80 rounded-xl p-4 border border-slate-200/60">
                 <div className="space-y-3">
                   {selectedApp.applicationData.fullName && (
                     <div>
-                      <label className="text-sm font-medium text-gray-500">Full Name</label>
-                      <p className="mt-1 text-gray-900">{selectedApp.applicationData.fullName}</p>
+                      <label className="text-xs text-slate-500">Full Name</label>
+                      <p className="mt-0.5 text-sm font-medium text-slate-900">{selectedApp.applicationData.fullName}</p>
                     </div>
                   )}
                   {selectedApp.applicationData.address && (
                     <div>
-                      <label className="text-sm font-medium text-gray-500">Address</label>
-                      <p className="mt-1 text-gray-900">{selectedApp.applicationData.address}</p>
+                      <label className="text-xs text-slate-500">Address</label>
+                      <p className="mt-0.5 text-sm font-medium text-slate-900">{selectedApp.applicationData.address}</p>
                     </div>
                   )}
                   {selectedApp.applicationData.additionalInfo && (
                     <div>
-                      <label className="text-sm font-medium text-gray-500">Additional Information</label>
-                      <p className="mt-1 text-gray-900 whitespace-pre-wrap">{selectedApp.applicationData.additionalInfo}</p>
+                      <label className="text-xs text-slate-500">Additional Information</label>
+                      <p className="mt-0.5 text-sm text-slate-800 whitespace-pre-wrap">{selectedApp.applicationData.additionalInfo}</p>
                     </div>
                   )}
                 </div>
@@ -433,28 +434,28 @@ function SectionApplications({ userInstitution }) {
           )}
 
           {selectedApp.reviewNotes && (
-            <div className="border-t border-gray-100 pt-6 mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Review Notes</h3>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-gray-900 whitespace-pre-wrap">{selectedApp.reviewNotes}</p>
+            <div className="border-t border-slate-100 pt-6 mb-6">
+              <h3 className="text-base font-bold text-slate-900 mb-4">Review Notes</h3>
+              <div className="bg-slate-50/80 rounded-xl p-4 border border-slate-200/60">
+                <p className="text-slate-800 text-sm whitespace-pre-wrap">{selectedApp.reviewNotes}</p>
               </div>
             </div>
           )}
 
           {selectedApp.assignedEmployee && (
-            <div className="border-t border-gray-100 pt-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Assignment</h3>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Assigned To</label>
-                <p className="mt-1 text-gray-900">{selectedApp.assignedEmployee}</p>
+            <div className="border-t border-slate-100 pt-6">
+              <h3 className="text-base font-bold text-slate-900 mb-3">Assignment</h3>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 text-[#1e3a8a] text-sm font-medium border border-blue-200/80">
+                <span>Assigned to:</span>
+                <strong>{selectedApp.assignedEmployee}</strong>
               </div>
             </div>
           )}
 
-          <div className="border-t border-gray-100 pt-6 mt-6">
+          <div className="border-t border-slate-100 pt-6 mt-6">
             <button 
               onClick={() => setSelectedApp(null)}
-              className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+              className="px-6 py-2.5 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition font-semibold text-sm"
             >
               Close
             </button>
@@ -467,8 +468,8 @@ function SectionApplications({ userInstitution }) {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Applications</h2>
-        <p className="text-sm text-gray-500">Monitor applications for {userInstitution || 'your institution'}.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">Applications</h2>
+        <p className="text-sm text-slate-500">Monitor applications for {userInstitution || 'your institution'}.</p>
       </div>
 
       {/* Search bar */}
@@ -479,9 +480,9 @@ function SectionApplications({ userInstitution }) {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search applications..."
-            className="w-full px-4 py-2.5 pl-10 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition text-sm"
+            className="w-full px-4 py-2.5 pl-10 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
           />
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
             fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -489,10 +490,10 @@ function SectionApplications({ userInstitution }) {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">Institution Applications</h3>
-          <span className="text-sm text-gray-500">{filteredApplications.length} result{filteredApplications.length !== 1 ? 's' : ''}</span>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <h3 className="font-semibold text-slate-900">Institution Applications</h3>
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">{filteredApplications.length} result{filteredApplications.length !== 1 ? 's' : ''}</span>
         </div>
         
         {filteredApplications.length > 0 ? (
@@ -511,25 +512,17 @@ function SectionApplications({ userInstitution }) {
               <tbody>
                 {filteredApplications.map(app => (
                   <tr key={app.id}>
-                    <td className="font-medium">{app.applicationNumber || app.id}</td>
+                    <td className="font-semibold text-slate-900">{app.applicationNumber || app.id}</td>
                     <td>{app.citizenName || app.citizenEmail}</td>
                     <td>{app.service}</td>
                     <td>
-                      <span className={`badge ${
-                        app.status === 'Submitted' ? 'bg-blue-100 text-blue-800' :
-                        app.status === 'Under Review' ? 'bg-amber-100 text-amber-800' :
-                        app.status === 'Approved' ? 'bg-green-100 text-green-800' :
-                        app.status === 'Rejected' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {app.status}
-                      </span>
+                      <StatusBadge status={app.status} />
                     </td>
-                    <td>{app.submittedDate}</td>
+                    <td className="text-slate-500">{app.submittedDate}</td>
                     <td className="text-right">
                       <button 
                         onClick={() => setSelectedApp(app)}
-                        className="text-blue-600 hover:underline text-sm font-medium"
+                        className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold transition"
                       >
                         View
                       </button>
@@ -540,16 +533,16 @@ function SectionApplications({ userInstitution }) {
             </table>
           </div>
         ) : (
-          <div className="p-6 text-center text-gray-400 py-12">
-            <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="p-6 text-center text-slate-400 py-12">
+            <svg className="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <p className="text-sm font-medium mb-2">No Applications</p>
-            <p className="text-xs">{searchQuery ? 'No applications match your search' : 'Applications submitted to your institution will appear here'}</p>
+            <p className="text-sm font-medium text-slate-700 mb-1">No Applications</p>
+            <p className="text-xs text-slate-400">{searchQuery ? 'No applications match your search' : 'Applications submitted to your institution will appear here'}</p>
           </div>
         )}
       </div>
-      <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl text-sm text-orange-800">
+      <div className="p-4 bg-blue-50/60 border border-blue-100 rounded-xl text-sm text-blue-900">
         <strong>Applications:</strong> All applications submitted for your institution's services are displayed here.
       </div>
     </>
@@ -709,13 +702,13 @@ function SectionMaintenance({ userInstitution }) {
 
             <form onSubmit={handleAssignTechnician} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
                   Select Technician <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={assignForm.technician}
                   onChange={e => setAssignForm({ technician: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-400 outline-none transition text-sm bg-white"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
                 >
                   <option value="">Select technician...</option>
                   {technicianList.map(t => (
@@ -733,14 +726,14 @@ function SectionMaintenance({ userInstitution }) {
               <div className="flex gap-3 pt-2">
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition"
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white text-sm font-semibold rounded-xl shadow-xs transition"
                 >
                   Assign Task
                 </button>
                 <button
                   type="button"
                   onClick={() => { setShowAssignModal(false); setAssignError(''); setAssignForm({ technician: '' }); }}
-                  className="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition"
+                  className="px-5 py-2.5 border border-slate-300 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition"
                 >
                   Cancel
                 </button>
@@ -762,35 +755,35 @@ function SectionMaintenance({ userInstitution }) {
     return (
       <>
         <div className="mb-6">
-          <button onClick={() => { setSelected(null); setSelectedType(null); }} className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
+          <button onClick={() => { setSelected(null); setSelectedType(null); }} className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold flex items-center gap-1 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
             Back to Maintenance
           </button>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
-          <div className="flex flex-wrap items-start justify-between gap-4 mb-6 pb-6 border-b border-gray-100">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6">
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-6 pb-6 border-b border-slate-100">
             <div>
-              <p className="text-xs text-gray-400 mb-1">{task.id}</p>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">{task.title}</h2>
+              <p className="text-xs text-slate-400 mb-1">{task.id}</p>
+              <h2 className="text-lg font-bold text-slate-900 mb-2">{task.title}</h2>
               <div className="flex gap-2"><PriorityBadge priority={task.priority} /><StatusBadge status={task.status} /></div>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-6">
-            <div className="flex justify-between"><span className="text-gray-500">Assigned To</span><span className="font-medium">{task.assignedTo}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Assigned Date</span><span className="font-medium">{task.assignedDate}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Related Report</span><span className="font-medium">{task.reportId || '—'}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Status</span><StatusBadge status={task.status} /></div>
+            <div className="flex justify-between"><span className="text-slate-500">Assigned To</span><span className="font-medium text-slate-800">{task.assignedTo}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Assigned Date</span><span className="font-medium text-slate-800">{task.assignedDate}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Related Report</span><span className="font-medium text-slate-800">{task.reportId || '—'}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Status</span><StatusBadge status={task.status} /></div>
           </div>
           {task.description && (
             <div className="mb-6">
               <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-2">Task Description</p>
-              <p className="text-sm text-gray-700">{task.description}</p>
+              <p className="text-sm text-slate-700">{task.description}</p>
             </div>
           )}
           {task.report && (
-            <div className="border-t border-gray-100 pt-5">
+            <div className="border-t border-slate-100 pt-5">
               <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-3">Technician Report</p>
-              <p className="text-sm text-gray-700">{task.report}</p>
+              <p className="text-sm text-slate-700">{task.report}</p>
             </div>
           )}
         </div>
@@ -808,22 +801,22 @@ function SectionMaintenance({ userInstitution }) {
     return (
       <>
         <div className="mb-6">
-          <button onClick={() => { setSelected(null); setSelectedType(null); }} className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
+          <button onClick={() => { setSelected(null); setSelectedType(null); }} className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold flex items-center gap-1 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
             Back to Maintenance
           </button>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6 max-w-4xl">
-          <div className="flex flex-wrap items-start justify-between gap-4 mb-6 pb-6 border-b border-gray-100">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6 max-w-4xl">
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-6 pb-6 border-b border-slate-100">
             <div>
-              <p className="text-xs text-gray-400 mb-1">{report.reportNumber}</p>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Maintenance Report Details</h2>
+              <p className="text-xs text-slate-400 mb-1">{report.reportNumber}</p>
+              <h2 className="text-lg font-bold text-slate-900 mb-2">Maintenance Report Details</h2>
               <div className="flex gap-2"><StatusBadge status={report.status} /></div>
             </div>
             {report.status === 'Submitted' && (
               <button
                 onClick={() => setShowAssignModal(true)}
-                className="px-4 py-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition"
+                className="px-4 py-2 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white text-sm font-semibold rounded-xl shadow-xs transition"
               >
                 Assign Technician
               </button>
@@ -836,16 +829,16 @@ function SectionMaintenance({ userInstitution }) {
                 <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-2">Reporter Information</p>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Employee Name:</span>
-                    <span className="font-medium text-gray-900">{report.reportedBy}</span>
+                    <span className="text-slate-500">Employee Name:</span>
+                    <span className="font-medium text-slate-900">{report.reportedBy}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Employee ID:</span>
-                    <span className="font-medium text-gray-900">{report.reportedById}</span>
+                    <span className="text-slate-500">Employee ID:</span>
+                    <span className="font-medium text-slate-900">{report.reportedById}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Institution:</span>
-                    <span className="font-medium text-gray-900">{report.institution}</span>
+                    <span className="text-slate-500">Institution:</span>
+                    <span className="font-medium text-slate-900">{report.institution}</span>
                   </div>
                 </div>
               </div>
@@ -854,16 +847,16 @@ function SectionMaintenance({ userInstitution }) {
                 <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-2">Problem Information</p>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Problem Type:</span>
-                    <span className="font-medium text-gray-900">{report.problemType}</span>
+                    <span className="text-slate-500">Problem Type:</span>
+                    <span className="font-medium text-slate-900">{report.problemType}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Location:</span>
-                    <span className="font-medium text-gray-900">{report.location}</span>
+                    <span className="text-slate-500">Location:</span>
+                    <span className="font-medium text-slate-900">{report.location}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Office Number:</span>
-                    <span className="font-medium text-gray-900">{report.officeNumber}</span>
+                    <span className="text-slate-500">Office Number:</span>
+                    <span className="font-medium text-slate-900">{report.officeNumber}</span>
                   </div>
                 </div>
               </div>
@@ -874,21 +867,21 @@ function SectionMaintenance({ userInstitution }) {
                 <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-2">Status Information</p>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Submitted:</span>
-                    <span className="font-medium text-gray-900">{report.date}</span>
+                    <span className="text-slate-500">Submitted:</span>
+                    <span className="font-medium text-slate-900">{report.date}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Status:</span>
+                    <span className="text-slate-500">Status:</span>
                     <StatusBadge status={report.status} />
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Assigned To:</span>
-                    <span className="font-medium text-gray-900">{report.assignedTo || <span className="text-gray-400">Not assigned yet</span>}</span>
+                    <span className="text-slate-500">Assigned To:</span>
+                    <span className="font-medium text-slate-900">{report.assignedTo || <span className="text-slate-400">Not assigned yet</span>}</span>
                   </div>
                   {report.taskId && (
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Task ID:</span>
-                      <span className="font-medium text-gray-900">{report.taskId}</span>
+                      <span className="text-slate-500">Task ID:</span>
+                      <span className="font-medium text-slate-900">{report.taskId}</span>
                     </div>
                   )}
                 </div>
@@ -898,7 +891,7 @@ function SectionMaintenance({ userInstitution }) {
 
           <div className="mb-6">
             <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-2">Problem Description</p>
-            <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-4">{report.description}</p>
+            <p className="text-sm text-slate-700 leading-relaxed bg-slate-50 rounded-xl p-4 border border-slate-100">{report.description}</p>
           </div>
 
           {report.photoPreview && (
@@ -907,13 +900,13 @@ function SectionMaintenance({ userInstitution }) {
               <img
                 src={report.photoPreview}
                 alt="Problem photo"
-                className="max-w-lg w-full rounded-xl border border-gray-200 shadow-sm"
+                className="max-w-lg w-full rounded-xl border border-slate-200 shadow-xs"
               />
             </div>
           )}
         </div>
 
-        <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl text-sm text-orange-800 max-w-4xl">
+        <div className="p-4 bg-[#314ea1]/5 border border-[#314ea1]/20 rounded-xl text-xs font-medium text-[#1e3a8a] max-w-4xl">
           <strong>Manager Actions:</strong> Review the complete employee report including the problem photo, then click "Assign Technician" to create a task and assign it to a technician.
         </div>
       </>
@@ -923,15 +916,15 @@ function SectionMaintenance({ userInstitution }) {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Maintenance</h2>
-        <p className="text-sm text-gray-500">Monitor employee-reported problems and assigned maintenance tasks for {userInstitution || 'your institution'}.</p>
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">Maintenance</h2>
+        <p className="text-sm text-slate-500 font-normal">Monitor employee-reported problems and assigned maintenance tasks for {userInstitution || 'your institution'}.</p>
       </div>
 
       {/* Employee Reports */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">Employee Problem Reports</h3>
-          <span className="text-sm text-gray-500">{reports.filter(r => r.status === 'Submitted').length} pending</span>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="font-bold text-slate-900">Employee Problem Reports</h3>
+          <span className="text-xs font-semibold px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full">{reports.filter(r => r.status === 'Submitted').length} pending</span>
         </div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
@@ -951,10 +944,10 @@ function SectionMaintenance({ userInstitution }) {
             </thead>
             <tbody>
               {reports.length === 0 ? (
-                <tr><td colSpan={10} className="text-center text-gray-400 py-6">No maintenance reports.</td></tr>
+                <tr><td colSpan={10} className="text-center text-slate-400 py-6">No maintenance reports.</td></tr>
               ) : reports.map(r => (
                 <tr key={r.id}>
-                  <td className="font-medium">{r.reportNumber}</td>
+                  <td className="font-semibold text-slate-800">{r.reportNumber}</td>
                   <td>{r.reportedBy}</td>
                   <td>{r.reportedById}</td>
                   <td>{r.problemType}</td>
@@ -962,8 +955,8 @@ function SectionMaintenance({ userInstitution }) {
                   <td>{r.officeNumber}</td>
                   <td className="whitespace-nowrap">{r.reportedAt}</td>
                   <td><StatusBadge status={r.status} /></td>
-                  <td>{r.assignedTo || <span className="text-gray-400">—</span>}</td>
-                  <td><button onClick={() => { setSelected(r.id); setSelectedType('report'); }} className="text-blue-600 hover:underline text-sm font-medium">View</button></td>
+                  <td>{r.assignedTo || <span className="text-slate-400">—</span>}</td>
+                  <td><button onClick={() => { setSelected(r.id); setSelectedType('report'); }} className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold transition">View</button></td>
                 </tr>
               ))}
             </tbody>
@@ -972,10 +965,10 @@ function SectionMaintenance({ userInstitution }) {
       </div>
 
       {/* Maintenance Tasks */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">Maintenance Tasks</h3>
-          <span className="text-sm text-gray-500">{tasks.filter(t => t.status !== 'Completed').length} open</span>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="font-bold text-slate-900">Maintenance Tasks</h3>
+          <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 text-[#1e3a8a] border border-blue-200 rounded-full">{tasks.filter(t => t.status !== 'Completed').length} open</span>
         </div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
@@ -984,24 +977,24 @@ function SectionMaintenance({ userInstitution }) {
             </thead>
             <tbody>
               {tasks.length === 0 ? (
-                <tr><td colSpan={8} className="text-center text-gray-400 py-6">No maintenance tasks.</td></tr>
+                <tr><td colSpan={8} className="text-center text-slate-400 py-6">No maintenance tasks.</td></tr>
               ) : tasks.map(t => (
                 <tr key={t.id}>
-                  <td className="font-medium">{t.id}</td>
+                  <td className="font-semibold text-slate-800">{t.id}</td>
                   <td>{t.title}</td>
                   <td><PriorityBadge priority={t.priority} /></td>
                   <td>{t.assignedTo}</td>
                   <td>{t.assignedDate}</td>
                   <td><StatusBadge status={t.status} /></td>
-                  <td>{t.report ? <span className="text-green-600 text-sm font-medium">Submitted</span> : <span className="text-gray-400 text-sm">—</span>}</td>
-                  <td><button onClick={() => { setSelected(t.id); setSelectedType('task'); }} className="text-blue-600 hover:underline text-sm font-medium">View</button></td>
+                  <td>{t.report ? <span className="text-emerald-700 text-sm font-semibold">Submitted</span> : <span className="text-slate-400 text-sm">—</span>}</td>
+                  <td><button onClick={() => { setSelected(t.id); setSelectedType('task'); }} className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold transition">View</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
-      <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl text-sm text-orange-800">
+      <div className="p-4 bg-[#314ea1]/5 border border-[#314ea1]/20 rounded-xl text-xs font-medium text-[#1e3a8a]">
         <strong>Maintenance:</strong> Review employee problem reports with all details including photos. Click "View" then "Assign Technician" to create a task. Monitor task progress and technician reports.
       </div>
     </>
@@ -1167,7 +1160,7 @@ function SectionTaskAssignment({ userInstitution }) {
               setView('list');
               setFormError('');
             }}
-            className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1"
+            className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold flex items-center gap-1 transition"
           >
             <svg
               className="w-4 h-4"
@@ -1186,21 +1179,21 @@ function SectionTaskAssignment({ userInstitution }) {
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 max-w-2xl">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 max-w-2xl">
+          <h2 className="text-xl font-bold text-slate-900 mb-6">
             Assign New Technical Task
           </h2>
 
           <form onSubmit={submitTask} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 Related Problem Report <span className="text-red-500">*</span>
               </label>
 
               <select
                 value={form.reportId}
                 onChange={e => handleReportChange(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm bg-white"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
               >
                 <option value="">Select maintenance report...</option>
 
@@ -1213,7 +1206,7 @@ function SectionTaskAssignment({ userInstitution }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 Task Title
               </label>
 
@@ -1222,13 +1215,13 @@ function SectionTaskAssignment({ userInstitution }) {
                 value={form.title}
                 readOnly
                 placeholder="Select a maintenance report first"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 bg-gray-50 outline-none text-sm"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50 outline-none text-sm text-slate-700"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
                   Assign To <span className="text-red-500">*</span>
                 </label>
 
@@ -1240,7 +1233,7 @@ function SectionTaskAssignment({ userInstitution }) {
                       assignedTo: e.target.value
                     }))
                   }
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm bg-white"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
                 >
                   <option value="">Select Technician...</option>
 
@@ -1253,7 +1246,7 @@ function SectionTaskAssignment({ userInstitution }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
                   Priority
                 </label>
 
@@ -1261,13 +1254,13 @@ function SectionTaskAssignment({ userInstitution }) {
                   type="text"
                   value={form.priority}
                   readOnly
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 bg-gray-50 outline-none text-sm"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50 outline-none text-sm text-slate-700"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 Description
               </label>
 
@@ -1276,7 +1269,7 @@ function SectionTaskAssignment({ userInstitution }) {
                 value={form.description}
                 readOnly
                 placeholder="Select a maintenance report first"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 bg-gray-50 outline-none text-sm resize-y"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50 outline-none text-sm resize-y text-slate-700"
               />
             </div>
 
@@ -1288,7 +1281,7 @@ function SectionTaskAssignment({ userInstitution }) {
 
             <button
               type="submit"
-              className="px-6 py-3 bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-semibold rounded-xl transition text-sm"
+              className="px-6 py-3 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white font-semibold rounded-xl shadow-xs transition text-sm"
             >
               Assign Task
             </button>
@@ -1302,11 +1295,11 @@ function SectionTaskAssignment({ userInstitution }) {
     <>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">
             Task Assignment
           </h2>
 
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500 font-normal">
             Assign and monitor technical tasks for Technicians in{' '}
             {userInstitution || 'your institution'}.
           </p>
@@ -1324,13 +1317,13 @@ function SectionTaskAssignment({ userInstitution }) {
             });
             setView('new');
           }}
-          className="px-4 py-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition"
+          className="px-4 py-2 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white text-sm font-semibold rounded-xl shadow-xs transition"
         >
           + Assign Task
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
             <thead>
@@ -1348,7 +1341,7 @@ function SectionTaskAssignment({ userInstitution }) {
               {assignedTasks.length > 0 ? (
                 assignedTasks.map(t => (
                   <tr key={t.id}>
-                    <td className="font-medium">
+                    <td className="font-semibold text-slate-800">
                       {t.reportNumber || t.id}
                     </td>
 
@@ -1381,7 +1374,7 @@ function SectionTaskAssignment({ userInstitution }) {
                 <tr>
                   <td
                     colSpan={6}
-                    className="text-center text-gray-400 py-8"
+                    className="text-center text-slate-400 py-8"
                   >
                     No maintenance tasks assigned yet.
                   </td>
@@ -1392,7 +1385,7 @@ function SectionTaskAssignment({ userInstitution }) {
         </div>
       </div>
 
-      <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl text-sm text-orange-800">
+      <div className="p-4 bg-[#314ea1]/5 border border-[#314ea1]/20 rounded-xl text-xs font-medium text-[#1e3a8a]">
         <strong>Task Assignment:</strong> Select an existing maintenance
         report and assign it to an ICT Technician in your institution.
         The backend automatically creates the maintenance task and
@@ -1459,63 +1452,68 @@ function SectionReports({ userInstitution }) {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Reports</h2>
-        <p className="text-sm text-gray-500">Operational summary for {userInstitution || 'your institution'}.</p>
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">Reports</h2>
+        <p className="text-sm text-slate-500 font-normal">Operational summary for {userInstitution || 'your institution'}.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Queue Completed Today</p><p className="text-2xl font-bold text-green-600">{qCompleted}</p></div>
-        <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Active Queue</p><p className="text-2xl font-bold">{queueActive}</p></div>
-        <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Maintenance Completed</p><p className="text-2xl font-bold text-green-600">{maintDone}</p></div>
-      </div>
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
-        <h3 className="font-semibold text-gray-900 mb-4">Application Status Breakdown</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-green-50 border border-green-100"><span className="badge bg-green-100 text-green-800">Completed</span><span className="text-2xl font-bold text-gray-900">{completed}</span></div>
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100"><span className="badge bg-amber-100 text-amber-800">Pending</span><span className="text-2xl font-bold text-gray-900">{pending}</span></div>
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-100"><span className="badge bg-blue-100 text-blue-800">In Progress</span><span className="text-2xl font-bold text-gray-900">{inProg}</span></div>
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Queue Completed Today</p>
+          <p className="text-3xl font-extrabold text-emerald-600">{qCompleted}</p>
+        </div>
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Active Queue</p>
+          <p className="text-3xl font-extrabold text-[#1e3a8a]">{queueActive}</p>
+        </div>
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Maintenance Completed</p>
+          <p className="text-3xl font-extrabold text-emerald-600">{maintDone}</p>
         </div>
       </div>
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">Maintenance Task Summary</h3></div>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6">
+        <h3 className="font-bold text-slate-900 mb-4">Application Status Breakdown</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-50/70 border border-emerald-200/70">
+            <span className="text-xs font-bold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full">Completed</span>
+            <span className="text-2xl font-bold text-slate-900">{completed}</span>
+          </div>
+          <div className="flex items-center justify-between p-4 rounded-xl bg-amber-50/70 border border-amber-200/70">
+            <span className="text-xs font-bold px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full">Pending</span>
+            <span className="text-2xl font-bold text-slate-900">{pending}</span>
+          </div>
+          <div className="flex items-center justify-between p-4 rounded-xl bg-blue-50/70 border border-blue-200/70">
+            <span className="text-xs font-bold px-2.5 py-1 bg-blue-100 text-[#1e3a8a] rounded-full">In Progress</span>
+            <span className="text-2xl font-bold text-slate-900">{inProg}</span>
+          </div>
+        </div>
+      </div>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-slate-100"><h3 className="font-bold text-slate-900">Maintenance Task Summary</h3></div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
             <thead><tr><th>Report Number</th><th>Problem Type</th><th>Priority</th><th>Assigned To</th><th>Status</th><th>Submitted</th></tr></thead>
             <tbody>
               {!maintenanceReports || maintenanceReports.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center text-gray-400 py-8">
-                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <td colSpan={6} className="text-center text-slate-400 py-8">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    <p className="font-medium text-gray-500">No maintenance reports yet</p>
-                    <p className="text-sm text-gray-400 mt-1">Maintenance reports will appear here once submitted</p>
+                    <p className="font-medium text-slate-500">No maintenance reports yet</p>
+                    <p className="text-sm text-slate-400 mt-1">Maintenance reports will appear here once submitted</p>
                   </td>
                 </tr>
               ) : (
                 maintenanceReports.slice(0, 10).map(report => (
                   <tr key={report.id}>
-                    <td className="font-medium">{report.reportNumber}</td>
+                    <td className="font-semibold text-slate-800">{report.reportNumber}</td>
                     <td>{report.problemType}</td>
                     <td>
-                      <span className={`badge ${
-                        report.priority === 'CRITICAL' ? 'bg-red-100 text-red-800' :
-                        report.priority === 'HIGH' ? 'bg-orange-100 text-orange-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {report.priority}
-                      </span>
+                      <PriorityBadge priority={report.priority} />
                     </td>
-                    <td>{report.assignedTo || <span className="text-gray-400">Unassigned</span>}</td>
+                    <td>{report.assignedTo || <span className="text-slate-400">Unassigned</span>}</td>
                     <td>
-                      <span className={`badge ${
-                        report.status === 'Completed' || report.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                        report.status === 'In Progress' || report.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
-                        report.status === 'Assigned' || report.status === 'ASSIGNED' ? 'bg-purple-100 text-purple-800' :
-                        'bg-amber-100 text-amber-800'
-                      }`}>
-                        {report.status}
-                      </span>
+                      <StatusBadge status={report.status} />
                     </td>
                     <td>{report.date}</td>
                   </tr>
@@ -1525,7 +1523,7 @@ function SectionReports({ userInstitution }) {
           </table>
         </div>
       </div>
-      <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl text-sm text-orange-800">
+      <div className="p-4 bg-[#314ea1]/5 border border-[#314ea1]/20 rounded-xl text-xs font-medium text-[#1e3a8a]">
         <strong>Reports:</strong> View operational summaries for your institution including queue performance, application status, and maintenance tasks. Data is automatically filtered to show only your institution's information.
       </div>
     </>
@@ -1611,34 +1609,34 @@ function SectionStaffManagement({ userInstitution }) {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Staff Management</h2>
-        <p className="text-sm text-gray-500">View employees and ICT staff in {userInstitution || 'your institution'}.</p>
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">Staff Management</h2>
+        <p className="text-sm text-slate-500 font-normal">View employees and ICT staff in {userInstitution || 'your institution'}.</p>
       </div>
 
       {/* Info Banner */}
-      <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800">
+      <div className="mb-6 p-4 bg-[#314ea1]/5 border border-[#314ea1]/20 rounded-xl text-xs font-medium text-[#1e3a8a]">
         <strong>View-Only Access:</strong> You can view staff in your institution. To create, edit, or manage users, please contact your Super Administrator.
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Search</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Search</label>
             <input
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Name, email, or ID..."
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-400 outline-none transition text-sm"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Role</label>
             <select
               value={filterRole}
               onChange={e => setFilterRole(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-400 outline-none transition text-sm bg-white"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
             >
               <option value="">All Roles</option>
               <option value="EMPLOYEE">Employee</option>
@@ -1646,11 +1644,11 @@ function SectionStaffManagement({ userInstitution }) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Status</label>
             <select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-400 outline-none transition text-sm bg-white"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
             >
               <option value="">All Status</option>
               <option value="ACTIVE">Active</option>
@@ -1660,7 +1658,7 @@ function SectionStaffManagement({ userInstitution }) {
           <div className="flex items-end">
             <button
               onClick={() => { setQuery(''); setFilterRole(''); setFilterStatus(''); }}
-              className="w-full px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition"
+              className="w-full px-4 py-2.5 border border-slate-300 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition"
             >
               Clear Filters
             </button>
@@ -1669,20 +1667,20 @@ function SectionStaffManagement({ userInstitution }) {
       </div>
 
       {/* Staff Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">Institution Staff</h3>
-          <span className="text-sm text-gray-500">{filtered.length} staff members</span>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="font-bold text-slate-900">Institution Staff</h3>
+          <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 text-[#1e3a8a] border border-blue-200 rounded-full">{filtered.length} staff members</span>
         </div>
         
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading staff...</div>
+          <div className="p-8 text-center text-slate-500">Loading staff...</div>
         ) : filtered.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-slate-500">
             {staff.length === 0 ? 'No staff members found.' : 'No staff match your filters.'}
           </div>
         ) : (
-          <div className="table-container">
+          <div className="table-container border-0 rounded-none">
             <table className="data-table">
               <thead>
                 <tr>
@@ -1698,16 +1696,16 @@ function SectionStaffManagement({ userInstitution }) {
               <tbody>
                 {filtered.map(s => (
                   <tr key={s.id}>
-                    <td className="font-medium">{s.full_name || 'N/A'}</td>
+                    <td className="font-semibold text-slate-800">{s.full_name || 'N/A'}</td>
                     <td>{s.email || 'N/A'}</td>
                     <td>{s.phone || '—'}</td>
-                    <td>{displayRole(s.role)}</td>
+                    <td><span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">{displayRole(s.role)}</span></td>
                     <td>{s.employee_id || '—'}</td>
                     <td>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                         String(s.status).toUpperCase() === 'ACTIVE' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                          : 'bg-slate-100 text-slate-700 border border-slate-200'
                       }`}>
                         {displayStatus(s.status)}
                       </span>
@@ -1728,7 +1726,7 @@ function SectionStaffManagement({ userInstitution }) {
       </div>
 
       {/* Help Text */}
-      <div className="mt-6 p-4 bg-orange-50 border border-orange-100 rounded-xl text-sm text-orange-800">
+      <div className="mt-6 p-4 bg-[#314ea1]/5 border border-[#314ea1]/20 rounded-xl text-xs font-medium text-[#1e3a8a]">
         <strong>Institution Scoped:</strong> You can only view staff (Employees and ICT Staff) belonging to {userInstitution || 'your institution'}. This list is automatically filtered by the backend.
       </div>
     </>
@@ -1839,38 +1837,38 @@ function SectionAnnouncements({ userInstitution }) {
     return (
       <>
         <div className="mb-6">
-          <button onClick={() => { setView('list'); setSelected(null); setFormError(''); }} className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
+          <button onClick={() => { setView('list'); setSelected(null); setFormError(''); }} className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold flex items-center gap-1 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
             Cancel
           </button>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 max-w-2xl">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">{view === 'edit' ? 'Edit Announcement' : 'New Announcement'}</h2>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 max-w-2xl">
+          <h2 className="text-xl font-bold text-slate-900 mb-6">{view === 'edit' ? 'Edit Announcement' : 'New Announcement'}</h2>
           <form onSubmit={submitAnnouncement} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Title <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Title <span className="text-red-500">*</span></label>
               <input type="text" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                 placeholder="Brief announcement title"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm" />
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Content <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Content <span className="text-red-500">*</span></label>
               <textarea rows={5} value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
                 placeholder="Announcement content"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm resize-y" />
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm resize-y bg-white" />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Audience <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Audience <span className="text-red-500">*</span></label>
               <select value={form.scope} onChange={e => setForm(f => ({ ...f, scope: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm">
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white">
                 <option value="PUBLIC">Public - Visible to everyone including citizens</option>
                 <option value="INTERNAL">Internal - Staff only (employees, managers, admins)</option>
                 <option value="INSTITUTION">Institution - Staff and employees in {userInstitution || 'your institution'}</option>
               </select>
             </div>
             
-            <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl text-sm text-orange-800">
+            <div className="p-4 bg-[#314ea1]/5 border border-[#314ea1]/20 rounded-xl text-xs font-medium text-[#1e3a8a]">
               <strong>Scope: {form.scope}</strong>
               {form.scope === 'PUBLIC' && <p className="mt-1">This announcement will be visible to all users including citizens.</p>}
               {form.scope === 'INTERNAL' && <p className="mt-1">This announcement will be visible only to staff (not citizens).</p>}
@@ -1879,7 +1877,7 @@ function SectionAnnouncements({ userInstitution }) {
             
             {formError && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">{formError}</div>}
             {error && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">{error}</div>}
-            <button type="submit" disabled={loading} className="px-6 py-3 bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-semibold rounded-xl transition text-sm disabled:opacity-50">
+            <button type="submit" disabled={loading} className="px-6 py-3 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white font-semibold rounded-xl shadow-xs transition text-sm disabled:opacity-50">
               {loading ? (view === 'edit' ? 'Updating...' : 'Publishing...') : (view === 'edit' ? 'Update Announcement' : 'Publish Announcement')}
             </button>
           </form>
@@ -1898,28 +1896,28 @@ function SectionAnnouncements({ userInstitution }) {
     return (
       <>
         <div className="mb-6">
-          <button onClick={() => setSelected(null)} className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
+          <button onClick={() => setSelected(null)} className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold flex items-center gap-1 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
             Back to Announcements
           </button>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">{ann.title}</h2>
+            <h2 className="text-xl font-bold text-slate-900">{ann.title}</h2>
             <div className="flex items-center gap-2 flex-shrink-0">
-              {ann.is_active && <span className="badge bg-green-100 text-green-800">Active</span>}
+              {ann.is_active && <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">Active</span>}
               {canEdit && (
                 <>
                   <button 
                     onClick={() => handleEdit(ann)}
-                    className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                    className="px-3 py-1.5 text-sm text-[#314ea1] hover:bg-[#314ea1]/10 font-semibold rounded-lg transition"
                     title="Edit announcement"
                   >
                     Edit
                   </button>
                   <button 
                     onClick={() => handleDelete(ann.id, ann.title)}
-                    className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition"
+                    className="px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-50 font-semibold rounded-lg transition"
                     title="Delete announcement"
                   >
                     Delete
@@ -1928,10 +1926,10 @@ function SectionAnnouncements({ userInstitution }) {
               )}
             </div>
           </div>
-          <p className="text-sm text-gray-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
-          <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{ann.content}</div>
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <p className="text-xs text-gray-500">
+          <p className="text-sm text-slate-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
+          <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{ann.content}</div>
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <p className="text-xs text-slate-500">
               <strong>Scope:</strong> {ann.scope}
             </p>
           </div>
@@ -1945,38 +1943,38 @@ function SectionAnnouncements({ userInstitution }) {
     <>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">Announcements</h2>
-          <p className="text-sm text-gray-500">Operational announcements for your institution.</p>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">Announcements</h2>
+          <p className="text-sm text-slate-500 font-normal">Operational announcements for your institution.</p>
         </div>
-        <button onClick={() => { setView('new'); setSelected(null); setFormError(''); }} className="px-4 py-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition">
+        <button onClick={() => { setView('new'); setSelected(null); setFormError(''); }} className="px-4 py-2 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white text-sm font-semibold rounded-xl shadow-xs transition">
           + New Announcement
         </button>
       </div>
 
       {loading && !announcements.length && (
-        <div className="text-center py-8 text-gray-500">Loading announcements...</div>
+        <div className="text-center py-8 text-slate-500">Loading announcements...</div>
       )}
 
       <div className="space-y-3">
         {announcements.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">No announcements available.</div>
+          <div className="text-center text-slate-400 py-12">No announcements available.</div>
         ) : announcements.map(ann => (
           <div key={ann.id} onClick={() => setSelected(ann.id)}
-            className={`bg-white rounded-2xl border shadow-sm p-5 cursor-pointer hover:shadow-md transition-all duration-200 ${ann.is_active ? 'border-gray-100' : 'border-gray-200 bg-gray-50'}`}>
+            className={`bg-white rounded-2xl border shadow-xs p-5 cursor-pointer hover:border-[#314ea1]/40 hover:shadow-md transition-all duration-200 ${ann.is_active ? 'border-slate-200/90' : 'border-slate-200 bg-slate-50'}`}>
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  {ann.is_active && <span className="inline-block w-2 h-2 rounded-full bg-green-600 flex-shrink-0" />}
-                  <h3 className="font-semibold text-sm text-gray-900 leading-snug">{ann.title}</h3>
-                  {ann.scope === 'PUBLIC' && <span className="badge bg-green-100 text-green-800 text-xs">Public</span>}
-                  {ann.scope === 'INTERNAL' && <span className="badge bg-blue-100 text-blue-800 text-xs">Internal</span>}
-                  {ann.scope === 'SYSTEM' && <span className="badge bg-purple-100 text-purple-800 text-xs">System</span>}
-                  {ann.scope === 'ROLE' && <span className="badge bg-orange-100 text-orange-800 text-xs">Role</span>}
-                  {ann.scope === 'INSTITUTION' && <span className="badge bg-indigo-100 text-indigo-800 text-xs">Institution</span>}
+                  {ann.is_active && <span className="inline-block w-2 h-2 rounded-full bg-emerald-600 flex-shrink-0" />}
+                  <h3 className="font-bold text-sm text-slate-900 leading-snug">{ann.title}</h3>
+                  {ann.scope === 'PUBLIC' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">Public</span>}
+                  {ann.scope === 'INTERNAL' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-[#1e3a8a] border border-blue-200">Internal</span>}
+                  {ann.scope === 'SYSTEM' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-800 border border-purple-200">System</span>}
+                  {ann.scope === 'ROLE' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-800 border border-orange-200">Role</span>}
+                  {ann.scope === 'INSTITUTION' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-800 border border-indigo-200">Institution</span>}
                 </div>
-                <p className="text-xs text-gray-500">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
+                <p className="text-xs text-slate-500">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
               </div>
-              <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
               </svg>
             </div>
@@ -1992,28 +1990,28 @@ function SectionMyProfile({ user, userInstitution }) {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">My Profile</h2>
-        <p className="text-sm text-gray-500">Your account information.</p>
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">My Profile</h2>
+        <p className="text-sm text-slate-500 font-normal">Your account information.</p>
       </div>
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6 max-w-lg">
-        <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
-          <div className="w-14 h-14 rounded-2xl bg-orange-600 text-white flex items-center justify-center text-xl font-bold flex-shrink-0">
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6 max-w-lg">
+        <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center text-xl font-bold shadow-xs flex-shrink-0">
             {user?.name?.charAt(0) || 'I'}
           </div>
           <div>
-            <p className="font-semibold text-gray-900">{user?.name}</p>
-            <p className="text-sm text-gray-500">{user?.email}</p>
-            <span className="badge bg-orange-100 text-orange-800 mt-1">Institution Manager</span>
+            <p className="font-bold text-slate-900 text-base">{user?.name}</p>
+            <p className="text-sm text-slate-500">{user?.email}</p>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-[#1e3a8a] border border-blue-200 mt-1">Institution Manager</span>
           </div>
         </div>
         <div className="space-y-4 text-sm">
-          <div className="flex justify-between"><span className="text-gray-500">Full Name</span><span className="font-medium text-gray-900">{user?.name}</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">Email</span><span className="font-medium text-gray-900">{user?.email}</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">Role</span><span className="font-medium text-gray-900">Institution Manager</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">Institution</span><span className="font-medium text-gray-900">{userInstitution || 'Not Assigned'}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">Full Name</span><span className="font-semibold text-slate-900">{user?.name}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">Email</span><span className="font-semibold text-slate-900">{user?.email}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">Role</span><span className="font-semibold text-slate-900">Institution Manager</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">Institution</span><span className="font-semibold text-slate-900">{userInstitution || 'Not Assigned'}</span></div>
         </div>
       </div>
-      <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl text-sm text-orange-800">
+      <div className="p-4 bg-[#314ea1]/5 border border-[#314ea1]/20 rounded-xl text-xs font-medium text-[#1e3a8a]">
         <strong>Note:</strong> To update your profile or change your password, contact MESOB administration.
       </div>
     </>
@@ -2022,7 +2020,7 @@ function SectionMyProfile({ user, userInstitution }) {
 
 // ─── Main InstitutionManagerDashboard ─────────────────────────────
 export default function InstitutionManagerDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [activeSection, setActiveSection] = useState('Dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -2051,17 +2049,17 @@ export default function InstitutionManagerDashboard() {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-[#f8fafc] via-[#f1f5f9] to-[#edf4fc] text-slate-900">
       <div className="flex min-h-screen">
 
         {/* ── Sidebar ── */}
-        <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200${sidebarOpen ? ' open' : ''}`}>
-          <div className="p-5 border-b border-gray-100">
+        <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white/95 backdrop-blur-xs border-r border-slate-200/80 flex flex-col transition-transform duration-200 shadow-xs${sidebarOpen ? ' open' : ''}`}>
+          <div className="p-5 border-b border-slate-100">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center font-bold text-lg">I</div>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-xs">I</div>
               <div>
-                <p className="font-semibold text-gray-900 text-sm">MESOB Center</p>
-                <p className="text-xs text-gray-500">Institution Manager</p>
+                <p className="font-bold text-slate-900 text-sm">MESOB Center</p>
+                <p className="text-xs text-slate-500">Institution Manager</p>
               </div>
             </div>
           </div>
@@ -2075,9 +2073,9 @@ export default function InstitutionManagerDashboard() {
             ))}
           </nav>
 
-          <div className="p-4 border-t border-gray-100">
-            <button onClick={() => { localStorage.removeItem('mesob_auth'); window.location.href = '/'; }}
-              className="sidebar-link w-full text-left text-red-600 hover:bg-red-50">
+          <div className="p-4 border-t border-slate-100">
+            <button onClick={logout}
+              className="sidebar-link w-full text-left text-rose-600 hover:bg-rose-50 font-medium">
               Logout
             </button>
           </div>
@@ -2085,23 +2083,23 @@ export default function InstitutionManagerDashboard() {
 
         {/* ── Main content ── */}
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="bg-white border-b border-gray-200 px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+          <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
             <div className="flex items-center gap-3">
-              <button className="lg:hidden p-2 rounded-lg hover:bg-gray-100" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle sidebar">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <button className="lg:hidden p-2 rounded-lg hover:bg-slate-100" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle sidebar">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/>
                 </svg>
               </button>
-              <h1 className="text-lg font-semibold text-gray-900">
+              <h1 className="text-lg font-bold text-slate-900">
                 {activeSection === 'Dashboard' ? 'Institution Manager Dashboard' : activeSection}
               </h1>
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
-              <span className="badge bg-orange-100 text-orange-800">Institution Manager</span>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#314ea1]/10 text-[#1e3a8a] border border-[#314ea1]/20">Institution Manager</span>
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                <p className="text-xs text-gray-500">{user?.email}</p>
+                <p className="text-sm font-semibold text-slate-900">{user?.name}</p>
+                <p className="text-xs text-slate-500">{user?.email}</p>
               </div>
             </div>
           </header>

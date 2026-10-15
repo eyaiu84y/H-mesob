@@ -1,20 +1,21 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth, ROLE_ROUTES } from '../../context/AuthContext';
+import { useAuth, ROLE_ROUTES, ROLE_LABELS } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import PasswordInput from '../../components/PasswordInput';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
 
 const DEMO_ACCOUNTS = [
-  { label: 'Super Admin',         email: 'superadmin@mesobcenter.et',        password: 'SuperAdmin@2026',      style: 'bg-purple-50 hover:bg-purple-100 text-purple-800' },
-  { label: 'MESOB Manager',       email: 'manager@mesobcenter.et',           password: 'MesobManager@2026',    style: 'bg-red-50 hover:bg-red-100 text-red-800' },
-  { label: 'Institution Manager', email: 'inst.manager@mesobcenter.et',      password: 'InstManager@2026',     style: 'bg-orange-50 hover:bg-orange-100 text-orange-800' },
-  { label: 'Employee',            email: 'employee@mesobcenter.et',          password: 'Employee@2026',        style: 'bg-blue-50 hover:bg-blue-100 text-blue-800' },
-  { label: 'ICT Staff',           email: 'ict.staff@mesobcenter.et',         password: 'IctStaff@2026',        style: 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800' },
-  { label: 'Citizen',             email: 'citizen@mesobcenter.et',           password: 'Citizen@2026',         style: 'bg-green-50 hover:bg-green-100 text-green-800' },
+  { label: 'Super Admin',         email: 'superadmin@mesobcenter.et',        password: 'SuperAdmin@2026' },
+  { label: 'MESOB Manager',       email: 'manager@mesobcenter.et',           password: 'MesobManager@2026' },
+  { label: 'Institution Manager', email: 'inst.manager@mesobcenter.et',      password: 'InstManager@2026' },
+  { label: 'Employee',            email: 'employee@mesobcenter.et',          password: 'Employee@2026' },
+  { label: 'ICT Staff',           email: 'ict.staff@mesobcenter.et',         password: 'IctStaff@2026' },
+  { label: 'Citizen',             email: 'citizen@mesobcenter.et',           password: 'Citizen@2026' },
 ];
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, logout, user, isLoggedIn } = useAuth();
   const { t } = useApp();
   const navigate = useNavigate();
 
@@ -22,9 +23,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Don't auto-redirect - let users access login page even if logged in
-  // This allows switching accounts without manual logout
 
   function fillDemo(demoEmail, demoPassword) {
     setEmail(demoEmail);
@@ -34,16 +32,11 @@ export default function LoginPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    console.log('=== FORM SUBMIT ===');
-    console.log('Email:', email);
-    console.log('Password length:', password.length);
-    
     setError('');
     setIsSubmitting(true);
     
     try {
       const result = await login(email.trim(), password);
-      console.log('Login result:', result);
       
       if (!result.success) {
         setError(result.message);
@@ -51,9 +44,7 @@ export default function LoginPage() {
         return;
       }
       
-      // Navigate directly after successful login
       const targetRoute = ROLE_ROUTES[result.user.role] || '/';
-      console.log('Navigating to:', targetRoute);
       navigate(targetRoute, { replace: true });
     } catch (err) {
       console.error('Submit error:', err);
@@ -63,96 +54,158 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-lg">
+    <div className="bg-slate-50 min-h-screen flex flex-col justify-between p-4 sm:p-6">
+      {/* Top Bar with Back Link & Language Switcher */}
+      <div className="w-full max-w-lg mx-auto flex items-center justify-between py-2">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-[#1e3a8a] hover:text-[#314ea1] transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          {t.nav_home || 'Back to Home'}
+        </Link>
+        <LanguageSwitcher />
+      </div>
 
+      <div className="w-full max-w-lg mx-auto my-auto py-6">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div
-            className="inline-flex items-center justify-center w-24 h-24 overflow-hidden mb-4"
-            style={{ transform: 'rotate(157.05deg) translateZ(0px)' }}
-          >
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-20 h-20 mb-3 bg-white rounded-2xl shadow-sm border border-gray-100 p-2">
             <img
-              src="/image/logo.jpg"
+              src="https://mesobcenter.et/Companies/Logo.png"
               alt="MESOB Logo"
-              className="w-20 h-20 object-contain transition-all duration-300 hover:drop-shadow-lg block"
+              className="w-16 h-16 object-contain"
+              onError={(e) => { e.target.src = '/image/logo.jpg'; }}
             />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">HAWASSA MESOB</h1>
-          <p className="text-gray-500 mt-1">{t.login_subtitle}</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">HAWASSA MESOB</h1>
+          <p className="text-gray-500 text-sm mt-1">{t.login_subtitle || 'Sign in to access your dashboard'}</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">{t.email_address}</label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                placeholder="you@example.com"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">{t.password}</label>
-              <PasswordInput
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-                placeholder="••••••••"
-              />
-            </div>
+        <div className="bg-white rounded-2xl shadow-md border border-gray-200/80 overflow-hidden">
+          {/* Brand header strip matching home page header */}
+          <div
+            className="h-1.5 w-full"
+            style={{ background: 'linear-gradient(90deg, #314ea1 0%, #1e3a8a 60%, #f4b51a 100%)' }}
+          />
 
-            {error && (
-              <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">
-                {error}
+          <div className="p-6 sm:p-8">
+            {/* Active session banner */}
+            {isLoggedIn && user && (
+              <div className="mb-5 p-3.5 rounded-xl bg-blue-50 border border-blue-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-blue-700 font-medium">Currently signed in as:</p>
+                    <p className="text-sm font-bold text-blue-950">
+                      {user.name} <span className="font-normal text-blue-800">({ROLE_LABELS[user.role] || user.role})</span>
+                    </p>
+                    <p className="text-xs text-blue-600 font-mono mt-0.5">{user.email}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to={ROLE_ROUTES[user.role] || '/'}
+                      className="text-xs bg-[#314ea1] hover:bg-[#1e3a8a] text-white font-semibold px-3 py-1.5 rounded-lg transition"
+                    >
+                      Dashboard →
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={logout}
+                      className="text-xs bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 font-semibold px-3 py-1.5 rounded-lg transition"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-semibold py-3 rounded-xl transition shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? t.signing_in : t.sign_in}
-            </button>
-          </form>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  {t.email_address || 'Email Address'}
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm"
+                />
+              </div>
 
-          {/* Demo accounts */}
-          <div className="mt-6 pt-6 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">{t.demo_accounts}</p>
-            <div className="space-y-2 text-sm max-h-72 overflow-y-auto pr-1">
-              {DEMO_ACCOUNTS.map((acc) => (
-                <button
-                  key={acc.email}
-                  type="button"
-                  onClick={() => fillDemo(acc.email, acc.password)}
-                  className={`w-full text-left px-3 py-2 rounded-lg transition flex justify-between items-center gap-2 ${acc.style}`}
-                >
-                  <span><strong>{acc.label}</strong></span>
-                  <span className="text-xs opacity-70 truncate">{acc.email}</span>
-                </button>
-              ))}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  {t.password || 'Password'}
+                </label>
+                <PasswordInput
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              {error && (
+                <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-[#314ea1] hover:bg-[#1e3a8a] text-white font-semibold py-2.5 rounded-xl transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                {isSubmitting ? (t.signing_in || 'Signing in...') : (t.sign_in || 'Sign In')}
+              </button>
+            </form>
+
+            {/* Demo accounts */}
+            <div className="mt-6 pt-5 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2.5">
+                {t.demo_accounts || 'Quick Demo Login'}
+              </p>
+              <div className="space-y-1.5 text-sm">
+                {DEMO_ACCOUNTS.map((acc) => (
+                  <button
+                    key={acc.email}
+                    type="button"
+                    onClick={() => fillDemo(acc.email, acc.password)}
+                    className="w-full text-left px-3 py-2 rounded-lg bg-slate-50 hover:bg-blue-50/80 border border-gray-200/60 hover:border-blue-200 transition-colors flex justify-between items-center gap-2 group"
+                  >
+                    <span className="font-medium text-gray-900 group-hover:text-[#1e3a8a] text-xs sm:text-sm">
+                      {acc.label}
+                    </span>
+                    <span className="text-xs text-gray-500 font-mono truncate">
+                      {acc.email}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* Sign up link */}
+            <p className="text-center text-sm text-gray-500 mt-5 pt-4 border-t border-gray-100">
+              Don&apos;t have an account?{' '}
+              <Link to="/signup" className="text-[#314ea1] hover:underline font-semibold">
+                Sign up
+              </Link>
+            </p>
           </div>
-
-          {/* Sign up link */}
-          <p className="text-center text-sm text-gray-500 mt-4">
-            Don&apos;t have an account?{' '}
-            <Link to="/signup" className="text-blue-600 hover:underline font-medium">Sign up</Link>
-          </p>
         </div>
+      </div>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
-          <Link to="/" className="text-blue-500 hover:underline">← Back to public website</Link>
-        </p>
+      <div className="text-center text-xs text-gray-400 py-2">
+        FDRE Hawassa MESOB Center &bull; Public Service Portal
       </div>
     </div>
   );

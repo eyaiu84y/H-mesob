@@ -27,12 +27,12 @@ function getSections(t) {
 
 // ─── Role display helpers ─────────────────────────────────────────
 const ROLE_COLORS = {
-  super_admin:         'bg-purple-50 text-purple-800 border-purple-200',
-  mesob_manager:       'bg-red-50 text-red-800 border-red-200',
-  institution_manager: 'bg-orange-50 text-orange-800 border-orange-200',
-  employee:            'bg-blue-50 text-blue-800 border-blue-200',
-  ict_staff:           'bg-cyan-50 text-cyan-800 border-cyan-200',
-  citizen:             'bg-green-50 text-green-800 border-green-200',
+  super_admin:         'bg-slate-100 text-slate-800 border-slate-300',
+  mesob_manager:       'bg-blue-50 text-[#1e3a8a] border-blue-200',
+  institution_manager: 'bg-blue-50 text-[#1e3a8a] border-blue-200',
+  employee:            'bg-blue-50 text-[#1e3a8a] border-blue-200',
+  ict_staff:           'bg-blue-50 text-[#1e3a8a] border-blue-200',
+  citizen:             'bg-blue-50 text-[#1e3a8a] border-blue-200',
 };
 
 // No mock data - all data comes from shared data system or real backend
@@ -53,12 +53,14 @@ function stripPassword(u) {
 }
 
 function RoleBadge({ role }) {
-  const cls = ROLE_BADGE[role] || 'bg-gray-100 text-gray-700';
-  return <span className={`badge ${cls}`}>{ROLE_LABELS[role] || role}</span>;
+  const cls = ROLE_BADGE[role] || 'bg-slate-100 text-slate-700 border-slate-200';
+  return <span className={`badge ${cls} font-semibold`}>{ROLE_LABELS[role] || role}</span>;
 }
 
 function StatusBadge({ status }) {
-  const cls = status === 'Active' ? 'badge bg-green-100 text-green-800' : 'badge bg-gray-100 text-gray-600';
+  const cls = (status === 'Active' || status === 'ACTIVE')
+    ? 'badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold' 
+    : 'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold';
   return <span className={cls}>{status}</span>;
 }
 
@@ -75,30 +77,30 @@ function SectionDashboard({ setActiveSection }) {
     <>
       {/* Stat cards */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">{t.total_users}</p>
-          <p className="text-2xl font-bold">{users.length}</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t.total_users}</p>
+          <p className="text-2xl font-bold text-slate-900">{users.length}</p>
         </div>
-        <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">{t.institutions}</p>
-          <p className="text-2xl font-bold">{institutions.length}</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t.institutions}</p>
+          <p className="text-2xl font-bold text-slate-900">{institutions.length}</p>
         </div>
-        <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">{t.active_users}</p>
-          <p className="text-2xl font-bold text-green-600">{users.filter(u => u.status === 'Active').length}</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t.active_users}</p>
+          <p className="text-2xl font-bold text-emerald-700">{users.filter(u => u.status === 'Active').length}</p>
         </div>
-        <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">{t.announcements}</p>
-          <p className="text-2xl font-bold">{unread}</p>
-          <p className="text-xs text-gray-500 mt-1">{t.unread}</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t.announcements}</p>
+          <p className="text-2xl font-bold text-slate-900">{unread}</p>
+          <p className="text-xs text-slate-500 mt-1">{t.unread}</p>
         </div>
       </div>
 
       {/* User overview */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">{t.user_overview}</h2>
-          <button onClick={() => setActiveSection(t.user_management)} className="text-sm text-blue-600 hover:underline font-medium">{t.view_all}</button>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="font-bold text-slate-900">{t.user_overview}</h2>
+          <button onClick={() => setActiveSection(t.user_management)} className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold transition">{t.view_all}</button>
         </div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
@@ -106,8 +108,8 @@ function SectionDashboard({ setActiveSection }) {
             <tbody>
               {users.slice(0, 5).map(u => (
                 <tr key={u.id}>
-                  <td className="font-medium">{u.name}</td>
-                  <td>{u.email}</td>
+                  <td className="font-semibold text-slate-900">{u.name}</td>
+                  <td className="text-slate-600">{u.email}</td>
                   <td><RoleBadge role={u.role} /></td>
                   <td><StatusBadge status={u.status} /></td>
                 </tr>
@@ -118,10 +120,10 @@ function SectionDashboard({ setActiveSection }) {
       </div>
 
       {/* Institution overview */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">Institution Overview</h2>
-          <button onClick={() => setActiveSection('Institution Management')} className="text-sm text-blue-600 hover:underline font-medium">View all</button>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="font-bold text-slate-900">Institution Overview</h2>
+          <button onClick={() => setActiveSection('Institution Management')} className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold transition">View all</button>
         </div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
@@ -129,9 +131,9 @@ function SectionDashboard({ setActiveSection }) {
             <tbody>
               {institutions.slice(0, 5).map(inst => (
                 <tr key={inst.id}>
-                  <td className="font-medium">{inst.name_en || inst.name}</td>
-                  <td>{inst.services?.length || 0}</td>
-                  <td><span className="badge bg-green-100 text-green-800">{inst.status || 'Active'}</span></td>
+                  <td className="font-semibold text-slate-900">{inst.name_en || inst.name}</td>
+                  <td className="text-slate-600">{inst.services?.length || 0}</td>
+                  <td><span className="badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold">{inst.status || 'Active'}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -140,12 +142,12 @@ function SectionDashboard({ setActiveSection }) {
       </div>
 
       {/* Role overview cards */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
-        <h2 className="font-semibold text-gray-900 mb-4">Role Overview</h2>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6">
+        <h2 className="font-bold text-slate-900 mb-4">Role Overview</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
           {Object.entries(ROLE_LABELS).map(([key, label]) => (
-            <div key={key} className={`p-3 rounded-xl border ${ROLE_COLORS[key] || 'bg-gray-50 text-gray-800 border-gray-200'}`}>
-              <strong>{label}</strong>
+            <div key={key} className={`p-3 rounded-xl border ${ROLE_COLORS[key] || 'bg-slate-50 text-slate-800 border-slate-200'}`}>
+              <strong className="text-slate-900">{label}</strong>
               <p className="text-xs mt-0.5 opacity-75">
                 {users.filter(u => u.role === key).length} user{users.filter(u => u.role === key).length !== 1 ? 's' : ''}
               </p>
@@ -154,8 +156,8 @@ function SectionDashboard({ setActiveSection }) {
         </div>
       </div>
 
-      <div className="p-4 bg-purple-50 border border-purple-100 rounded-xl text-sm text-purple-900">
-        <strong>System Admin:</strong> Full system access — user management, institution management, roles, settings, reports, and analytics.
+      <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-800">
+        <strong className="text-slate-900">System Admin:</strong> Full system access — user management, institution management, roles, settings, reports, and analytics.
       </div>
     </>
   );
@@ -361,11 +363,11 @@ function SectionUserManagement() {
 
   // Add User Modal
   const addUserModal = showAddUser && (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-xl border border-slate-200/90 w-full max-w-2xl p-6 my-8">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-semibold text-gray-900">Add New User</h3>
-          <button onClick={() => { setShowAddUser(false); resetNewUserForm(); }} className="text-gray-400 hover:text-gray-600">
+          <h3 className="font-bold text-slate-900 text-lg">Add New User</h3>
+          <button onClick={() => { setShowAddUser(false); resetNewUserForm(); }} className="text-slate-400 hover:text-slate-600 transition">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -375,53 +377,53 @@ function SectionUserManagement() {
         <form onSubmit={handleAddUser} className="space-y-4">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Full Name <span className="text-red-500">*</span>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              Full Name <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
               value={newUserForm.name}
               onChange={e => setNewUserForm(f => ({ ...f, name: e.target.value }))}
               placeholder="Abebe Kebede"
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
             />
           </div>
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Email <span className="text-red-500">*</span>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              Email <span className="text-rose-500">*</span>
             </label>
             <input
               type="email"
               value={newUserForm.email}
               onChange={e => setNewUserForm(f => ({ ...f, email: e.target.value }))}
               placeholder="user@example.com"
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
             />
           </div>
 
           {/* Phone */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Phone</label>
             <input
               type="tel"
               value={newUserForm.phone}
               onChange={e => setNewUserForm(f => ({ ...f, phone: e.target.value }))}
               placeholder="+251 91 234 5678"
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
             />
           </div>
 
           {/* Role */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Role <span className="text-red-500">*</span>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              Role <span className="text-rose-500">*</span>
             </label>
             <select
               value={newUserForm.role}
               onChange={e => setNewUserForm(f => ({ ...f, role: e.target.value, institution: '', employeeId: '' }))}
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm bg-white"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
             >
               <option value="">Select Role...</option>
               {Object.entries(ROLE_LABELS).map(([k, v]) => (
@@ -433,13 +435,13 @@ function SectionUserManagement() {
           {/* Institution (conditional) */}
           {['institution_manager', 'employee', 'ict_staff'].includes(newUserForm.role) && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Institution <span className="text-red-500">*</span>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Institution <span className="text-rose-500">*</span>
               </label>
               <select
                 value={newUserForm.institution}
                 onChange={e => setNewUserForm(f => ({ ...f, institution: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm bg-white"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
               >
                 <option value="">Select Institution...</option>
                 {institutions.map(inst => (
@@ -452,26 +454,26 @@ function SectionUserManagement() {
           {/* Employee/Staff ID (conditional) */}
           {['institution_manager', 'employee', 'ict_staff'].includes(newUserForm.role) && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                {newUserForm.role === 'ict_staff' ? 'Staff ID' : 'Employee ID'} <span className="text-red-500">*</span>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                {newUserForm.role === 'ict_staff' ? 'Staff ID' : 'Employee ID'} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 value={newUserForm.employeeId}
                 onChange={e => setNewUserForm(f => ({ ...f, employeeId: e.target.value }))}
                 placeholder={newUserForm.role === 'ict_staff' ? 'TECH-001' : 'EMP-001'}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
               />
             </div>
           )}
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Status</label>
             <select
               value={newUserForm.status}
               onChange={e => setNewUserForm(f => ({ ...f, status: e.target.value }))}
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm bg-white"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
             >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
@@ -479,24 +481,24 @@ function SectionUserManagement() {
           </div>
 
           {/* Info Box */}
-          <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-            <p className="text-xs text-purple-900">
-              <strong>Note:</strong> A temporary password will be generated for this user. Please share it securely with them after creation.
+          <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-4">
+            <p className="text-xs text-slate-700 leading-relaxed">
+              <strong className="text-slate-900">Note:</strong> A temporary password will be generated for this user. Please share it securely with them after creation.
             </p>
           </div>
 
           {editError && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">
+            <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 font-medium">
               {editError}
             </div>
           )}
 
           <div className="flex gap-3 pt-2">
-            <button type="submit" className="px-5 py-2.5 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition">
+            <button type="submit" className="px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white text-sm font-semibold rounded-xl transition shadow-xs">
               Create User
             </button>
             <button type="button" onClick={() => { setShowAddUser(false); resetNewUserForm(); }}
-              className="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition">
+              className="px-5 py-2.5 border border-slate-300 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition">
               Cancel
             </button>
           </div>
@@ -507,56 +509,56 @@ function SectionUserManagement() {
 
   // Edit User Modal
   const editUserModal = editUser && (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 my-8">
-        <h3 className="font-semibold text-gray-900 mb-5">Edit User</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-xl border border-slate-200/90 w-full max-w-2xl p-6 my-8">
+        <h3 className="font-bold text-slate-900 text-lg mb-5">Edit User</h3>
         <form onSubmit={handleEditUser} className="space-y-4">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Full Name <span className="text-red-500">*</span>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              Full Name <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
               value={editUser.name}
               onChange={e => setEditUser(u => ({ ...u, name: e.target.value }))}
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
             />
           </div>
 
           {/* Email (read-only) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
             <input
               type="email"
               value={editUser.email}
               disabled
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-500 text-sm cursor-not-allowed"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm cursor-not-allowed"
             />
-            <p className="text-xs text-gray-400 mt-1">Email cannot be changed.</p>
+            <p className="text-xs text-slate-400 mt-1">Email cannot be changed.</p>
           </div>
 
           {/* Phone */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Phone</label>
             <input
               type="tel"
               value={editUser.phone || ''}
               onChange={e => setEditUser(u => ({ ...u, phone: e.target.value }))}
               placeholder="+251 91 234 5678"
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
             />
           </div>
 
           {/* Role */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Role <span className="text-red-500">*</span>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              Role <span className="text-rose-500">*</span>
             </label>
             <select
               value={editUser.role}
               onChange={e => setEditUser(u => ({ ...u, role: e.target.value }))}
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm bg-white"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
             >
               {Object.entries(ROLE_LABELS).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
@@ -567,13 +569,13 @@ function SectionUserManagement() {
           {/* Institution (conditional) */}
           {['institution_manager', 'employee', 'ict_staff'].includes(editUser.role) && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Institution <span className="text-red-500">*</span>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Institution <span className="text-rose-500">*</span>
               </label>
               <select
                 value={editUser.institution || ''}
                 onChange={e => setEditUser(u => ({ ...u, institution: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm bg-white"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
               >
                 <option value="">Select Institution...</option>
                 {institutions.map(inst => (
@@ -586,25 +588,25 @@ function SectionUserManagement() {
           {/* Employee/Staff ID (conditional) */}
           {['institution_manager', 'employee', 'ict_staff'].includes(editUser.role) && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                {editUser.role === 'ict_staff' ? 'Staff ID' : 'Employee ID'} <span className="text-red-500">*</span>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                {editUser.role === 'ict_staff' ? 'Staff ID' : 'Employee ID'} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 value={editUser.employeeId || ''}
                 onChange={e => setEditUser(u => ({ ...u, employeeId: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
               />
             </div>
           )}
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Status</label>
             <select
               value={editUser.status}
               onChange={e => setEditUser(u => ({ ...u, status: e.target.value }))}
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm bg-white"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
             >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
@@ -612,15 +614,15 @@ function SectionUserManagement() {
           </div>
 
           {editError && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">{editError}</p>
+            <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 font-medium">{editError}</p>
           )}
 
           <div className="flex gap-3 pt-2">
-            <button type="submit" className="px-5 py-2.5 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition">
+            <button type="submit" className="px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white text-sm font-semibold rounded-xl transition shadow-xs">
               Save Changes
             </button>
             <button type="button" onClick={() => { setEditUser(null); setEditError(''); }}
-              className="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition">
+              className="px-5 py-2.5 border border-slate-300 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition">
               Cancel
             </button>
           </div>
@@ -633,12 +635,12 @@ function SectionUserManagement() {
     <>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">User Management</h2>
-          <p className="text-sm text-gray-500">Manage system users. Passwords are never displayed.</p>
+          <h2 className="text-lg font-bold text-slate-900 mb-1">User Management</h2>
+          <p className="text-sm text-slate-500">Manage system users. Passwords are never displayed.</p>
         </div>
         <button
           onClick={() => setShowAddUser(true)}
-          className="px-4 py-2.5 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition flex items-center gap-2"
+          className="px-4 py-2 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white text-sm font-semibold rounded-xl transition shadow-xs flex items-center gap-2"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -658,9 +660,9 @@ function SectionUserManagement() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search name, email, ID..."
-            className="w-full px-4 py-2.5 pl-10 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+            className="w-full px-4 py-2.5 pl-10 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
           />
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
@@ -668,7 +670,7 @@ function SectionUserManagement() {
         <select
           value={filterRole}
           onChange={e => setFilterRole(e.target.value)}
-          className="px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm bg-white"
+          className="px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
         >
           <option value="">All Roles</option>
           {Object.entries(ROLE_LABELS).map(([k, v]) => (
@@ -679,7 +681,7 @@ function SectionUserManagement() {
         <select
           value={filterInstitution}
           onChange={e => setFilterInstitution(e.target.value)}
-          className="px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm bg-white"
+          className="px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
         >
           <option value="">All Institutions</option>
           {institutions.map(inst => (
@@ -690,7 +692,7 @@ function SectionUserManagement() {
         <select
           value={filterStatus}
           onChange={e => setFilterStatus(e.target.value)}
-          className="px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm bg-white"
+          className="px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
         >
           <option value="">All Status</option>
           <option value="Active">Active</option>
@@ -698,10 +700,10 @@ function SectionUserManagement() {
         </select>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">System Users</h3>
-          <span className="text-sm text-gray-500">{filtered.length} user{filtered.length !== 1 ? 's' : ''}</span>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="font-bold text-slate-900">System Users</h3>
+          <span className="text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 rounded-full px-2.5 py-1">{filtered.length} user{filtered.length !== 1 ? 's' : ''}</span>
         </div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
@@ -719,18 +721,18 @@ function SectionUserManagement() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center text-gray-400 py-8">
+                  <td colSpan="7" className="text-center text-slate-400 py-8">
                     No users found matching your filters.
                   </td>
                 </tr>
               ) : (
                 filtered.map(u => (
                   <tr key={u.id}>
-                    <td className="font-medium">{u.name}</td>
-                    <td>{u.email}</td>
+                    <td className="font-semibold text-slate-900">{u.name}</td>
+                    <td className="text-slate-600">{u.email}</td>
                     <td><RoleBadge role={u.role} /></td>
-                    <td>{u.institution || <span className="text-gray-400">—</span>}</td>
-                    <td>{u.employeeId || <span className="text-gray-400">—</span>}</td>
+                    <td>{u.institution || <span className="text-slate-400">—</span>}</td>
+                    <td className="font-mono text-xs text-slate-600">{u.employeeId || <span className="text-slate-400">—</span>}</td>
                     <td><StatusBadge status={u.status} /></td>
                     <td>
                       <div className="flex gap-3">
@@ -748,13 +750,13 @@ function SectionUserManagement() {
                               status: fullUser.status,
                             });
                           }}
-                          className="text-blue-600 hover:underline text-sm font-medium"
+                          className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold transition"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => handleToggleStatus(u.id)}
-                          className={`text-sm font-medium ${u.status === 'Active' ? 'text-amber-600 hover:underline' : 'text-green-600 hover:underline'}`}
+                          className={`text-sm font-semibold transition ${u.status === 'Active' ? 'text-amber-700 hover:text-amber-800' : 'text-emerald-700 hover:text-emerald-800'}`}
                         >
                           {u.status === 'Active' ? 'Deactivate' : 'Activate'}
                         </button>
@@ -768,8 +770,8 @@ function SectionUserManagement() {
         </div>
       </div>
 
-      <div className="p-4 bg-purple-50 border border-purple-100 rounded-xl text-sm text-purple-900">
-        <strong>Security:</strong> Passwords are never displayed or accessible through this interface. Users are created with temporary passwords that should be changed after first login.
+      <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-800">
+        <strong className="text-slate-900">Security:</strong> Passwords are never displayed or accessible through this interface. Users are created with temporary passwords that should be changed after first login.
       </div>
     </>
   );
@@ -1103,7 +1105,7 @@ function SectionInstitutionManagement() {
       <>
         <div className="mb-6">
           <button onClick={() => { setView('list'); setFormError(''); setShowServiceForm(false); }} 
-            className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
+            className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold flex items-center gap-1.5 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
@@ -1111,31 +1113,31 @@ function SectionInstitutionManagement() {
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6 max-w-4xl">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6 max-w-4xl">
+          <h2 className="text-lg font-bold text-slate-900 mb-6">
             {editingInstitution ? 'Edit Institution' : 'Add New Institution'}
           </h2>
           
           <form onSubmit={saveInstitution} className="space-y-6">
             {/* Institution Information */}
-            <div className="border-b border-gray-200 pb-6">
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Institution Information</h3>
+            <div className="border-b border-slate-200 pb-6">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Institution Information</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Institution Name (English) <span className="text-red-500">*</span>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Institution Name (English) <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={form.name_en}
                     onChange={e => setForm(f => ({ ...f, name_en: e.target.value }))}
                     placeholder="e.g. Immigration Service"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                     Institution Name (Amharic)
                   </label>
                   <input
@@ -1143,13 +1145,13 @@ function SectionInstitutionManagement() {
                     value={form.name_am}
                     onChange={e => setForm(f => ({ ...f, name_am: e.target.value }))}
                     placeholder="e.g. የኢሚግሬሽን አገልግሎት"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
                   />
                 </div>
               </div>
 
               <div className="mt-5">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                   Institution Code
                 </label>
                 <input
@@ -1157,25 +1159,25 @@ function SectionInstitutionManagement() {
                   value={form.code}
                   onChange={e => setForm(f => ({ ...f, code: e.target.value }))}
                   placeholder="e.g. immigration (auto-generated if empty)"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
                 />
-                <p className="text-xs text-gray-500 mt-1">Unique identifier for the institution. Auto-generated from name if left empty.</p>
+                <p className="text-xs text-slate-500 mt-1">Unique identifier for the institution. Auto-generated from name if left empty.</p>
               </div>
 
               <div className="mt-5">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Institution Logo <span className="text-red-500">*</span>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Institution Logo <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleImageSelect}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
                 />
                 {form.imagePreview && (
                   <div className="mt-3">
-                    <p className="text-xs text-gray-500 mb-2">Logo Preview:</p>
-                    <img src={form.imagePreview} alt="Logo preview" className="w-20 h-20 object-contain rounded-lg border border-gray-200 p-2" />
+                    <p className="text-xs text-slate-500 mb-2">Logo Preview:</p>
+                    <img src={form.imagePreview} alt="Logo preview" className="w-20 h-20 object-contain rounded-xl border border-slate-200 p-2 bg-slate-50" />
                   </div>
                 )}
               </div>
@@ -1189,7 +1191,7 @@ function SectionInstitutionManagement() {
                   value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                   placeholder="Short description explaining the institution and its role"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm resize-y"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-[#314ea1] outline-none transition text-sm resize-y"
                 />
               </div>
 
@@ -1202,7 +1204,7 @@ function SectionInstitutionManagement() {
                   value={form.details}
                   onChange={e => setForm(f => ({ ...f, details: e.target.value }))}
                   placeholder="Detailed institutional information used by the public institution listing"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm resize-y"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-[#314ea1] outline-none transition text-sm resize-y"
                 />
               </div>
 
@@ -1215,7 +1217,7 @@ function SectionInstitutionManagement() {
                   value={form.officialUrl}
                   onChange={e => setForm(f => ({ ...f, officialUrl: e.target.value }))}
                   placeholder="https://example.gov.et"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-[#314ea1] outline-none transition text-sm"
                 />
               </div>
 
@@ -1230,7 +1232,7 @@ function SectionInstitutionManagement() {
                     value={form.phone}
                     onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
                     placeholder="+251 11 234 5678"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-[#314ea1] outline-none transition text-sm"
                   />
                 </div>
                 <div>
@@ -1242,7 +1244,7 @@ function SectionInstitutionManagement() {
                     value={form.email}
                     onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                     placeholder="info@institution.gov.et"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-[#314ea1] outline-none transition text-sm"
                   />
                 </div>
                 <div>
@@ -1254,7 +1256,7 @@ function SectionInstitutionManagement() {
                     value={form.address}
                     onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
                     placeholder="Hawassa, Ethiopia"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-[#314ea1] outline-none transition text-sm"
                   />
                 </div>
               </div>
@@ -1267,7 +1269,7 @@ function SectionInstitutionManagement() {
                 <button
                   type="button"
                   onClick={() => { setShowServiceForm(true); setEditingServiceIndex(null); setServiceForm({ title_en: '', title_am: '', description_en: '', description_am: '', time: '', fee: '', officialUrl: '', docs_en: [], docs_am: [] }); }}
-                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg transition"
+                  className="px-3 py-1.5 bg-[#314ea1] hover:bg-[#1e3a8a] text-white text-xs font-semibold rounded-lg transition"
                 >
                   + Add Service
                 </button>
@@ -1313,7 +1315,7 @@ function SectionInstitutionManagement() {
 
               {/* Service Form */}
               {showServiceForm && (
-                <div className="p-5 bg-purple-50 border border-purple-200 rounded-xl space-y-4">
+                <div className="p-5 bg-blue-50 border border-blue-200 rounded-xl space-y-4">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-semibold text-gray-900">
                       {editingServiceIndex !== null ? 'Edit Service' : 'New Service'}
@@ -1339,7 +1341,7 @@ function SectionInstitutionManagement() {
                         value={serviceForm.title_en}
                         onChange={e => setServiceForm(f => ({ ...f, title_en: e.target.value }))}
                         placeholder="e.g. Business License"
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-[#314ea1] outline-none transition text-sm"
                       />
                     </div>
                     <div>
@@ -1351,7 +1353,7 @@ function SectionInstitutionManagement() {
                         value={serviceForm.title_am}
                         onChange={e => setServiceForm(f => ({ ...f, title_am: e.target.value }))}
                         placeholder="e.g. የንግድ ፈቃድ"
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-[#314ea1] outline-none transition text-sm"
                       />
                     </div>
                   </div>
@@ -1366,7 +1368,7 @@ function SectionInstitutionManagement() {
                         value={serviceForm.description_en || ''}
                         onChange={e => setServiceForm(f => ({ ...f, description_en: e.target.value }))}
                         placeholder="Brief service description"
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm resize-y"
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-[#314ea1] outline-none transition text-sm resize-y"
                       />
                     </div>
                     <div>
@@ -1378,7 +1380,7 @@ function SectionInstitutionManagement() {
                         value={serviceForm.description_am || ''}
                         onChange={e => setServiceForm(f => ({ ...f, description_am: e.target.value }))}
                         placeholder="የአገልግሎት መግለጫ"
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm resize-y"
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-[#314ea1] outline-none transition text-sm resize-y"
                       />
                     </div>
                   </div>
@@ -1393,7 +1395,7 @@ function SectionInstitutionManagement() {
                         value={serviceForm.time}
                         onChange={e => setServiceForm(f => ({ ...f, time: e.target.value }))}
                         placeholder="e.g. 3-5 days"
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-[#314ea1] outline-none transition text-sm"
                       />
                     </div>
                     <div>
@@ -1405,7 +1407,7 @@ function SectionInstitutionManagement() {
                         value={serviceForm.fee}
                         onChange={e => setServiceForm(f => ({ ...f, fee: e.target.value }))}
                         placeholder="e.g. 500 ETB"
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-[#314ea1] outline-none transition text-sm"
                       />
                     </div>
                   </div>
@@ -1419,7 +1421,7 @@ function SectionInstitutionManagement() {
                       value={serviceForm.officialUrl}
                       onChange={e => setServiceForm(f => ({ ...f, officialUrl: e.target.value }))}
                       placeholder="https://example.gov.et/service"
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-[#314ea1] outline-none transition text-sm"
                     />
                   </div>
 
@@ -1453,7 +1455,7 @@ function SectionInstitutionManagement() {
                           value={docInput.en}
                           onChange={e => setDocInput(d => ({ ...d, en: e.target.value }))}
                           placeholder="Document name (English)"
-                          className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-[#314ea1] outline-none transition text-sm"
                         />
                       </div>
                       <div>
@@ -1462,7 +1464,7 @@ function SectionInstitutionManagement() {
                           value={docInput.am}
                           onChange={e => setDocInput(d => ({ ...d, am: e.target.value }))}
                           placeholder="Document name (Amharic)"
-                          className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm"
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-[#314ea1] outline-none transition text-sm"
                         />
                       </div>
                     </div>
@@ -1475,11 +1477,11 @@ function SectionInstitutionManagement() {
                     </button>
                   </div>
 
-                  <div className="pt-3 border-t border-purple-200">
+                  <div className="pt-3 border-t border-blue-200">
                     <button
                       type="button"
                       onClick={saveService}
-                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition"
+                      className="px-4 py-2 bg-[#314ea1] hover:bg-[#1e3a8a] text-white text-sm font-semibold rounded-lg transition"
                     >
                       {editingServiceIndex !== null ? 'Update Service' : 'Save Service'}
                     </button>
@@ -1496,10 +1498,10 @@ function SectionInstitutionManagement() {
             )}
 
             {/* Submit Button */}
-            <div className="pt-4 border-t border-gray-200">
+            <div className="pt-4 border-t border-slate-200">
               <button
                 type="submit"
-                className="px-6 py-3 bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-semibold rounded-xl transition text-sm"
+                className="px-6 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white font-semibold rounded-xl transition shadow-xs text-sm"
               >
                 Save Institution
               </button>
@@ -1515,23 +1517,23 @@ function SectionInstitutionManagement() {
     <>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">Institution Management</h2>
-          <p className="text-sm text-gray-500">Manage institutions registered in Hawassa MESOB.</p>
+          <h2 className="text-lg font-bold text-slate-900 mb-1">Institution Management</h2>
+          <p className="text-sm text-slate-500">Manage institutions registered in Hawassa MESOB.</p>
         </div>
         {canCreate && (
           <button
             onClick={() => setView('new')}
-            className="px-4 py-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition"
+            className="px-4 py-2 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white text-sm font-semibold rounded-xl transition shadow-xs"
           >
             + Add Institution
           </button>
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">Registered Institutions</h3>
-          <span className="text-sm text-gray-500">{institutions.length} total</span>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="font-bold text-slate-900">Registered Institutions</h3>
+          <span className="text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 rounded-full px-2.5 py-1">{institutions.length} total</span>
         </div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
@@ -1539,24 +1541,24 @@ function SectionInstitutionManagement() {
             <tbody>
               {institutions.map(org => (
                 <tr key={org.id}>
-                  <td className="font-medium">{org.name_en || org.name}</td>
-                  <td>{org.name_am || org.nameAm || ''}</td>
-                  <td className="text-xs text-gray-600">{org.code || ''}</td>
+                  <td className="font-semibold text-slate-900">{org.name_en || org.name}</td>
+                  <td className="text-slate-700">{org.name_am || org.nameAm || ''}</td>
+                  <td className="text-xs font-mono text-slate-600">{org.code || ''}</td>
                   <td><StatusBadge status={org.status} /></td>
                   <td>
                     <div className="flex gap-3">
                       {canCreate && (
                         <>
                           <button onClick={() => editInstitution(org)}
-                            className="text-blue-600 hover:underline text-sm font-medium">
+                            className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold transition">
                             Edit
                           </button>
                           <button onClick={() => toggleStatus(org.id)}
-                            className={`text-sm font-medium ${(org.status === 'ACTIVE' || org.status === 'Active') ? 'text-amber-600 hover:underline' : 'text-green-600 hover:underline'}`}>
+                            className={`text-sm font-semibold transition ${(org.status === 'ACTIVE' || org.status === 'Active') ? 'text-amber-700 hover:text-amber-800' : 'text-emerald-700 hover:text-emerald-800'}`}>
                             {(org.status === 'ACTIVE' || org.status === 'Active') ? 'Deactivate' : 'Activate'}
                           </button>
                           <button onClick={() => deleteInst(org.id)}
-                            className="text-red-600 hover:underline text-sm font-medium">
+                            className="text-rose-600 hover:text-rose-700 text-sm font-semibold transition">
                             Delete
                           </button>
                         </>
@@ -1590,21 +1592,21 @@ function SectionRolesPermissions() {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Roles & Permissions</h2>
-        <p className="text-sm text-gray-500">Approved role structure for Hawassa MESOB.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">Roles & Permissions</h2>
+        <p className="text-sm text-slate-500">Approved role structure for Hawassa MESOB.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         {roleDefinitions.map(({ role, label, color, perms }) => (
           <div key={role} className={`rounded-2xl border p-5 ${color}`}>
             <div className="flex items-center justify-between mb-3">
-              <strong className="text-sm">{label}</strong>
-              <span className="text-xs opacity-70">{users.filter(u => u.role === role).length} user{users.filter(u => u.role === role).length !== 1 ? 's' : ''}</span>
+              <strong className="text-sm font-bold text-slate-900">{label}</strong>
+              <span className="text-xs font-semibold bg-white/70 px-2 py-0.5 rounded-md border border-slate-200/50">{users.filter(u => u.role === role).length} user{users.filter(u => u.role === role).length !== 1 ? 's' : ''}</span>
             </div>
-            <ul className="space-y-1">
+            <ul className="space-y-1.5">
               {perms.map((p, i) => (
-                <li key={i} className="text-xs flex items-start gap-1.5">
-                  <span className="mt-0.5">✔</span><span>{p}</span>
+                <li key={i} className="text-xs flex items-start gap-1.5 font-medium">
+                  <span className="mt-0.5 text-emerald-600 font-bold">✔</span><span>{p}</span>
                 </li>
               ))}
             </ul>
@@ -1612,8 +1614,8 @@ function SectionRolesPermissions() {
         ))}
       </div>
 
-      <div className="p-4 bg-purple-50 border border-purple-100 rounded-xl text-sm text-purple-900">
-        <strong>Note:</strong> Role permissions are enforced by the system RBAC layer. Changes to role permissions require backend configuration.
+      <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-800">
+        <strong className="text-slate-900">Note:</strong> Role permissions are enforced by the system RBAC layer. Changes to role permissions require backend configuration.
       </div>
     </>
   );
@@ -1635,38 +1637,38 @@ function SectionSystemSettings() {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">System Settings</h2>
-        <p className="text-sm text-gray-500">System-level configuration for Hawassa MESOB.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">System Settings</h2>
+        <p className="text-sm text-slate-500">System-level configuration for Hawassa MESOB.</p>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6 max-w-2xl">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h3 className="font-semibold text-gray-900 mb-5">General Settings</h3>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
+          <h3 className="font-bold text-slate-900 mb-5">General Settings</h3>
           <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">System Name</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">System Name</label>
               <input type="text" value={systemName} onChange={e => setSystemName(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm" />
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white" />
             </div>
 
-            <div className="flex items-center justify-between py-3 border-t border-gray-100">
+            <div className="flex items-center justify-between py-3 border-t border-slate-100">
               <div>
-                <p className="text-sm font-medium text-gray-900">Maintenance Mode</p>
-                <p className="text-xs text-gray-500">When enabled, only Super Admin can access the system.</p>
+                <p className="text-sm font-semibold text-slate-900">Maintenance Mode</p>
+                <p className="text-xs text-slate-500">When enabled, only Super Admin can access the system.</p>
               </div>
               <button type="button" onClick={() => setMaintenanceMode(m => !m)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${maintenanceMode ? 'bg-amber-500' : 'bg-gray-300'}`}>
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${maintenanceMode ? 'bg-amber-500' : 'bg-slate-300'}`}>
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${maintenanceMode ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
 
-            <div className="flex items-center justify-between py-3 border-t border-gray-100">
+            <div className="flex items-center justify-between py-3 border-t border-slate-100">
               <div>
-                <p className="text-sm font-medium text-gray-900">Allow New Registrations</p>
-                <p className="text-xs text-gray-500">Allow new users to register accounts.</p>
+                <p className="text-sm font-semibold text-slate-900">Allow New Registrations</p>
+                <p className="text-xs text-slate-500">Allow new users to register accounts.</p>
               </div>
               <button type="button" onClick={() => setAllowSignup(v => !v)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${allowSignup ? 'bg-[#1e3a8a]' : 'bg-gray-300'}`}>
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${allowSignup ? 'bg-[#314ea1]' : 'bg-slate-300'}`}>
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${allowSignup ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
@@ -1674,15 +1676,15 @@ function SectionSystemSettings() {
         </div>
 
         <div className="flex items-center gap-4">
-          <button type="submit" className="px-6 py-3 bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-semibold rounded-xl transition text-sm">
+          <button type="submit" className="px-6 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white font-semibold rounded-xl transition shadow-xs text-sm">
             Save Settings
           </button>
-          {saved && <span className="text-sm text-green-600 font-medium">✓ Settings saved</span>}
+          {saved && <span className="text-sm text-emerald-700 font-semibold">✓ Settings saved</span>}
         </div>
       </form>
 
-      <div className="mt-6 p-4 bg-purple-50 border border-purple-100 rounded-xl text-sm text-purple-900">
-        <strong>Security:</strong> Database credentials, API keys, and Telegram Bot tokens are never stored or displayed in the frontend.
+      <div className="mt-6 p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-800">
+        <strong className="text-slate-900">Security:</strong> Database credentials, API keys, and Telegram Bot tokens are never stored or displayed in the frontend.
       </div>
     </>
   );
@@ -1728,52 +1730,52 @@ function MaintenanceReportTab() {
     <>
       {/* Statistics Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-        <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Total Reports</p>
-          <p className="text-2xl font-bold">{stats.total}</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Reports</p>
+          <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
         </div>
-        <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Reported</p>
-          <p className="text-2xl font-bold text-gray-600">{stats.reported}</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Reported</p>
+          <p className="text-2xl font-bold text-slate-600">{stats.reported}</p>
         </div>
-        <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Assigned</p>
-          <p className="text-2xl font-bold text-blue-600">{stats.assigned}</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Assigned</p>
+          <p className="text-2xl font-bold text-[#1e3a8a]">{stats.assigned}</p>
         </div>
-        <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">In Progress</p>
-          <p className="text-2xl font-bold text-orange-600">{stats.inProgress}</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">In Progress</p>
+          <p className="text-2xl font-bold text-amber-700">{stats.inProgress}</p>
         </div>
-        <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Resolved</p>
-          <p className="text-2xl font-bold text-green-600">{stats.resolved}</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Resolved</p>
+          <p className="text-2xl font-bold text-emerald-700">{stats.resolved}</p>
         </div>
       </div>
 
       {/* Priority Distribution */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <div className="stat-card border-l-4 border-gray-400">
-          <p className="text-sm text-gray-500 mb-1">Low Priority</p>
-          <p className="text-xl font-bold">{byPriority.LOW}</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 border-l-4 border-slate-400">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Low Priority</p>
+          <p className="text-xl font-bold text-slate-900">{byPriority.LOW}</p>
         </div>
-        <div className="stat-card border-l-4 border-blue-400">
-          <p className="text-sm text-gray-500 mb-1">Normal Priority</p>
-          <p className="text-xl font-bold">{byPriority.NORMAL}</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 border-l-4 border-blue-500">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Normal Priority</p>
+          <p className="text-xl font-bold text-slate-900">{byPriority.NORMAL}</p>
         </div>
-        <div className="stat-card border-l-4 border-orange-400">
-          <p className="text-sm text-gray-500 mb-1">High Priority</p>
-          <p className="text-xl font-bold">{byPriority.HIGH}</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 border-l-4 border-amber-500">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">High Priority</p>
+          <p className="text-xl font-bold text-slate-900">{byPriority.HIGH}</p>
         </div>
-        <div className="stat-card border-l-4 border-red-400">
-          <p className="text-sm text-gray-500 mb-1">Critical Priority</p>
-          <p className="text-xl font-bold">{byPriority.CRITICAL}</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 border-l-4 border-rose-500">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Critical Priority</p>
+          <p className="text-xl font-bold text-slate-900">{byPriority.CRITICAL}</p>
         </div>
       </div>
 
       {/* Maintenance by Institution */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-900">Maintenance by Institution</h3>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-slate-100">
+          <h3 className="font-bold text-slate-900">Maintenance by Institution</h3>
         </div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
@@ -1794,12 +1796,12 @@ function MaintenanceReportTab() {
                   const total = counts.reported + counts.assigned + counts.inProgress + counts.resolved;
                   return (
                     <tr key={instId}>
-                      <td className="font-medium">{inst?.name_en || 'Unknown Institution'}</td>
-                      <td><span className="badge bg-gray-100 text-gray-800">{counts.reported}</span></td>
-                      <td><span className="badge bg-blue-100 text-blue-800">{counts.assigned}</span></td>
-                      <td><span className="badge bg-orange-100 text-orange-800">{counts.inProgress}</span></td>
-                      <td><span className="badge bg-green-100 text-green-800">{counts.resolved}</span></td>
-                      <td className="font-bold">{total}</td>
+                      <td className="font-semibold text-slate-900">{inst?.name_en || 'Unknown Institution'}</td>
+                      <td><span className="badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold">{counts.reported}</span></td>
+                      <td><span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold">{counts.assigned}</span></td>
+                      <td><span className="badge bg-amber-50 text-amber-800 border border-amber-200 font-semibold">{counts.inProgress}</span></td>
+                      <td><span className="badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold">{counts.resolved}</span></td>
+                      <td className="font-bold text-slate-900">{total}</td>
                     </tr>
                   );
                 })
@@ -2033,13 +2035,13 @@ function SectionReports() {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Reports</h2>
-        <p className="text-sm text-gray-500">System-wide administrative and operational reports.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">Reports</h2>
+        <p className="text-sm text-slate-500">System-wide administrative and operational reports.</p>
       </div>
       <div className="flex flex-wrap gap-2 mb-6">
         {tabs.map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === t.key ? 'bg-[#1e3a8a] text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-700 hover:border-gray-300'}`}>
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === t.key ? 'bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] text-white shadow-xs' : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'}`}>
             {t.label}
           </button>
         ))}
@@ -2048,18 +2050,18 @@ function SectionReports() {
       {activeTab === 'users' && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Total Users</p><p className="text-2xl font-bold">{users.length}</p></div>
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Active</p><p className="text-2xl font-bold text-green-600">{users.filter(u => u.status === 'Active').length}</p></div>
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Roles in Use</p><p className="text-2xl font-bold">{new Set(users.map(u => u.role)).size}</p></div>
+            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5"><p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Users</p><p className="text-2xl font-bold text-slate-900">{users.length}</p></div>
+            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5"><p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Active</p><p className="text-2xl font-bold text-emerald-700">{users.filter(u => u.status === 'Active').length}</p></div>
+            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5"><p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Roles in Use</p><p className="text-2xl font-bold text-slate-900">{new Set(users.map(u => u.role)).size}</p></div>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-            <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">User Report</h3></div>
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+            <div className="px-6 py-4 border-b border-slate-100"><h3 className="font-bold text-slate-900">User Report</h3></div>
             <div className="table-container border-0 rounded-none">
               <table className="data-table">
                 <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
                 <tbody>
                   {users.map(u => (
-                    <tr key={u.id}><td className="font-medium">{u.name}</td><td>{u.email}</td><td><RoleBadge role={u.role} /></td><td><StatusBadge status={u.status} /></td></tr>
+                    <tr key={u.id}><td className="font-semibold text-slate-900">{u.name}</td><td className="text-slate-600">{u.email}</td><td><RoleBadge role={u.role} /></td><td><StatusBadge status={u.status} /></td></tr>
                   ))}
                 </tbody>
               </table>
@@ -2071,17 +2073,17 @@ function SectionReports() {
       {activeTab === 'institutions' && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Total Institutions</p><p className="text-2xl font-bold">{institutions.length}</p></div>
-            <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Active</p><p className="text-2xl font-bold text-green-600">{institutions.filter(i => i.status === 'active' || i.is_active).length}</p></div>
+            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5"><p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Institutions</p><p className="text-2xl font-bold text-slate-900">{institutions.length}</p></div>
+            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5"><p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Active</p><p className="text-2xl font-bold text-emerald-700">{institutions.filter(i => i.status === 'active' || i.is_active).length}</p></div>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-            <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-900">Institution Report</h3></div>
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+            <div className="px-6 py-4 border-b border-slate-100"><h3 className="font-bold text-slate-900">Institution Report</h3></div>
             <div className="table-container border-0 rounded-none">
               <table className="data-table">
                 <thead><tr><th>Institution</th><th>Amharic Name</th><th>Code</th><th>Status</th></tr></thead>
                 <tbody>
                   {institutions.map(inst => (
-                    <tr key={inst.id}><td className="font-medium">{inst.name_en || inst.name}</td><td>{inst.name_am}</td><td>{inst.code || 'N/A'}</td><td><span className="badge bg-green-100 text-green-800">Active</span></td></tr>
+                    <tr key={inst.id}><td className="font-semibold text-slate-900">{inst.name_en || inst.name}</td><td className="text-slate-700">{inst.name_am}</td><td className="text-xs font-mono text-slate-600">{inst.code || 'N/A'}</td><td><span className="badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold">Active</span></td></tr>
                   ))}
                 </tbody>
               </table>
@@ -2094,8 +2096,8 @@ function SectionReports() {
 
       {activeTab === 'maintenance' && <MaintenanceReportTab />}
 
-      <div className="mt-4 p-4 bg-purple-50 border border-purple-100 rounded-xl text-sm text-purple-900">
-        <strong>Reports:</strong> System-wide reporting. Payment, appointment, and grievance reports are not part of the approved system scope.
+      <div className="mt-4 p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-800">
+        <strong className="text-slate-900">Reports:</strong> System-wide reporting. Payment, appointment, and grievance reports are not part of the approved system scope.
       </div>
     </>
   );
@@ -2110,50 +2112,50 @@ function SectionAnalytics() {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Analytics</h2>
-        <p className="text-sm text-gray-500">System-wide overview using existing data.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">Analytics</h2>
+        <p className="text-sm text-slate-500">System-wide overview using existing data.</p>
       </div>
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Total Users</p><p className="text-2xl font-bold">{users.length}</p></div>
-        <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Institutions</p><p className="text-2xl font-bold">{organizationsData.length}</p></div>
-        <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Total Services</p><p className="text-2xl font-bold">{organizationsData.reduce((s, o) => s + o.services.length, 0)}</p></div>
-        <div className="stat-card"><p className="text-sm text-gray-500 mb-1">Active Users</p><p className="text-2xl font-bold text-green-600">{users.filter(u => u.status === 'Active').length}</p></div>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5"><p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Users</p><p className="text-2xl font-bold text-slate-900">{users.length}</p></div>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5"><p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Institutions</p><p className="text-2xl font-bold text-slate-900">{organizationsData.length}</p></div>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5"><p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Services</p><p className="text-2xl font-bold text-slate-900">{organizationsData.reduce((s, o) => s + o.services.length, 0)}</p></div>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5"><p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Active Users</p><p className="text-2xl font-bold text-emerald-700">{users.filter(u => u.status === 'Active').length}</p></div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
-        <h3 className="font-semibold text-gray-900 mb-4">Users by Role</h3>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6">
+        <h3 className="font-bold text-slate-900 mb-4">Users by Role</h3>
         <div className="space-y-3">
           {byRole.map(({ role, label, count }) => (
             <div key={role} className="flex items-center gap-3">
-              <span className="text-sm text-gray-600 w-40 flex-shrink-0">{label}</span>
-              <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                <div className="h-2.5 rounded-full bg-[#1e3a8a] transition-all duration-300"
+              <span className="text-sm text-slate-600 w-40 flex-shrink-0 font-medium">{label}</span>
+              <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                <div className="h-2.5 rounded-full bg-[#314ea1] transition-all duration-300"
                   style={{ width: users.length ? `${(count / users.length) * 100}%` : '0%' }} />
               </div>
-              <span className="text-sm font-medium text-gray-900 w-6 text-right">{count}</span>
+              <span className="text-sm font-semibold text-slate-900 w-6 text-right">{count}</span>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
-        <h3 className="font-semibold text-gray-900 mb-4">Services per Institution</h3>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6">
+        <h3 className="font-bold text-slate-900 mb-4">Services per Institution</h3>
         <div className="space-y-3">
           {organizationsData.map(org => (
             <div key={org.id} className="flex items-center gap-3">
-              <span className="text-sm text-gray-600 w-52 flex-shrink-0 truncate">{org.name_en}</span>
-              <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                <div className="h-2.5 rounded-full bg-orange-400 transition-all duration-300"
+              <span className="text-sm text-slate-600 w-52 flex-shrink-0 truncate font-medium">{org.name_en}</span>
+              <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                <div className="h-2.5 rounded-full bg-amber-500 transition-all duration-300"
                   style={{ width: `${(org.services.length / 4) * 100}%` }} />
               </div>
-              <span className="text-sm font-medium text-gray-900 w-6 text-right">{org.services.length}</span>
+              <span className="text-sm font-semibold text-slate-900 w-6 text-right">{org.services.length}</span>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="p-4 bg-purple-50 border border-purple-100 rounded-xl text-sm text-purple-900">
-        <strong>Analytics:</strong> System-level metrics. Financial, payment, and appointment analytics are not part of the approved system scope.
+      <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-800">
+        <strong className="text-slate-900">Analytics:</strong> System-level metrics. Financial, payment, and appointment analytics are not part of the approved system scope.
       </div>
     </>
   );
@@ -2277,28 +2279,28 @@ function SectionAnnouncements() {
     return (
       <>
         <div className="mb-6">
-          <button onClick={() => setSelected(null)} className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
+          <button onClick={() => setSelected(null)} className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-medium flex items-center gap-1 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
             Back to Announcements
           </button>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">{ann.title}</h2>
+            <h2 className="text-lg font-bold text-slate-900">{ann.title}</h2>
             <div className="flex items-center gap-2 flex-shrink-0">
-              {ann.is_active && <span className="badge bg-green-100 text-green-800">Active</span>}
+              {ann.is_active && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">Active</span>}
               {canEdit && (
                 <>
                   <button 
                     onClick={() => handleEdit(ann)}
-                    className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                    className="px-3 py-1.5 text-sm text-[#314ea1] hover:bg-blue-50/80 rounded-xl font-medium transition"
                     title="Edit announcement"
                   >
                     Edit
                   </button>
                   <button 
                     onClick={() => handleDelete(ann.id, ann.title)}
-                    className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition"
+                    className="px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-50/80 rounded-xl font-medium transition"
                     title="Delete announcement"
                   >
                     Delete
@@ -2307,11 +2309,11 @@ function SectionAnnouncements() {
               )}
             </div>
           </div>
-          <p className="text-xs text-gray-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} · {ann.creator?.full_name || 'System'}</p>
-          <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{ann.content}</div>
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <p className="text-xs text-gray-500">
-              <strong>Scope:</strong> {ann.scope} 
+          <p className="text-xs text-slate-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} · {ann.creator?.full_name || 'System'}</p>
+          <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{ann.content}</div>
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <p className="text-xs text-slate-500">
+              <strong className="text-slate-700">Scope:</strong> {ann.scope} 
               {ann.target_roles && ann.target_roles.length > 0 && <span> ({ann.target_roles.join(', ')})</span>}
             </p>
           </div>
@@ -2325,31 +2327,31 @@ function SectionAnnouncements() {
     return (
       <>
         <div className="mb-6">
-          <button onClick={() => { setView('list'); setSelected(null); setFormError(''); }} className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
+          <button onClick={() => { setView('list'); setSelected(null); setFormError(''); }} className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-medium flex items-center gap-1 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
             Cancel
           </button>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 max-w-2xl">
-          <h3 className="font-semibold text-gray-900 mb-4">{view === 'edit' ? 'Edit Announcement' : 'Create Announcement'}</h3>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 max-w-2xl">
+          <h3 className="font-bold text-slate-900 mb-4 text-base">{view === 'edit' ? 'Edit Announcement' : 'Create Announcement'}</h3>
           <form onSubmit={submitAnnouncement} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Title <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Title <span className="text-rose-500">*</span></label>
               <input type="text" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                 placeholder="Announcement title"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm" />
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Content <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Content <span className="text-rose-500">*</span></label>
               <textarea rows={4} value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
                 placeholder="Announcement content..."
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm resize-y" />
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm resize-y bg-white" />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Audience <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Audience <span className="text-rose-500">*</span></label>
               <select value={form.scope} onChange={e => setForm(f => ({ ...f, scope: e.target.value, targetRoles: [], institutionId: '' }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm">
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white">
                 <option value="PUBLIC">Public - Visible to everyone including citizens</option>
                 <option value="INTERNAL">Internal - Staff only (employees, managers, admins)</option>
                 <option value="SYSTEM">System - Admins and managers only</option>
@@ -2360,7 +2362,7 @@ function SectionAnnouncements() {
             
             {form.scope === 'ROLE' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Target Roles <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Target Roles <span className="text-rose-500">*</span></label>
                 <div className="space-y-2">
                   {['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'ICT_STAFF', 'CITIZEN'].map(role => (
                     <label key={role} className="flex items-center gap-2 text-sm">
@@ -2373,8 +2375,8 @@ function SectionAnnouncements() {
                             setForm(f => ({ ...f, targetRoles: f.targetRoles.filter(r => r !== role) }));
                           }
                         }}
-                        className="rounded border-gray-300 text-purple-600 focus:ring-purple-400" />
-                      <span className="text-gray-700">{role.replace(/_/g, ' ')}</span>
+                        className="rounded border-slate-300 text-[#314ea1] focus:ring-[#314ea1]/20 focus:border-[#314ea1]" />
+                      <span className="text-slate-700 font-medium">{role.replace(/_/g, ' ')}</span>
                     </label>
                   ))}
                 </div>
@@ -2383,26 +2385,26 @@ function SectionAnnouncements() {
             
             {form.scope === 'INSTITUTION' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Institution <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Institution <span className="text-rose-500">*</span></label>
                 <input type="text" value={form.institutionId} onChange={e => setForm(f => ({ ...f, institutionId: e.target.value }))}
                   placeholder="Enter institution ID"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none transition text-sm" />
-                <p className="text-xs text-gray-500 mt-1">Enter the UUID of the target institution</p>
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white" />
+                <p className="text-xs text-slate-500 mt-1">Enter the UUID of the target institution</p>
               </div>
             )}
             
-            <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-900">
-              <strong>Scope: {form.scope}</strong>
-              {form.scope === 'PUBLIC' && <p className="mt-1">This announcement will be visible to all users including citizens.</p>}
-              {form.scope === 'INTERNAL' && <p className="mt-1">This announcement will be visible only to staff (not citizens).</p>}
-              {form.scope === 'SYSTEM' && <p className="mt-1">This announcement will be visible only to admins and managers.</p>}
-              {form.scope === 'ROLE' && <p className="mt-1">This announcement will be visible only to the selected role(s).</p>}
-              {form.scope === 'INSTITUTION' && <p className="mt-1">This announcement will be visible only to users in the selected institution.</p>}
+            <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-800">
+              <strong className="text-slate-900">Scope: {form.scope}</strong>
+              {form.scope === 'PUBLIC' && <p className="mt-1 text-slate-600">This announcement will be visible to all users including citizens.</p>}
+              {form.scope === 'INTERNAL' && <p className="mt-1 text-slate-600">This announcement will be visible only to staff (not citizens).</p>}
+              {form.scope === 'SYSTEM' && <p className="mt-1 text-slate-600">This announcement will be visible only to admins and managers.</p>}
+              {form.scope === 'ROLE' && <p className="mt-1 text-slate-600">This announcement will be visible only to the selected role(s).</p>}
+              {form.scope === 'INSTITUTION' && <p className="mt-1 text-slate-600">This announcement will be visible only to users in the selected institution.</p>}
             </div>
             
-            {formError && <p className="text-sm text-red-600">{formError}</p>}
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <button type="submit" disabled={loading} className="px-5 py-2.5 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition disabled:opacity-50">
+            {formError && <p className="text-sm text-rose-600">{formError}</p>}
+            {error && <p className="text-sm text-rose-600">{error}</p>}
+            <button type="submit" disabled={loading} className="px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white text-sm font-semibold rounded-xl shadow-xs transition disabled:opacity-50">
               {loading ? (view === 'edit' ? 'Updating...' : 'Publishing...') : (view === 'edit' ? 'Update Announcement' : 'Publish Announcement')}
             </button>
           </form>
@@ -2416,37 +2418,37 @@ function SectionAnnouncements() {
     <>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">Announcements</h2>
-          <p className="text-sm text-gray-500">System-level announcements and notifications.</p>
+          <h2 className="text-lg font-bold text-slate-900 mb-1">Announcements</h2>
+          <p className="text-sm text-slate-500">System-level announcements and notifications.</p>
         </div>
         <button onClick={() => { setView('new'); setSelected(null); setFormError(''); }}
-          className="px-4 py-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl transition">
+          className="px-4 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white text-sm font-semibold rounded-xl shadow-xs transition">
           + New Announcement
         </button>
       </div>
 
       {loading && !announcements.length && (
-        <div className="text-center py-8 text-gray-500">Loading announcements...</div>
+        <div className="text-center py-8 text-slate-500">Loading announcements...</div>
       )}
 
       <div className="space-y-3">
         {announcements.map(ann => (
           <div key={ann.id} onClick={() => setSelected(ann.id)}
-            className={`bg-white rounded-2xl border shadow-sm p-5 cursor-pointer hover:shadow-md transition-all duration-200 ${ann.is_active ? 'border-gray-100' : 'border-gray-200 bg-gray-50'}`}>
+            className={`bg-white rounded-2xl border shadow-xs p-5 cursor-pointer hover:border-slate-300 hover:shadow-md transition-all duration-200 ${ann.is_active ? 'border-slate-200/90' : 'border-slate-200 bg-slate-50/70'}`}>
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  {ann.is_active && <span className="inline-block w-2 h-2 rounded-full bg-green-600 flex-shrink-0" />}
-                  <h3 className="font-semibold text-sm text-gray-900 leading-snug">{ann.title}</h3>
-                  {ann.scope === 'PUBLIC' && <span className="badge bg-green-100 text-green-800 text-xs">Public</span>}
-                  {ann.scope === 'INTERNAL' && <span className="badge bg-blue-100 text-blue-800 text-xs">Internal</span>}
-                  {ann.scope === 'SYSTEM' && <span className="badge bg-purple-100 text-purple-800 text-xs">System</span>}
-                  {ann.scope === 'ROLE' && <span className="badge bg-orange-100 text-orange-800 text-xs">Role</span>}
-                  {ann.scope === 'INSTITUTION' && <span className="badge bg-indigo-100 text-indigo-800 text-xs">Institution</span>}
+                  {ann.is_active && <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />}
+                  <h3 className="font-semibold text-sm text-slate-900 leading-snug">{ann.title}</h3>
+                  {ann.scope === 'PUBLIC' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">Public</span>}
+                  {ann.scope === 'INTERNAL' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-[#1e3a8a] border border-blue-200">Internal</span>}
+                  {ann.scope === 'SYSTEM' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-800 border border-purple-200">System</span>}
+                  {ann.scope === 'ROLE' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200">Role</span>}
+                  {ann.scope === 'INSTITUTION' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-800 border border-indigo-200">Institution</span>}
                 </div>
-                <p className="text-xs text-gray-500">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} · {ann.creator?.full_name || 'System'}</p>
+                <p className="text-xs text-slate-500">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} · {ann.creator?.full_name || 'System'}</p>
               </div>
-              <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
               </svg>
             </div>
@@ -2462,29 +2464,29 @@ function SectionMyProfile({ user }) {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">My Profile</h2>
-        <p className="text-sm text-gray-500">Your System Admin account information.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">My Profile</h2>
+        <p className="text-sm text-slate-500">Your System Admin account information.</p>
       </div>
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6 max-w-lg">
-        <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
-          <div className="w-14 h-14 rounded-2xl bg-purple-700 text-white flex items-center justify-center text-xl font-bold flex-shrink-0">
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6 max-w-lg">
+        <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center text-xl font-bold flex-shrink-0 shadow-md">
             {user?.name?.charAt(0) || 'S'}
           </div>
           <div>
-            <p className="font-semibold text-gray-900">{user?.name}</p>
-            <p className="text-sm text-gray-500">{user?.email}</p>
-            <span className="badge bg-purple-100 text-purple-800 mt-1">Super Admin</span>
+            <p className="font-bold text-slate-900 text-base">{user?.name}</p>
+            <p className="text-sm text-slate-500">{user?.email}</p>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-[#1e3a8a] border border-blue-200 mt-1">Super Admin</span>
           </div>
         </div>
         <div className="space-y-4 text-sm">
-          <div className="flex justify-between"><span className="text-gray-500">Full Name</span><span className="font-medium text-gray-900">{user?.name}</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">Email</span><span className="font-medium text-gray-900">{user?.email}</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">Role</span><span className="font-medium text-gray-900">Super Admin</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">Access Level</span><span className="font-medium text-gray-900">System-wide</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">Full Name</span><span className="font-medium text-slate-900">{user?.name}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">Email</span><span className="font-medium text-slate-900">{user?.email}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">Role</span><span className="font-medium text-slate-900">Super Admin</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">Access Level</span><span className="font-medium text-slate-900">System-wide</span></div>
         </div>
       </div>
-      <div className="p-4 bg-purple-50 border border-purple-100 rounded-xl text-sm text-purple-900">
-        <strong>Security:</strong> Passwords and authentication secrets are never displayed. To change your password, use the authentication system.
+      <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-700">
+        <strong className="text-slate-900">Security:</strong> Passwords and authentication secrets are never displayed. To change your password, use the authentication system.
       </div>
     </>
   );
@@ -2492,7 +2494,7 @@ function SectionMyProfile({ user }) {
 
 // ─── Main SuperAdminDashboard ─────────────────────────────────────
 export default function SuperAdminDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { t } = useApp();
   const [activeSection, setActiveSection] = useState(t.dashboard);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -2518,17 +2520,17 @@ export default function SuperAdminDashboard() {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gradient-to-br from-[#f8fafc] via-[#f1f5f9] to-[#edf4fc] min-h-screen text-slate-900">
       <div className="flex min-h-screen">
 
         {/* ── Sidebar ── */}
-        <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200${sidebarOpen ? ' open' : ''}`}>
-          <div className="p-5 border-b border-gray-100">
+        <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white/95 backdrop-blur-md border-r border-slate-200/90 flex flex-col transition-transform duration-200${sidebarOpen ? ' open' : ''}`}>
+          <div className="p-5 border-b border-slate-100">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-700 text-white flex items-center justify-center font-bold text-lg">S</div>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-sm">S</div>
               <div>
-                <p className="font-semibold text-gray-900 text-sm">MESOB Center</p>
-                <p className="text-xs text-gray-500">Super Admin</p>
+                <p className="font-bold text-slate-900 text-sm">MESOB Center</p>
+                <p className="text-xs text-slate-500 font-medium">Super Admin</p>
               </div>
             </div>
           </div>
@@ -2542,9 +2544,9 @@ export default function SuperAdminDashboard() {
             ))}
           </nav>
 
-          <div className="p-4 border-t border-gray-100">
-            <button onClick={() => { localStorage.removeItem('mesob_auth'); window.location.href = '/'; }}
-              className="sidebar-link w-full text-left text-red-600 hover:bg-red-50">
+          <div className="p-4 border-t border-slate-100">
+            <button onClick={logout}
+              className="sidebar-link w-full text-left text-rose-600 hover:bg-rose-50/80 font-medium">
               {t.logout}
             </button>
           </div>
@@ -2552,23 +2554,23 @@ export default function SuperAdminDashboard() {
 
         {/* ── Main content ── */}
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="bg-white border-b border-gray-200 px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+          <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/90 px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
             <div className="flex items-center gap-3">
-              <button className="lg:hidden p-2 rounded-lg hover:bg-gray-100" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle sidebar">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <button className="lg:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-700" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle sidebar">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/>
                 </svg>
               </button>
-              <h1 className="text-lg font-semibold text-gray-900">
+              <h1 className="text-lg font-bold text-slate-900">
                 {activeSection === t.dashboard ? t.system_admin_dashboard : activeSection}
               </h1>
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
-              <span className="badge bg-purple-100 text-purple-800">Super Admin</span>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-[#1e3a8a] border border-blue-200">Super Admin</span>
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                <p className="text-xs text-gray-500">{user?.email}</p>
+                <p className="text-sm font-semibold text-slate-900">{user?.name}</p>
+                <p className="text-xs text-slate-500">{user?.email}</p>
               </div>
             </div>
           </header>

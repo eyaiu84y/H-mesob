@@ -455,10 +455,10 @@ export const ROLE_LABELS = {
 };
 
 export const ROLE_BADGE = {
-  super_admin:          "bg-purple-100 text-purple-800",
-  mesob_manager:        "bg-red-100 text-red-800",
-  institution_manager:  "bg-orange-100 text-orange-800",
-  employee:             "bg-blue-100 text-blue-800",
-  ict_staff:            "bg-cyan-100 text-cyan-800",
-  citizen:              "bg-green-100 text-green-800",
+  super_admin:          "bg-slate-100 text-slate-800 border border-slate-300 font-medium",
+  mesob_manager:        "bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium",
+  institution_manager:  "bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium",
+  employee:             "bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium",
+  ict_staff:            "bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium",
+  citizen:              "bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium",
 };

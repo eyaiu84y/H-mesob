@@ -2,39 +2,29 @@ import { useState } from 'react';
 import { useAuth, ROLE_LABELS, ROLE_BADGE } from '../../context/AuthContext';
 import LanguageSwitcher from '../LanguageSwitcher';
 
-const ACCENT_BG = {
-  purple: 'bg-purple-700',
-  red:    'bg-red-600',
-  orange: 'bg-orange-600',
-  blue:   'bg-blue-600',
-  cyan:   'bg-cyan-600',
-  green:  'bg-green-600',
-};
-
-export default function DashboardLayout({ title, navLinks = [], accentColor = 'blue', letter, subtitle, children }) {
+export default function DashboardLayout({ title, navLinks = [], letter, subtitle, children }) {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const badgeClass = user ? ROLE_BADGE[user.role] : '';
   const roleLabel  = user ? ROLE_LABELS[user.role] : '';
-  const accentBg   = ACCENT_BG[accentColor] || 'bg-blue-600';
 
   function closeSidebar() {
     setSidebarOpen(false);
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gradient-to-br from-[#f8fafc] via-[#f1f5f9] to-[#edf4fc] min-h-screen text-slate-900">
       <div className="flex min-h-screen">
 
         {/* Sidebar */}
         <aside
-          className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200 ${sidebarOpen ? 'open' : ''}`}
+          className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col transition-transform duration-200 ${sidebarOpen ? 'open' : ''}`}
         >
           {/* Logo area */}
-          <div className="p-5 border-b border-gray-100">
+          <div className="p-5 border-b border-slate-100">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl ${accentBg} text-white flex items-center justify-center font-bold text-lg`}>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-sm border border-[#314ea1]/20">
                 {letter}
               </div>
               <div>
@@ -46,25 +36,28 @@ export default function DashboardLayout({ title, navLinks = [], accentColor = 'b
 
           {/* Nav links */}
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {navLinks.map((link, i) => (
-              <a
-                key={i}
-                href={link.href || '#'}
-                onClick={(e) => {
-                  if (link.onClick) {
-                    link.onClick(e);
-                  }
-                  closeSidebar();
-                }}
-                className={`sidebar-link${i === 0 ? ' active' : ''}`}
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link, i) => {
+              const isActive = link.active !== undefined ? link.active : i === 0;
+              return (
+                <a
+                  key={i}
+                  href={link.href || '#'}
+                  onClick={(e) => {
+                    if (link.onClick) {
+                      link.onClick(e);
+                    }
+                    closeSidebar();
+                  }}
+                  className={`sidebar-link${isActive ? ' active' : ''}`}
+                >
+                  {link.label}
+                </a>
+              );
+            })}
           </nav>
 
           {/* Logout */}
-          <div className="p-4 border-t border-gray-100">
+          <div className="p-4 border-t border-slate-100">
             <button
               onClick={logout}
               className="sidebar-link w-full text-red-600 hover:bg-red-50"
@@ -78,7 +71,7 @@ export default function DashboardLayout({ title, navLinks = [], accentColor = 'b
         <div className="flex-1 flex flex-col min-w-0">
 
           {/* Top header */}
-          <header className="bg-white border-b border-gray-200 px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+          <header className="bg-white/95 backdrop-blur-sm border-b border-slate-200 px-4 lg:px-8 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
             <div className="flex items-center gap-3">
               {/* Hamburger (mobile) */}
               <button

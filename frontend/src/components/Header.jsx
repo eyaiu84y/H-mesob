@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { useAuth, ROLE_ROUTES, ROLE_LABELS } from '../context/AuthContext';
 
 const LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -9,6 +10,7 @@ const LANGUAGES = [
 
 export default function Header() {
   const { isDark, toggleTheme, lang, switchLang, t } = useApp();
+  const { user, isLoggedIn, logout } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
@@ -103,17 +105,36 @@ export default function Header() {
               );
             })}
 
-            {/* Login button */}
-            <Link
-              to="/login"
-              className={`font-medium text-sm xl:text-base transition-all duration-200 px-3.5 py-1.5 rounded-lg border border-white/20 hover:border-[#f4b51a]/60 ${
-                location.pathname === '/login'
-                  ? 'bg-white/30 text-[#f4b51a] font-semibold'
-                  : 'bg-white/15 hover:bg-white/25 text-white hover:text-[#f4b51a]'
-              }`}
-            >
-              {t.nav_login || 'Login'}
-            </Link>
+            {/* Auth / Login button */}
+            {isLoggedIn && user ? (
+              <div className="flex items-center space-x-2">
+                <Link
+                  to={ROLE_ROUTES[user.role] || '/dashboard'}
+                  className="font-medium text-xs xl:text-sm transition-all duration-200 px-3 py-1.5 rounded-lg bg-[#f4b51a] text-slate-900 font-bold hover:bg-[#e0a415] shadow-sm flex items-center gap-1.5"
+                >
+                  <span>{ROLE_LABELS[user.role] || 'Dashboard'}</span>
+                  <span>→</span>
+                </Link>
+                <button
+                  onClick={logout}
+                  title="Sign out"
+                  className="font-medium text-xs xl:text-sm transition-all duration-200 px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-rose-500/80 text-white hover:text-white border border-white/20"
+                >
+                  {t.logout || 'Logout'}
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className={`font-medium text-sm xl:text-base transition-all duration-200 px-3.5 py-1.5 rounded-lg border border-white/20 hover:border-[#f4b51a]/60 ${
+                  location.pathname === '/login'
+                    ? 'bg-white/30 text-[#f4b51a] font-semibold'
+                    : 'bg-white/15 hover:bg-white/25 text-white hover:text-[#f4b51a]'
+                }`}
+              >
+                {t.nav_login || 'Login'}
+              </Link>
+            )}
 
             {/* ── Theme Toggle ── */}
             <button
@@ -237,13 +258,32 @@ export default function Header() {
               );
             })}
 
-            <Link
-              to="/login"
-              onClick={() => setMobileOpen(false)}
-              className="font-medium px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white hover:text-[#f4b51a] transition"
-            >
-              {t.nav_login || 'Login'}
-            </Link>
+            {isLoggedIn && user ? (
+              <div className="flex flex-col space-y-1">
+                <Link
+                  to={ROLE_ROUTES[user.role] || '/dashboard'}
+                  onClick={() => setMobileOpen(false)}
+                  className="font-medium px-3 py-2 rounded-lg bg-[#f4b51a] text-slate-900 font-bold flex items-center justify-between"
+                >
+                  <span>{ROLE_LABELS[user.role] || 'Dashboard'}</span>
+                  <span>→</span>
+                </Link>
+                <button
+                  onClick={() => { logout(); setMobileOpen(false); }}
+                  className="text-left font-medium px-3 py-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/40 text-rose-200 transition"
+                >
+                  {t.logout || 'Logout'} ({user.name.split(' ')[0]})
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                onClick={() => setMobileOpen(false)}
+                className="font-medium px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white hover:text-[#f4b51a] transition"
+              >
+                {t.nav_login || 'Login'}
+              </Link>
+            )}
 
             {/* Mobile theme toggle */}
             <button

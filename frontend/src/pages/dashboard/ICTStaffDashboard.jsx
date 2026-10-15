@@ -14,26 +14,24 @@ const SECTIONS = [
   'My Profile',
 ];
 
-// ─── Mock static data removed - using shared data system ────────
-
 // ─── Badge helpers ────────────────────────────────────────────────
 function PriorityBadge({ priority }) {
   const cls = {
-    High:   'badge bg-red-100 text-red-800',
-    Medium: 'badge bg-amber-100 text-amber-800',
-    Normal: 'badge bg-gray-100 text-gray-700',
-  }[priority] || 'badge bg-gray-100 text-gray-700';
+    High:   'badge bg-rose-50 text-rose-800 border border-rose-200 font-semibold',
+    Medium: 'badge bg-amber-50 text-amber-800 border border-amber-200 font-semibold',
+    Normal: 'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold',
+  }[priority] || 'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold';
   return <span className={cls}>{priority}</span>;
 }
 
 function StatusBadge({ status }) {
   const cls = {
-    Assigned:      'badge bg-amber-100 text-amber-800',
-    'In Progress': 'badge bg-blue-100 text-blue-800',
-    Completed:     'badge bg-green-100 text-green-800',
-    Submitted:     'badge bg-green-100 text-green-800',
-    Draft:         'badge bg-gray-100 text-gray-700',
-  }[status] || 'badge bg-gray-100 text-gray-700';
+    Assigned:      'badge bg-amber-50 text-amber-800 border border-amber-200 font-semibold',
+    'In Progress': 'badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold',
+    Completed:     'badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold',
+    Submitted:     'badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold',
+    Draft:         'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold',
+  }[status] || 'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold';
   return <span className={cls}>{status}</span>;
 }
 
@@ -46,32 +44,32 @@ function SectionDashboard({ setActiveSection, tasks }) {
     <>
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Assigned Tasks</p>
-          <p className="text-2xl font-bold">{tasks.length}</p>
-          <p className="text-xs text-amber-600 mt-1">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Assigned Tasks</p>
+          <p className="text-2xl font-bold text-slate-900">{tasks.length}</p>
+          <p className="text-xs text-amber-700 mt-1 font-semibold">
             {tasks.filter(t => t.priority === 'High' && t.status !== 'Completed').length} high priority
           </p>
         </div>
-        <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Pending Tasks</p>
-          <p className="text-2xl font-bold">{pending}</p>
-          <p className="text-xs text-gray-500 mt-1">Not yet completed</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Pending Tasks</p>
+          <p className="text-2xl font-bold text-slate-900">{pending}</p>
+          <p className="text-xs text-slate-500 mt-1">Not yet completed</p>
         </div>
-        <div className="stat-card">
-          <p className="text-sm text-gray-500 mb-1">Announcements</p>
-          <p className="text-2xl font-bold">{announcements.filter(a => !a.is_read).length}</p>
-          <p className="text-xs text-gray-500 mt-1">Unread</p>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Announcements</p>
+          <p className="text-2xl font-bold text-slate-900">{announcements.filter(a => !a.is_read).length}</p>
+          <p className="text-xs text-slate-500 mt-1">Unread</p>
         </div>
       </div>
 
       {/* My Tasks preview */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">My Tasks</h2>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="font-bold text-slate-900">My Tasks</h2>
           <button
             onClick={() => setActiveSection('My Tasks')}
-            className="text-sm text-blue-600 hover:underline font-medium"
+            className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold transition"
           >
             View all
           </button>
@@ -91,15 +89,15 @@ function SectionDashboard({ setActiveSection, tasks }) {
             <tbody>
               {tasks.filter(t => t.status !== 'Completed').slice(0, 3).map(task => (
                 <tr key={task.id}>
-                  <td className="font-medium">{task.id}</td>
-                  <td>{task.title}</td>
+                  <td className="font-medium text-slate-900">{task.id}</td>
+                  <td className="font-medium text-slate-800">{task.title}</td>
                   <td>{task.institution}</td>
                   <td><PriorityBadge priority={task.priority} /></td>
                   <td><StatusBadge status={task.status} /></td>
                   <td>
                     <button
                       onClick={() => setActiveSection('My Tasks')}
-                      className="text-blue-600 hover:underline text-sm font-medium"
+                      className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold transition"
                     >
                       View
                     </button>
@@ -111,8 +109,8 @@ function SectionDashboard({ setActiveSection, tasks }) {
         </div>
       </div>
 
-      <div className="p-4 bg-cyan-50 border border-cyan-100 rounded-xl text-sm text-cyan-900">
-        <strong>Technician:</strong> Process assigned technical tasks, record maintenance work, and submit reports. You do not assign tasks to other staff or manage users and institutions.
+      <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-800">
+        <strong className="text-slate-900">Technician:</strong> Process assigned technical tasks, record maintenance work, and submit reports. You do not assign tasks to other staff or manage users and institutions.
       </div>
     </>
   );
@@ -224,7 +222,7 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
       setSelectedTask(completedTask);
 
       alert(
-        'Task completed successfully!\\n\\n' +
+        'Task completed successfully!\n\n' +
         'The maintenance report has been resolved.'
       );
     } catch (error) {
@@ -251,24 +249,24 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Task Details</h2>
-              <p className="text-gray-500">Maintenance task information</p>
+              <h2 className="text-xl font-bold text-slate-900">Task Details</h2>
+              <p className="text-sm text-slate-500">Maintenance task information</p>
             </div>
 
             <button
               onClick={() => setSelectedTask(null)}
-              className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+              className="px-4 py-2 border border-slate-300 rounded-xl hover:bg-slate-50 text-slate-700 font-semibold text-sm transition shadow-xs"
             >
               Back to My Tasks
             </button>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-xl font-semibold">{live.title}</h3>
-                <p className="text-sm text-gray-500">
-                  Task ID: {live.id}
+                <h3 className="text-xl font-bold text-slate-900">{live.title}</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Task ID: <span className="font-mono text-slate-700">{live.id}</span>
                 </p>
               </div>
 
@@ -277,37 +275,37 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-sm text-gray-500">Institution</p>
-                <p className="font-medium">{live.institution}</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Institution</p>
+                <p className="font-semibold text-slate-900 mt-1">{live.institution}</p>
               </div>
 
               <div>
-                <p className="text-sm text-gray-500">Priority</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Priority</p>
                 <PriorityBadge priority={live.priority} />
               </div>
 
               <div>
-                <p className="text-sm text-gray-500">Location</p>
-                <p className="font-medium">{live.location || 'N/A'}</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</p>
+                <p className="font-medium text-slate-900 mt-1">{live.location || 'N/A'}</p>
               </div>
 
               <div>
-                <p className="text-sm text-gray-500">Assigned Date</p>
-                <p className="font-medium">{live.assignedDate}</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Assigned Date</p>
+                <p className="font-medium text-slate-900 mt-1">{live.assignedDate}</p>
               </div>
             </div>
 
             <div className="mt-6">
-              <p className="text-sm text-gray-500">Description</p>
-              <p className="mt-1 text-gray-800 whitespace-pre-wrap">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</p>
+              <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
                 {live.description || 'No description provided.'}
               </p>
             </div>
 
             {live.equipmentInfo && (
               <div className="mt-6">
-                <p className="text-sm text-gray-500">Equipment / Office</p>
-                <p className="mt-1 text-gray-800">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Equipment / Office</p>
+                <p className="mt-1 text-sm text-slate-800 font-medium">
                   {live.equipmentInfo}
                 </p>
               </div>
@@ -315,8 +313,8 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
 
             {live.photo && (
               <div className="mt-6">
-                <p className="text-sm text-gray-500 mb-2">Problem Photo</p>
-                <div className="border rounded-lg overflow-hidden bg-gray-50">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Problem Photo</p>
+                <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
                   <img 
                     src={live.photo} 
                     alt={live.photoName || 'Problem photo'} 
@@ -325,14 +323,14 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
                   />
                 </div>
                 {live.photoName && (
-                  <p className="text-xs text-gray-500 mt-1">{live.photoName}</p>
+                  <p className="text-xs text-slate-500 mt-1">{live.photoName}</p>
                 )}
               </div>
             )}
 
             {live.attachments && live.attachments.length > 0 && (
               <div className="mt-6">
-                <p className="text-sm text-gray-500 mb-2">Attachments ({live.attachments.length})</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Attachments ({live.attachments.length})</p>
                 <div className="space-y-2">
                   {live.attachments.map((attachment, i) => (
                     <a
@@ -340,18 +338,18 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
                       href={attachment.file_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 transition"
+                      className="flex items-center gap-2 p-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition"
                     >
-                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                       </svg>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{attachment.file_name}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-sm font-semibold text-slate-900">{attachment.file_name}</p>
+                        <p className="text-xs text-slate-500">
                           {attachment.file_type} · {(attachment.file_size / 1024).toFixed(1)} KB
                         </p>
                       </div>
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
                     </a>
@@ -361,11 +359,11 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
             )}
 
             {live.status === 'Completed' && live.resolution && (
-              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm font-medium text-gray-700">
+              <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Resolution
                 </p>
-                <p className="mt-1 text-gray-800 whitespace-pre-wrap">
+                <p className="mt-1 text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
                   {live.resolution}
                 </p>
               </div>
@@ -375,30 +373,30 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
               {label && (
                 <button
                   onClick={() => advanceStatus(live.id)}
-                  className="px-5 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white font-semibold transition shadow-xs text-sm"
                 >
                   {label} Task
                 </button>
               )}
 
               {live.status === 'Completed' && (
-                <span className="text-green-600 font-medium">
+                <span className="badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold text-sm py-1.5 px-3">
                   Task Completed
                 </span>
               )}
             </div>
 
             <div className="mt-8">
-              <div className="flex items-center gap-2 text-sm">
-                <span className={live.status === 'Assigned' || live.status === 'In Progress' || live.status === 'Completed' ? 'font-medium' : ''}>
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                <span className={live.status === 'Assigned' || live.status === 'In Progress' || live.status === 'Completed' ? 'text-[#314ea1] font-bold' : ''}>
                   Assigned
                 </span>
                 <span>→</span>
-                <span className={live.status === 'In Progress' || live.status === 'Completed' ? 'font-medium' : ''}>
+                <span className={live.status === 'In Progress' || live.status === 'Completed' ? 'text-[#314ea1] font-bold' : ''}>
                   In Progress
                 </span>
                 <span>→</span>
-                <span className={live.status === 'Completed' ? 'font-medium' : ''}>
+                <span className={live.status === 'Completed' ? 'text-emerald-700 font-bold' : ''}>
                   Completed
                 </span>
               </div>
@@ -407,13 +405,13 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
         </div>
 
         {showResolutionModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-              <h3 className="text-xl font-semibold text-gray-900">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+            <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900">
                 Complete Task
               </h3>
 
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-slate-500">
                 Enter the resolution details for this maintenance task.
               </p>
 
@@ -424,12 +422,12 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
                   setResolutionError('');
                 }}
                 rows={6}
-                className="mt-4 w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none"
+                className="mt-4 w-full rounded-xl border border-slate-300 p-3 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] focus:outline-none text-sm bg-white"
                 placeholder="Describe how the maintenance issue was resolved..."
               />
 
               {resolutionError && (
-                <p className="mt-2 text-sm text-red-600">
+                <p className="mt-2 text-sm text-rose-600 font-medium">
                   {resolutionError}
                 </p>
               )}
@@ -441,14 +439,14 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
                     setResolution('');
                     setResolutionError('');
                   }}
-                  className="px-4 py-2 rounded-lg border hover:bg-gray-50"
+                  className="px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 font-semibold text-sm text-slate-700 transition"
                 >
                   Cancel
                 </button>
 
                 <button
                   onClick={handleCompleteTask}
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white font-semibold text-sm transition shadow-xs"
                 >
                   Submit & Complete Task
                 </button>
@@ -463,26 +461,26 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">My Tasks</h2>
-        <p className="text-gray-500">
+        <h2 className="text-xl font-bold text-slate-900">My Tasks</h2>
+        <p className="text-sm text-slate-500">
           Maintenance tasks assigned to you
         </p>
       </div>
 
       {loadingTasks ? (
-        <div className="bg-white rounded-xl border p-8 text-center text-gray-500">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-8 text-center text-slate-500">
           Loading tasks...
         </div>
       ) : tasks.length === 0 ? (
-        <div className="bg-white rounded-xl border p-8 text-center text-gray-500">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-8 text-center text-slate-500">
           No maintenance tasks assigned to you.
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b bg-gray-50">
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   <th className="text-left p-4">Task ID</th>
                   <th className="text-left p-4">Task</th>
                   <th className="text-left p-4">Institution</th>
@@ -493,23 +491,23 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
                 </tr>
               </thead>
 
-              <tbody>
+              <tbody className="divide-y divide-slate-100 text-sm">
                 {tasks.map(task => (
-                  <tr key={task.id} className="border-b last:border-0">
-                    <td className="p-4 text-sm">{task.id}</td>
-                    <td className="p-4 font-medium">{task.title}</td>
-                    <td className="p-4">{task.institution}</td>
+                  <tr key={task.id} className="hover:bg-slate-50/50 transition">
+                    <td className="p-4 font-mono text-xs text-slate-600">{task.id}</td>
+                    <td className="p-4 font-semibold text-slate-900">{task.title}</td>
+                    <td className="p-4 text-slate-700">{task.institution}</td>
                     <td className="p-4">
                       <PriorityBadge priority={task.priority} />
                     </td>
-                    <td className="p-4">{task.assignedDate}</td>
+                    <td className="p-4 text-slate-600">{task.assignedDate}</td>
                     <td className="p-4">
                       <StatusBadge status={task.status} />
                     </td>
                     <td className="p-4">
                       <button
                         onClick={() => setSelectedTask(task)}
-                        className="px-3 py-1.5 rounded-lg border hover:bg-gray-50"
+                        className="px-3.5 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-50 font-semibold text-xs text-slate-700 transition"
                       >
                         {task.status === 'Completed' ? 'View' : 'Open'}
                       </button>
@@ -531,14 +529,14 @@ function SectionMaintenanceReports({ tasks }) {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Maintenance Reports</h2>
-        <p className="text-sm text-gray-500">Your completed maintenance tasks serve as your maintenance reports.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">Maintenance Reports</h2>
+        <p className="text-sm text-slate-500">Your completed maintenance tasks serve as your maintenance reports.</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">Completed Maintenance Work</h3>
-          <span className="text-sm text-gray-500">{completedTasks.length} completed</span>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="font-bold text-slate-900">Completed Maintenance Work</h3>
+          <span className="text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full px-2.5 py-1">{completedTasks.length} completed</span>
         </div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
@@ -555,18 +553,18 @@ function SectionMaintenanceReports({ tasks }) {
             <tbody>
               {completedTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center text-gray-400 py-6">
+                  <td colSpan={6} className="text-center text-slate-400 py-6">
                     No completed maintenance work yet.
                   </td>
                 </tr>
               ) : completedTasks.map(task => (
                 <tr key={task.id}>
-                  <td className="font-medium">{task.id}</td>
-                  <td>{task.title}</td>
-                  <td>{task.reportId || <span className="text-gray-400">—</span>}</td>
+                  <td className="font-medium font-mono text-xs text-slate-600">{task.id}</td>
+                  <td className="font-semibold text-slate-900">{task.title}</td>
+                  <td>{task.reportId || <span className="text-slate-400">—</span>}</td>
                   <td>{task.institution}</td>
                   <td><PriorityBadge priority={task.priority} /></td>
-                  <td>{task.completedDate || task.assignedDate}</td>
+                  <td className="text-slate-600">{task.completedDate || task.assignedDate}</td>
                 </tr>
               ))}
             </tbody>
@@ -574,8 +572,8 @@ function SectionMaintenanceReports({ tasks }) {
         </div>
       </div>
 
-      <div className="p-4 bg-cyan-50 border border-cyan-100 rounded-xl text-sm text-cyan-900">
-        <strong>Maintenance Reports:</strong> When you complete a task, it automatically becomes part of your maintenance history. Institution Managers can view your completed work.
+      <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-800">
+        <strong className="text-slate-900">Maintenance Reports:</strong> When you complete a task, it automatically becomes part of your maintenance history. Institution Managers can view your completed work.
       </div>
     </>
   );
@@ -595,7 +593,7 @@ function SectionAnnouncements() {
         <div className="mb-6">
           <button
             onClick={() => setSelected(null)}
-            className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1"
+            className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold flex items-center gap-1.5 transition"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -603,13 +601,13 @@ function SectionAnnouncements() {
             Back to Announcements
           </button>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">{ann.title}</h2>
-            {ann.is_active && <span className="badge bg-green-100 text-green-800 flex-shrink-0">Active</span>}
+            <h2 className="text-lg font-bold text-slate-900">{ann.title}</h2>
+            {ann.is_active && <span className="badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold flex-shrink-0">Active</span>}
           </div>
-          <p className="text-sm text-gray-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
-          <p className="text-sm text-gray-700 leading-relaxed">{ann.content}</p>
+          <p className="text-xs text-slate-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
+          <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{ann.content}</p>
         </div>
       </>
     );
@@ -618,32 +616,32 @@ function SectionAnnouncements() {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Announcements</h2>
-        <p className="text-sm text-gray-500">Operational announcements and notifications.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">Announcements</h2>
+        <p className="text-sm text-slate-500">Operational announcements and notifications.</p>
       </div>
 
       {loading && !announcements.length && (
-        <div className="text-center py-8 text-gray-500">Loading announcements...</div>
+        <div className="text-center py-8 text-slate-500">Loading announcements...</div>
       )}
 
       <div className="space-y-3">
         {announcements.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">No announcements available.</div>
+          <div className="text-center text-slate-400 py-12">No announcements available.</div>
         ) : announcements.map(ann => (
           <div
             key={ann.id}
             onClick={() => setSelected(ann.id)}
-            className={`bg-white rounded-2xl border shadow-sm p-5 cursor-pointer hover:shadow-md transition-all duration-200 ${ann.is_active ? 'border-gray-100' : 'border-gray-200 bg-gray-50'}`}
+            className={`bg-white rounded-2xl border shadow-xs p-5 cursor-pointer hover:border-slate-300 transition-all duration-200 ${ann.is_active ? 'border-slate-200/90' : 'border-slate-200 bg-slate-50/70'}`}
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  {ann.is_active && <span className="inline-block w-2 h-2 rounded-full bg-green-600 flex-shrink-0" />}
-                  <h3 className="font-semibold text-sm text-gray-900 leading-snug">{ann.title}</h3>
+                  {ann.is_active && <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />}
+                  <h3 className="font-semibold text-sm text-slate-900 leading-snug">{ann.title}</h3>
                 </div>
-                <p className="text-xs text-gray-500">{new Date(ann.published_at || ann.created_at).toLocaleDateString()}</p>
+                <p className="text-xs text-slate-500">{new Date(ann.published_at || ann.created_at).toLocaleDateString()}</p>
               </div>
-              <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none"
+              <svg className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" fill="none"
                 stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
               </svg>
@@ -660,43 +658,43 @@ function SectionMyProfile({ user }) {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">My Profile</h2>
-        <p className="text-sm text-gray-500">Your account information.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">My Profile</h2>
+        <p className="text-sm text-slate-500">Your account information.</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6 max-w-lg">
-        <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
-          <div className="w-14 h-14 rounded-2xl bg-cyan-600 text-white flex items-center justify-center text-xl font-bold flex-shrink-0">
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6 max-w-lg">
+        <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center text-xl font-bold flex-shrink-0 shadow-md">
             {user?.name?.charAt(0) || 'T'}
           </div>
           <div>
-            <p className="font-semibold text-gray-900">{user?.name}</p>
-            <p className="text-sm text-gray-500">{user?.email}</p>
-            <span className="badge bg-cyan-100 text-cyan-800 mt-1">Technician</span>
+            <p className="font-bold text-slate-900">{user?.name}</p>
+            <p className="text-sm text-slate-500">{user?.email}</p>
+            <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold mt-1">Technician</span>
           </div>
         </div>
         <div className="space-y-4 text-sm">
           <div className="flex justify-between">
-            <span className="text-gray-500">Full Name</span>
-            <span className="font-medium text-gray-900">{user?.name}</span>
+            <span className="text-slate-500">Full Name</span>
+            <span className="font-semibold text-slate-900">{user?.name}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-500">Email</span>
-            <span className="font-medium text-gray-900">{user?.email}</span>
+            <span className="text-slate-500">Email</span>
+            <span className="font-semibold text-slate-900">{user?.email}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-500">Role</span>
-            <span className="font-medium text-gray-900">Technician</span>
+            <span className="text-slate-500">Role</span>
+            <span className="font-semibold text-slate-900">Technician</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-500">Department</span>
-            <span className="font-medium text-gray-900">MESOB Center – ICT</span>
+            <span className="text-slate-500">Department</span>
+            <span className="font-semibold text-slate-900">MESOB Center – ICT</span>
           </div>
         </div>
       </div>
 
-      <div className="p-4 bg-cyan-50 border border-cyan-100 rounded-xl text-sm text-cyan-900">
-        <strong>Note:</strong> To update your profile or change your password, contact the Institution Manager or MESOB administration.
+      <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-800 max-w-lg">
+        <strong className="text-slate-900">Note:</strong> To update your profile or change your password, contact the Institution Manager or MESOB administration.
       </div>
     </>
   );
@@ -704,7 +702,7 @@ function SectionMyProfile({ user }) {
 
 // ─── Main ICTStaffDashboard ───────────────────────────────────────
 export default function ICTStaffDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [activeSection, setActiveSection] = useState('Dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tasks, setTasks] = useState([]);
@@ -820,19 +818,19 @@ export default function ICTStaffDashboard() {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gradient-to-br from-[#f8fafc] via-[#f1f5f9] to-[#edf4fc] min-h-screen text-slate-900">
       <div className="flex min-h-screen">
 
         {/* ── Sidebar ── */}
-        <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200${sidebarOpen ? ' open' : ''}`}>
-          <div className="p-5 border-b border-gray-100">
+        <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white/95 backdrop-blur-md border-r border-slate-200/90 flex flex-col transition-transform duration-200${sidebarOpen ? ' open' : ''}`}>
+          <div className="p-5 border-b border-slate-100">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-cyan-600 text-white flex items-center justify-center font-bold text-sm">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-sm shadow-md">
                 ICT
               </div>
               <div>
-                <p className="font-semibold text-gray-900 text-sm">MESOB Center</p>
-                <p className="text-xs text-gray-500">Technician Portal</p>
+                <p className="font-bold text-slate-900 text-sm">MESOB Center</p>
+                <p className="text-xs text-slate-500">Technician Portal</p>
               </div>
             </div>
           </div>
@@ -849,10 +847,10 @@ export default function ICTStaffDashboard() {
             ))}
           </nav>
 
-          <div className="p-4 border-t border-gray-100">
+          <div className="p-4 border-t border-slate-100">
             <button
-              onClick={() => { localStorage.removeItem('mesob_auth'); window.location.href = '/'; }}
-              className="sidebar-link w-full text-left text-red-600 hover:bg-red-50"
+              onClick={logout}
+              className="sidebar-link w-full text-left text-rose-600 hover:bg-rose-50/80 font-medium"
             >
               Logout
             </button>
@@ -861,30 +859,30 @@ export default function ICTStaffDashboard() {
 
         {/* ── Main content ── */}
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="bg-white border-b border-gray-200 px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+          <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/90 px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
             <div className="flex items-center gap-3">
               <button
-                className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+                className="lg:hidden p-2 rounded-xl hover:bg-slate-100 text-slate-700"
                 onClick={() => setSidebarOpen(o => !o)}
                 aria-label="Toggle sidebar"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-700" fill="none"
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-700" fill="none"
                   viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <line x1="4" x2="20" y1="6" y2="6"/>
                   <line x1="4" x2="20" y1="12" y2="12"/>
                   <line x1="4" x2="20" y1="18" y2="18"/>
                 </svg>
               </button>
-              <h1 className="text-lg font-semibold text-gray-900">
+              <h1 className="text-lg font-bold text-slate-900">
                 {activeSection === 'Dashboard' ? 'Technician Dashboard' : activeSection}
               </h1>
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
-              <span className="badge bg-cyan-100 text-cyan-800">Technician</span>
+              <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold">Technician</span>
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                <p className="text-xs text-gray-500">{user?.email}</p>
+                <p className="text-sm font-semibold text-slate-900">{user?.name}</p>
+                <p className="text-xs text-slate-500">{user?.email}</p>
               </div>
             </div>
           </header>

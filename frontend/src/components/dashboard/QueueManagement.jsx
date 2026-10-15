@@ -5,11 +5,11 @@ import FeedbackRating from './FeedbackRating';
 
 // ─── Status badge styles ──────────────────────────────────────────
 const STATUS_STYLES = {
-  waiting:   'bg-yellow-100 text-yellow-800',
-  called:    'bg-blue-100 text-blue-800 animate-pulse',
-  serving:   'bg-green-100 text-green-800',
-  completed: 'bg-gray-100 text-gray-600',
-  cancelled: 'bg-red-100 text-red-700',
+  waiting:   'bg-amber-50 text-amber-800 border border-amber-200',
+  called:    'bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold',
+  serving:   'bg-emerald-50 text-emerald-800 border border-emerald-200',
+  completed: 'bg-slate-100 text-slate-700 border border-slate-200',
+  cancelled: 'bg-rose-50 text-rose-800 border border-rose-200',
 };
 
 const STATUS_LABELS = {
@@ -37,47 +37,47 @@ function TicketCard({ ticket, onView, onCancel }) {
   }
 
   return (
-    <div className={`bg-white rounded-xl border shadow-sm p-5 ${ticket.status === 'called' ? 'border-blue-400 ring-2 ring-blue-200' : 'border-gray-100'}`}>
+    <div className={`bg-white rounded-2xl border shadow-xs p-5 transition-all ${ticket.status === 'called' ? 'border-[#314ea1] ring-2 ring-blue-100' : 'border-slate-200/90 hover:border-blue-300'}`}>
       <div className="flex items-start justify-between mb-3">
         <div>
-          <p className="text-xs text-gray-500 mb-1">{ticket.institutionName}</p>
-          <p className="text-sm font-medium text-gray-700">{ticket.serviceName}</p>
+          <p className="text-xs font-semibold text-slate-500 mb-1">{ticket.institutionName}</p>
+          <p className="text-sm font-bold text-slate-900">{ticket.serviceName}</p>
         </div>
-        <span className={`badge text-xs px-2 py-1 rounded-full font-medium ${STATUS_STYLES[ticket.status]}`}>
+        <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-semibold border ${STATUS_STYLES[ticket.status]}`}>
           {STATUS_LABELS[ticket.status]}
         </span>
       </div>
 
       <div className="flex items-center gap-4 mb-3">
         <div className="text-center">
-          <p className="text-xs text-gray-500">Your Token</p>
+          <p className="text-xs text-slate-500">Your Token</p>
           <p className="text-2xl font-bold text-[#1e3a8a]">{ticket.token}</p>
         </div>
         {(ticket.status === 'waiting' || ticket.status === 'called') && (
           <>
-            <div className="h-10 border-l border-gray-200" />
+            <div className="h-10 border-l border-slate-200" />
             <div className="text-center">
-              <p className="text-xs text-gray-500">Now Serving</p>
-              <p className="text-lg font-semibold text-gray-800">{ticket.currentServing}</p>
+              <p className="text-xs text-slate-500">Now Serving</p>
+              <p className="text-lg font-bold text-slate-800">{ticket.currentServing}</p>
             </div>
-            <div className="h-10 border-l border-gray-200" />
+            <div className="h-10 border-l border-slate-200" />
             <div className="text-center">
-              <p className="text-xs text-gray-500">Ahead</p>
-              <p className="text-lg font-semibold text-gray-800">{ticket.peopleAhead}</p>
+              <p className="text-xs text-slate-500">Ahead</p>
+              <p className="text-lg font-bold text-slate-800">{ticket.peopleAhead}</p>
             </div>
           </>
         )}
       </div>
 
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-400">
+      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+        <p className="text-xs text-slate-400">
           {new Date(ticket.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           {' · '}
           {new Date(ticket.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
         </p>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           {onView && (
-            <button onClick={() => onView(ticket)} className="text-xs text-blue-600 hover:underline font-medium">
+            <button onClick={() => onView(ticket)} className="text-xs text-[#314ea1] hover:text-[#1e3a8a] font-semibold cursor-pointer">
               View Details
             </button>
           )}
@@ -85,7 +85,7 @@ function TicketCard({ ticket, onView, onCancel }) {
             <button 
               onClick={handleCancel} 
               disabled={cancelling}
-              className="text-xs text-red-500 hover:underline font-medium disabled:opacity-50"
+              className="text-xs text-rose-600 hover:text-rose-800 font-semibold disabled:opacity-50 cursor-pointer"
             >
               {cancelling ? 'Leaving...' : 'Leave Queue'}
             </button>
@@ -181,14 +181,14 @@ export default function QueueManagement() {
   if (step === 'overview') {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-1">My Queue</h2>
-            <p className="text-gray-600 text-sm">Register for queues and track your token status.</p>
+            <h2 className="text-xl font-bold text-slate-900 mb-1">My Queue</h2>
+            <p className="text-slate-500 text-sm">Register for queues and track your token status.</p>
           </div>
           <button
             onClick={() => { setStep('select-institution'); setSearchTerm(''); }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+            className="px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white rounded-xl shadow-xs transition text-sm font-semibold cursor-pointer"
           >
             + Join a Queue
           </button>
@@ -198,13 +198,21 @@ export default function QueueManagement() {
         <div className="flex gap-2">
           <button
             onClick={() => setHistoryTab('active')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium ${historyTab === 'active' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition cursor-pointer ${
+              historyTab === 'active' 
+                ? 'bg-[#314ea1] text-white shadow-xs' 
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80 font-medium'
+            }`}
           >
             Active ({activeTickets.length})
           </button>
           <button
             onClick={() => setHistoryTab('history')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium ${historyTab === 'history' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition cursor-pointer ${
+              historyTab === 'history' 
+                ? 'bg-[#314ea1] text-white shadow-xs' 
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80 font-medium'
+            }`}
           >
             History ({ticketHistory.length})
           </button>
@@ -214,12 +222,14 @@ export default function QueueManagement() {
         {historyTab === 'active' && (
           <div className="space-y-4">
             {activeTickets.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-                <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                </svg>
-                <p className="font-medium text-gray-500">No active queue tickets</p>
-                <p className="text-sm text-gray-400 mt-1">Click &quot;Join a Queue&quot; to register for a service queue</p>
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-10 text-center">
+                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  </svg>
+                </div>
+                <p className="font-semibold text-slate-700 text-sm">No active queue tickets</p>
+                <p className="text-xs text-slate-500 mt-1">Click &quot;+ Join a Queue&quot; to register for a service queue.</p>
               </div>
             ) : (
               activeTickets.map(ticket => (
@@ -238,12 +248,14 @@ export default function QueueManagement() {
         {historyTab === 'history' && (
           <div className="space-y-4">
             {ticketHistory.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-                <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="font-medium text-gray-500">No queue history yet</p>
-                <p className="text-sm text-gray-400 mt-1">Completed and cancelled queues will appear here</p>
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-10 text-center">
+                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="font-semibold text-slate-700 text-sm">No queue history yet</p>
+                <p className="text-xs text-slate-500 mt-1">Completed and cancelled queues will appear here.</p>
               </div>
             ) : (
               ticketHistory.map(ticket => (
@@ -254,8 +266,11 @@ export default function QueueManagement() {
         )}
 
         {/* Info */}
-        <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800">
-          <strong>Queue Management:</strong> Join a service queue, receive a system-generated token, and track your position in real time. Your token number is assigned automatically.
+        <div className="p-4.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl text-xs sm:text-sm text-blue-950 flex items-start gap-3 shadow-xs">
+          <span className="text-base flex-shrink-0">ℹ️</span>
+          <div>
+            <strong className="font-semibold text-[#1e3a8a]">Queue Management:</strong> Join a service queue, receive a system-generated token, and track your position in real time. Your token number is assigned automatically.
+          </div>
         </div>
       </div>
     );
@@ -266,11 +281,11 @@ export default function QueueManagement() {
     return (
       <div className="space-y-6">
         <div>
-          <button onClick={handleBack} className="text-sm text-blue-600 hover:underline font-medium mb-2 inline-flex items-center gap-1">
+          <button onClick={handleBack} className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold mb-2 inline-flex items-center gap-1.5 cursor-pointer">
             ← Back to My Queue
           </button>
-          <h2 className="text-xl font-semibold text-gray-900 mb-1">Select Institution</h2>
-          <p className="text-gray-600 text-sm">Choose the institution you want to queue for.</p>
+          <h2 className="text-xl font-bold text-slate-900 mb-1">Select Institution</h2>
+          <p className="text-slate-500 text-sm">Choose the institution you want to queue for.</p>
         </div>
 
         {/* Search */}
@@ -280,9 +295,9 @@ export default function QueueManagement() {
             placeholder="Search institutions..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-3 pl-11 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
+            className="w-full px-4 py-3 pl-11 rounded-2xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none shadow-2xs text-sm"
           />
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-3 top-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-3.5 top-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
@@ -295,16 +310,16 @@ export default function QueueManagement() {
               <button
                 key={inst.id}
                 onClick={() => handleSelectInstitution(inst)}
-                className="stat-card hover:border-blue-400 transition text-left cursor-pointer"
+                className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs hover:border-[#314ea1] hover:shadow-md transition-all text-left cursor-pointer group"
               >
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 font-bold text-sm">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center flex-shrink-0 font-bold text-base shadow-xs">
                     {inst.name_en?.charAt(0) || '?'}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-gray-900 mb-1 text-sm leading-tight">{inst.name_en}</h3>
-                    <p className="text-xs text-gray-500 truncate">{inst.name_am}</p>
-                    <p className="text-xs text-blue-600 mt-1 font-medium">
+                    <h3 className="font-bold text-slate-900 group-hover:text-[#314ea1] transition-colors mb-1 text-sm leading-tight">{inst.name_en}</h3>
+                    <p className="text-xs text-slate-500 truncate">{inst.name_am}</p>
+                    <p className="text-xs text-[#314ea1] mt-1.5 font-semibold group-hover:translate-x-0.5 transition-transform inline-block">
                       {instServices.length} {instServices.length === 1 ? 'service' : 'services'} →
                     </p>
                   </div>
@@ -315,9 +330,9 @@ export default function QueueManagement() {
         </div>
 
         {filteredInstitutions.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            <p className="font-medium">No institutions found</p>
-            <p className="text-sm mt-1">Try a different search term</p>
+          <div className="text-center py-8 text-slate-500 bg-white rounded-2xl border border-slate-200/90 p-8">
+            <p className="font-semibold text-slate-700">No institutions found</p>
+            <p className="text-xs text-slate-400 mt-1">Try a different search term</p>
           </div>
         )}
       </div>
@@ -331,47 +346,47 @@ export default function QueueManagement() {
     return (
       <div className="space-y-6">
         <div>
-          <button onClick={handleBack} className="text-sm text-blue-600 hover:underline font-medium mb-2 inline-flex items-center gap-1">
+          <button onClick={handleBack} className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold mb-2 inline-flex items-center gap-1.5 cursor-pointer">
             ← Back to Institutions
           </button>
-          <h2 className="text-xl font-semibold text-gray-900 mb-1">Select Service</h2>
-          <p className="text-gray-600 text-sm">
-            Choose a service at <span className="font-medium">{selectedInstitution.name_en}</span>
+          <h2 className="text-xl font-bold text-slate-900 mb-1">Select Service</h2>
+          <p className="text-slate-500 text-sm">
+            Choose a service at <span className="font-semibold text-[#1e3a8a]">{selectedInstitution.name_en}</span>
           </p>
         </div>
 
         {/* Services list */}
         <div className="space-y-3">
           {institutionServices.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p className="font-medium">No services available</p>
-              <p className="text-sm mt-1">This institution has no services configured yet</p>
+            <div className="text-center py-8 text-slate-500 bg-white rounded-2xl border border-slate-200/90 p-8">
+              <p className="font-semibold text-slate-700">No services available</p>
+              <p className="text-xs text-slate-400 mt-1">This institution has no services configured yet</p>
             </div>
           ) : (
             institutionServices.map((svc) => (
               <button
                 key={svc.id}
                 onClick={() => handleSelectService(svc)}
-                className="w-full stat-card hover:border-blue-400 transition text-left cursor-pointer"
+                className="w-full bg-white rounded-2xl border border-slate-200/90 p-5 hover:border-[#314ea1] hover:shadow-md transition-all text-left cursor-pointer group"
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">{svc.title_en || svc.name}</h3>
-                    <p className="text-xs text-gray-500">{svc.title_am || svc.name_am}</p>
-                    <div className="flex gap-4 mt-2">
+                    <h3 className="font-bold text-slate-900 group-hover:text-[#314ea1] transition-colors mb-1 text-base">{svc.title_en || svc.name}</h3>
+                    <p className="text-xs text-slate-500">{svc.title_am || svc.name_am}</p>
+                    <div className="flex gap-4 mt-2 text-xs text-slate-600">
                       {svc.processing_time && (
-                        <span className="text-xs text-gray-500">
-                          <span className="font-medium">Time:</span> {svc.processing_time}
+                        <span>
+                          <span className="font-semibold text-slate-700">Time:</span> {svc.processing_time}
                         </span>
                       )}
                       {svc.service_fee && (
-                        <span className="text-xs text-gray-500">
-                          <span className="font-medium">Fee:</span> {svc.service_fee}
+                        <span>
+                          <span className="font-semibold text-[#1e3a8a]">Fee:</span> {svc.service_fee}
                         </span>
                       )}
                     </div>
                   </div>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400 group-hover:text-[#314ea1] group-hover:translate-x-1 transition-all flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
@@ -388,49 +403,49 @@ export default function QueueManagement() {
     return (
       <div className="space-y-6">
         <div>
-          <button onClick={handleBack} className="text-sm text-blue-600 hover:underline font-medium mb-2 inline-flex items-center gap-1">
+          <button onClick={handleBack} className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold mb-2 inline-flex items-center gap-1.5 cursor-pointer">
             ← Back to Services
           </button>
-          <h2 className="text-xl font-semibold text-gray-900 mb-1">Confirm Queue Registration</h2>
-          <p className="text-gray-600 text-sm">Review and confirm your queue registration.</p>
+          <h2 className="text-xl font-bold text-slate-900 mb-1">Confirm Queue Registration</h2>
+          <p className="text-slate-500 text-sm">Review and confirm your queue registration.</p>
         </div>
 
         {registrationError && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800">
+          <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-800">
             <strong>Error:</strong> {registrationError}
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
           <div className="space-y-4">
-            <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg">
+            <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-xs">
                 {selectedInstitution.name_en.charAt(0)}
               </div>
               <div>
-                <p className="font-semibold text-gray-900">{selectedInstitution.name_en}</p>
-                <p className="text-sm text-gray-500">{selectedInstitution.name_am}</p>
+                <p className="font-bold text-slate-900 text-base">{selectedInstitution.name_en}</p>
+                <p className="text-xs text-slate-500">{selectedInstitution.name_am}</p>
               </div>
             </div>
 
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Service</p>
-              <p className="font-medium text-gray-900">{selectedService.title_en}</p>
-              <p className="text-sm text-gray-500">{selectedService.title_am}</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Service</p>
+              <p className="font-bold text-slate-900 text-base">{selectedService.title_en}</p>
+              <p className="text-xs text-slate-500">{selectedService.title_am}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Processing Time</p>
-                <p className="text-sm font-medium text-gray-700">{selectedService.processing_time || 'N/A'}</p>
+              <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-3.5">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Processing Time</p>
+                <p className="text-sm font-bold text-[#1e3a8a]">{selectedService.processing_time || 'N/A'}</p>
               </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Fee</p>
-                <p className="text-sm font-medium text-gray-700">{selectedService.service_fee || 'N/A'}</p>
+              <div className="bg-emerald-50/70 border border-emerald-100 rounded-xl p-3.5">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Fee</p>
+                <p className="text-sm font-bold text-emerald-800">{selectedService.service_fee || 'N/A'}</p>
               </div>
             </div>
 
-            <div className="p-3 bg-yellow-50 border border-yellow-100 rounded-lg text-sm text-yellow-800">
+            <div className="p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs sm:text-sm text-amber-900">
               <strong>Note:</strong> Your queue token will be generated automatically by the system. You cannot choose a token number.
             </div>
           </div>
@@ -438,13 +453,13 @@ export default function QueueManagement() {
           <div className="mt-6 flex gap-3">
             <button
               onClick={handleRegister}
-              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+              className="flex-1 px-5 py-3 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white rounded-xl shadow-xs transition text-sm font-semibold cursor-pointer"
             >
               Register for Queue
             </button>
             <button
               onClick={handleBack}
-              className="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-medium"
+              className="px-5 py-3 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition text-sm font-medium cursor-pointer"
             >
               Cancel
             </button>
@@ -462,62 +477,62 @@ export default function QueueManagement() {
     return (
       <div className="space-y-6">
         <div>
-          <button onClick={handleBack} className="text-sm text-blue-600 hover:underline font-medium mb-2 inline-flex items-center gap-1">
+          <button onClick={handleBack} className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold mb-2 inline-flex items-center gap-1.5 cursor-pointer">
             ← Back to My Queue
           </button>
-          <h2 className="text-xl font-semibold text-gray-900 mb-1">Your Queue Token</h2>
-          <p className="text-gray-600 text-sm">Your token has been generated. Please wait for your number to be called.</p>
+          <h2 className="text-xl font-bold text-slate-900 mb-1">Your Queue Token</h2>
+          <p className="text-slate-500 text-sm">Your token has been generated. Please wait for your number to be called.</p>
         </div>
 
         {/* Token card */}
-        <div className={`bg-white rounded-2xl border-2 shadow-lg p-6 text-center ${liveTicket.status === 'called' ? 'border-blue-400 ring-4 ring-blue-100' : 'border-gray-100'}`}>
+        <div className={`bg-white rounded-2xl border-2 shadow-xs p-6 text-center ${liveTicket.status === 'called' ? 'border-[#314ea1] ring-4 ring-blue-100' : 'border-slate-200/90'}`}>
           {liveTicket.status === 'called' && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl animate-pulse">
-              <p className="text-blue-800 font-bold text-lg">🔔 Your number is being called!</p>
-              <p className="text-blue-600 text-sm">Please proceed to the service counter.</p>
+            <div className="mb-4 p-3.5 bg-blue-50 border border-blue-200 rounded-xl">
+              <p className="text-[#1e3a8a] font-bold text-lg">🔔 Your number is being called!</p>
+              <p className="text-blue-700 text-sm">Please proceed to the service counter.</p>
             </div>
           )}
 
           {liveTicket.status === 'completed' && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl">
-              <p className="text-green-800 font-bold text-lg">✅ Service Completed</p>
-              <p className="text-green-600 text-sm">Your queue session has been completed.</p>
+            <div className="mb-4 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+              <p className="text-emerald-800 font-bold text-lg">✅ Service Completed</p>
+              <p className="text-emerald-700 text-sm">Your queue session has been completed.</p>
             </div>
           )}
 
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Your Token Number</p>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Your Token Number</p>
           <p className="text-5xl font-extrabold text-[#1e3a8a] mb-2">{liveTicket.token}</p>
-          <span className={`inline-block badge text-xs px-3 py-1 rounded-full font-medium ${STATUS_STYLES[liveTicket.status]}`}>
+          <span className={`inline-block text-xs px-3 py-1 rounded-full font-semibold border ${STATUS_STYLES[liveTicket.status]}`}>
             {STATUS_LABELS[liveTicket.status]}
           </span>
         </div>
 
         {/* Queue status details */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Queue Status</h3>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
+          <h3 className="font-bold text-slate-900 mb-4 text-base">Queue Status</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="text-center p-3 bg-gray-50 rounded-xl">
-              <p className="text-xs text-gray-500 mb-1">Now Serving</p>
-              <p className="text-xl font-bold text-gray-900">{liveTicket.currentServing}</p>
+            <div className="text-center p-3.5 bg-slate-50/80 border border-slate-100 rounded-xl">
+              <p className="text-xs text-slate-500 mb-1">Now Serving</p>
+              <p className="text-xl font-bold text-slate-900">{liveTicket.currentServing}</p>
             </div>
-            <div className="text-center p-3 bg-gray-50 rounded-xl">
-              <p className="text-xs text-gray-500 mb-1">People Ahead</p>
-              <p className="text-xl font-bold text-gray-900">{liveTicket.peopleAhead}</p>
+            <div className="text-center p-3.5 bg-slate-50/80 border border-slate-100 rounded-xl">
+              <p className="text-xs text-slate-500 mb-1">People Ahead</p>
+              <p className="text-xl font-bold text-[#314ea1]">{liveTicket.peopleAhead}</p>
             </div>
-            <div className="text-center p-3 bg-gray-50 rounded-xl">
-              <p className="text-xs text-gray-500 mb-1">Institution</p>
-              <p className="text-sm font-medium text-gray-900 leading-tight">{liveTicket.institutionName}</p>
+            <div className="text-center p-3.5 bg-slate-50/80 border border-slate-100 rounded-xl">
+              <p className="text-xs text-slate-500 mb-1">Institution</p>
+              <p className="text-sm font-semibold text-slate-900 leading-tight">{liveTicket.institutionName}</p>
             </div>
-            <div className="text-center p-3 bg-gray-50 rounded-xl">
-              <p className="text-xs text-gray-500 mb-1">Service</p>
-              <p className="text-sm font-medium text-gray-900 leading-tight">{liveTicket.serviceName}</p>
+            <div className="text-center p-3.5 bg-slate-50/80 border border-slate-100 rounded-xl">
+              <p className="text-xs text-slate-500 mb-1">Service</p>
+              <p className="text-sm font-semibold text-slate-900 leading-tight">{liveTicket.serviceName}</p>
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+          <div className="mt-4 grid grid-cols-2 gap-4 text-xs sm:text-sm pt-4 border-t border-slate-100">
             <div>
-              <p className="text-xs text-gray-500">Registered</p>
-              <p className="font-medium text-gray-700">
+              <p className="text-xs text-slate-500">Registered</p>
+              <p className="font-medium text-slate-800">
                 {new Date(liveTicket.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 {' '}
                 {new Date(liveTicket.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
@@ -525,18 +540,18 @@ export default function QueueManagement() {
             </div>
             {liveTicket.calledAt && (
               <div>
-                <p className="text-xs text-gray-500">Called At</p>
-                <p className="font-medium text-gray-700">
+                <p className="text-xs text-slate-500">Called At</p>
+                <p className="font-medium text-slate-800">
                   {new Date(liveTicket.calledAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
             )}
             {liveTicket.completedAt && (
               <div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-slate-500">
                   {liveTicket.status === 'cancelled' ? 'Cancelled At' : 'Completed At'}
                 </p>
-                <p className="font-medium text-gray-700">
+                <p className="font-medium text-slate-800">
                   {new Date(liveTicket.completedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
@@ -548,7 +563,7 @@ export default function QueueManagement() {
         {(liveTicket.status === 'waiting' || liveTicket.status === 'called') && (
           <button
             onClick={() => { cancelTicket(liveTicket.id); handleBack(); }}
-            className="w-full px-4 py-3 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition text-sm font-medium"
+            className="w-full px-4 py-3 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl hover:bg-rose-100 transition text-sm font-semibold cursor-pointer"
           >
             Leave Queue
           </button>
@@ -557,7 +572,7 @@ export default function QueueManagement() {
         {/* Feedback Rating - Only show for completed queue entries */}
         {liveTicket.status === 'completed' && liveTicket.institutionId && liveTicket.serviceId && (
           <div>
-            <h3 className="font-semibold text-gray-900 mb-4 text-lg">Rate Your Experience</h3>
+            <h3 className="font-bold text-slate-900 mb-4 text-base">Rate Your Experience</h3>
             <FeedbackRating
               queueEntryId={liveTicket.id}
               institutionId={liveTicket.institutionId}
