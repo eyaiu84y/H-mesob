@@ -8,6 +8,7 @@ import { useQueue } from '../../context/QueueContext';
 import { useServices } from '../../context/ServiceContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import EmployeeQueueManagement from '../../components/dashboard/EmployeeQueueManagement';
+import NotificationBell from '../../components/dashboard/NotificationBell';
 
 // ─── Navigation sections ────────────────────────────────────────
 const SECTIONS = [
@@ -182,7 +183,7 @@ function SectionSearchApplications() {
           </div>
 
           <div className="border-t border-slate-100 pt-6 mb-6">
-            <h3 className="text-base font-bold text-slate-900 mb-4">Citizen Information</h3>
+            <h3 className="text-base font-bold text-slate-900 mb-4">Customer Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
                 <label className="text-xs text-slate-500">Name</label>
@@ -301,7 +302,7 @@ function SectionSearchApplications() {
     <>
       <div className="mb-6">
         <h2 className="text-lg font-bold text-slate-900 mb-1">Search Applications</h2>
-        <p className="text-sm text-slate-500">Search by Application ID, citizen name, service, or status.</p>
+        <p className="text-sm text-slate-500">Search by Application ID, customer name, service, or status.</p>
       </div>
 
       <div className="mb-6">
@@ -327,7 +328,7 @@ function SectionSearchApplications() {
             <thead>
               <tr>
                 <th>Application ID</th>
-                <th>Citizen</th>
+                <th>Customer</th>
                 <th>Service</th>
                 <th>Status</th>
                 <th>Submitted</th>
@@ -1285,7 +1286,7 @@ function SectionReports() {
                 <tr>
                   <th>Application Number</th>
                   <th>Service</th>
-                  <th>Citizen</th>
+                  <th>Customer</th>
                   <th>Status</th>
                   <th>Submitted</th>
                 </tr>
@@ -1701,6 +1702,7 @@ export default function EmployeeDashboard() {
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
+              <NotificationBell onNavigate={(section) => setActiveSection(section)} />
               <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium">Employee</span>
             </div>
           </div>

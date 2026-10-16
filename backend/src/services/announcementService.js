@@ -40,8 +40,9 @@ export const getAnnouncements = async (filters, currentUser) => {
 
     // Role-based filtering with PUBLIC/INTERNAL distinction
     if (currentUser) {
-      // CITIZEN: Only PUBLIC announcements
-      if (currentUser.role === 'CITIZEN') {
+      const userRole = (currentUser.role || '').toUpperCase();
+      // CUSTOMER/CITIZEN: Only PUBLIC announcements
+      if (userRole === 'CITIZEN' || userRole === 'CUSTOMER') {
         query = query.eq('scope', 'PUBLIC');
       } 
       // STAFF (all other roles): PUBLIC + INTERNAL + authorized INSTITUTION + authorized ROLE
@@ -68,7 +69,7 @@ export const getAnnouncements = async (filters, currentUser) => {
     // For staff users, apply additional filtering in JavaScript
     let filteredData = data || [];
     
-    if (currentUser && currentUser.role !== 'CITIZEN') {
+    if (currentUser && !['CITIZEN', 'CUSTOMER'].includes((currentUser.role || '').toUpperCase())) {
       filteredData = (data || []).filter(announcement => {
         // PUBLIC - visible to everyone
         if (announcement.scope === 'PUBLIC') return true;
@@ -86,9 +87,18 @@ export const getAnnouncements = async (filters, currentUser) => {
           return currentUser.institution_id === announcement.institution_id;
         }
         
-        // ROLE - visible if user's role is in target_roles
+        // ROLE - visible if user's role is in target_roles (handling synonyms)
         if (announcement.target_roles && Array.isArray(announcement.target_roles)) {
-          return announcement.target_roles.includes(currentUser.role);
+          const userRole = (currentUser.role || '').toUpperCase();
+          return announcement.target_roles.some(r => {
+            const tr = r.toUpperCase();
+            if (tr === userRole) return true;
+            if (userRole === 'TECHNICIAN' && tr === 'ICT_STAFF') return true;
+            if (userRole === 'ICT_STAFF' && tr === 'TECHNICIAN') return true;
+            if (userRole === 'CUSTOMER' && tr === 'CITIZEN') return true;
+            if (userRole === 'CITIZEN' && tr === 'CUSTOMER') return true;
+            return false;
+          });
         }
         
         return false;
@@ -460,13 +470,20 @@ const notifyTargetUsers = async (announcement) => {
     if (announcement.scope === 'PUBLIC') {
       // All active users
     } else if (announcement.scope === 'INTERNAL') {
-      // Only staff (all roles except CITIZEN)
-      query = query.in('role', ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'ICT_STAFF']);
+      // Only staff (all roles except CUSTOMER / CITIZEN)
+      query = query.in('role', ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF']);
     } else if (announcement.scope === 'SYSTEM') {
       // Only admins and managers
       query = query.in('role', ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER']);
     } else if (announcement.scope === 'ROLE' && announcement.target_roles.length > 0) {
-      query = query.in('role', announcement.target_roles);
+      const expandedRoles = [...announcement.target_roles];
+      if (announcement.target_roles.includes('TECHNICIAN') && !announcement.target_roles.includes('ICT_STAFF')) {
+        expandedRoles.push('ICT_STAFF');
+      }
+      if (announcement.target_roles.includes('CUSTOMER') && !announcement.target_roles.includes('CITIZEN')) {
+        expandedRoles.push('CITIZEN');
+      }
+      query = query.in('role', expandedRoles);
     } else if (announcement.scope === 'INSTITUTION' && announcement.institution_id) {
       query = query.eq('institution_id', announcement.institution_id);
     }

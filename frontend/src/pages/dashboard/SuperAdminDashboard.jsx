@@ -7,6 +7,8 @@ import { useMaintenance } from '../../context/MaintenanceContext';
 import { organizationsData } from '../../data/organizations';
 import { useApp } from '../../context/AppContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
+import NotificationBell from '../../components/dashboard/NotificationBell';
+import ApprovalsManagement from '../../components/dashboard/ApprovalsManagement';
 import api from '../../utils/api';
 
 // ─── Navigation sections ──────────────────────────────────────────
@@ -16,6 +18,7 @@ function getSections(t) {
     t.dashboard,
     t.user_management,
     t.institution_management,
+    t.central_approvals || 'Central Approvals',
     t.roles_permissions,
     t.system_settings,
     t.reports,
@@ -31,9 +34,11 @@ const ROLE_COLORS = {
   mesob_manager:       'bg-blue-50 text-[#1e3a8a] border-blue-200',
   institution_manager: 'bg-blue-50 text-[#1e3a8a] border-blue-200',
   employee:            'bg-blue-50 text-[#1e3a8a] border-blue-200',
-  ict_staff:           'bg-blue-50 text-[#1e3a8a] border-blue-200',
-  citizen:             'bg-blue-50 text-[#1e3a8a] border-blue-200',
+  technician:          'bg-blue-50 text-[#1e3a8a] border-blue-200',
+  customer:            'bg-blue-50 text-[#1e3a8a] border-blue-200',
 };
+Object.defineProperty(ROLE_COLORS, 'ict_staff', { value: 'bg-blue-50 text-[#1e3a8a] border-blue-200', enumerable: false, writable: true, configurable: true });
+Object.defineProperty(ROLE_COLORS, 'citizen', { value: 'bg-blue-50 text-[#1e3a8a] border-blue-200', enumerable: false, writable: true, configurable: true });
 
 // No mock data - all data comes from shared data system or real backend
 
@@ -57,11 +62,28 @@ function RoleBadge({ role }) {
   return <span className={`badge ${cls} font-semibold`}>{ROLE_LABELS[role] || role}</span>;
 }
 
-function StatusBadge({ status }) {
-  const cls = (status === 'Active' || status === 'ACTIVE')
-    ? 'badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold' 
-    : 'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold';
-  return <span className={cls}>{status}</span>;
+function StatusBadge({ status, approvalStatus }) {
+  const effective = approvalStatus || status;
+  let cls = 'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold';
+  let label = effective || 'Unknown';
+
+  if (effective === 'Active' || effective === 'ACTIVE' || effective === 'APPROVED') {
+    cls = 'badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold';
+    label = 'Active';
+  } else if (effective === 'PENDING_APPROVAL' || effective === 'pending') {
+    cls = 'badge bg-amber-50 text-amber-800 border border-amber-200 font-semibold';
+    label = 'Pending Approval';
+  } else if (effective === 'REJECTED' || effective === 'rejected') {
+    cls = 'badge bg-rose-50 text-rose-800 border border-rose-200 font-semibold';
+    label = 'Rejected';
+  } else if (effective === 'INACTIVE' || effective === 'Inactive') {
+    cls = 'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold';
+    label = 'Inactive';
+  } else if (effective === 'SUSPENDED' || effective === 'Suspended') {
+    cls = 'badge bg-rose-50 text-rose-700 border border-rose-200 font-semibold';
+    label = 'Suspended';
+  }
+  return <span className={cls}>{label}</span>;
 }
 
 // ─── SECTION: Dashboard Overview ─────────────────────────────────
@@ -145,14 +167,17 @@ function SectionDashboard({ setActiveSection }) {
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6">
         <h2 className="font-bold text-slate-900 mb-4">Role Overview</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-          {Object.entries(ROLE_LABELS).map(([key, label]) => (
-            <div key={key} className={`p-3 rounded-xl border ${ROLE_COLORS[key] || 'bg-slate-50 text-slate-800 border-slate-200'}`}>
-              <strong className="text-slate-900">{label}</strong>
-              <p className="text-xs mt-0.5 opacity-75">
-                {users.filter(u => u.role === key).length} user{users.filter(u => u.role === key).length !== 1 ? 's' : ''}
-              </p>
-            </div>
-          ))}
+          {Object.entries(ROLE_LABELS).map(([key, label]) => {
+            const count = users.filter(u => u.role === key || (key === 'technician' && u.role === 'ict_staff') || (key === 'customer' && u.role === 'citizen')).length;
+            return (
+              <div key={key} className={`p-3 rounded-xl border ${ROLE_COLORS[key] || 'bg-slate-50 text-slate-800 border-slate-200'}`}>
+                <strong className="text-slate-900">{label}</strong>
+                <p className="text-xs mt-0.5 opacity-75">
+                  {count} user{count !== 1 ? 's' : ''}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -215,7 +240,12 @@ function SectionUserManagement() {
       u.name.toLowerCase().includes(q) || 
       u.email.toLowerCase().includes(q) ||
       (u.employeeId && u.employeeId.toLowerCase().includes(q));
-    const matchR = !filterRole || u.role === filterRole;
+    const matchR = !filterRole || 
+      u.role === filterRole || 
+      (filterRole === 'technician' && u.role === 'ict_staff') ||
+      (filterRole === 'customer' && u.role === 'citizen') ||
+      (filterRole === 'ict_staff' && u.role === 'technician') ||
+      (filterRole === 'citizen' && u.role === 'customer');
     const matchI = !filterInstitution || u.institution === filterInstitution;
     const matchS = !filterStatus || u.status === filterStatus;
     return matchQ && matchR && matchI && matchS;
@@ -223,8 +253,8 @@ function SectionUserManagement() {
 
   // Determine which fields are required based on role
   function getRequiredFields(role) {
-    const institutionRequired = ['institution_manager', 'employee', 'ict_staff'].includes(role);
-    const employeeIdRequired = ['institution_manager', 'employee', 'ict_staff'].includes(role);
+    const institutionRequired = ['institution_manager', 'employee', 'technician', 'ict_staff'].includes(role);
+    const employeeIdRequired = ['institution_manager', 'employee', 'technician', 'ict_staff'].includes(role);
     return { institutionRequired, employeeIdRequired };
   }
 
@@ -352,6 +382,15 @@ function SectionUserManagement() {
   }
 
   async function handleToggleStatus(userId) {
+    const targetUser = users.find(u => u.id === userId);
+    if (targetUser?.metadata?.approval?.status === 'PENDING_APPROVAL') {
+      alert('This user account is currently pending Mesob Manager approval and cannot be activated directly.');
+      return;
+    }
+    if (targetUser?.metadata?.approval?.status === 'REJECTED') {
+      alert('This user account was rejected. Please review and resubmit via Central Approvals.');
+      return;
+    }
     const result = await toggleUserStatus(userId);
     if (result.success) {
       // User list will auto-refresh via useEffect watching usersLoading
@@ -433,7 +472,7 @@ function SectionUserManagement() {
           </div>
 
           {/* Institution (conditional) */}
-          {['institution_manager', 'employee', 'ict_staff'].includes(newUserForm.role) && (
+          {['institution_manager', 'employee', 'technician', 'ict_staff'].includes(newUserForm.role) && (
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                 Institution <span className="text-rose-500">*</span>
@@ -452,16 +491,16 @@ function SectionUserManagement() {
           )}
 
           {/* Employee/Staff ID (conditional) */}
-          {['institution_manager', 'employee', 'ict_staff'].includes(newUserForm.role) && (
+          {['institution_manager', 'employee', 'technician', 'ict_staff'].includes(newUserForm.role) && (
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                {newUserForm.role === 'ict_staff' ? 'Staff ID' : 'Employee ID'} <span className="text-rose-500">*</span>
+                {['technician', 'ict_staff'].includes(newUserForm.role) ? 'Technician ID' : 'Employee ID'} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 value={newUserForm.employeeId}
                 onChange={e => setNewUserForm(f => ({ ...f, employeeId: e.target.value }))}
-                placeholder={newUserForm.role === 'ict_staff' ? 'TECH-001' : 'EMP-001'}
+                placeholder={['technician', 'ict_staff'].includes(newUserForm.role) ? 'TECH-001' : 'EMP-001'}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
               />
             </div>
@@ -567,7 +606,7 @@ function SectionUserManagement() {
           </div>
 
           {/* Institution (conditional) */}
-          {['institution_manager', 'employee', 'ict_staff'].includes(editUser.role) && (
+          {['institution_manager', 'employee', 'technician', 'ict_staff'].includes(editUser.role) && (
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                 Institution <span className="text-rose-500">*</span>
@@ -586,15 +625,16 @@ function SectionUserManagement() {
           )}
 
           {/* Employee/Staff ID (conditional) */}
-          {['institution_manager', 'employee', 'ict_staff'].includes(editUser.role) && (
+          {['institution_manager', 'employee', 'technician', 'ict_staff'].includes(editUser.role) && (
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                {editUser.role === 'ict_staff' ? 'Staff ID' : 'Employee ID'} <span className="text-rose-500">*</span>
+                {['technician', 'ict_staff'].includes(editUser.role) ? 'Technician ID' : 'Employee ID'} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 value={editUser.employeeId || ''}
                 onChange={e => setEditUser(u => ({ ...u, employeeId: e.target.value }))}
+                placeholder={['technician', 'ict_staff'].includes(editUser.role) ? 'TECH-001' : 'EMP-001'}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
               />
             </div>
@@ -732,19 +772,25 @@ function SectionUserManagement() {
                     <td className="text-slate-600">{u.email}</td>
                     <td><RoleBadge role={u.role} /></td>
                     <td>{u.institution || <span className="text-slate-400">—</span>}</td>
-                    <td className="font-mono text-xs text-slate-600">{u.employeeId || <span className="text-slate-400">—</span>}</td>
-                    <td><StatusBadge status={u.status} /></td>
+                    <td className="text-xs font-mono text-slate-600">{u.employeeId || <span className="text-slate-400">—</span>}</td>
                     <td>
-                      <div className="flex gap-3">
+                      <StatusBadge 
+                        status={u.status} 
+                        approvalStatus={u.metadata?.approval?.status} 
+                      />
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-3">
                         <button
                           onClick={() => {
                             const fullUser = getUsers().find(user => user.id === u.id);
+                            const userRole = fullUser.role === 'ict_staff' ? 'technician' : fullUser.role === 'citizen' ? 'customer' : fullUser.role;
                             setEditUser({
                               id: fullUser.id,
                               name: fullUser.name,
                               email: fullUser.email,
                               phone: fullUser.phone || '',
-                              role: fullUser.role,
+                              role: userRole,
                               institution: fullUser.institution || '',
                               employeeId: fullUser.employeeId || '',
                               status: fullUser.status,
@@ -754,12 +800,22 @@ function SectionUserManagement() {
                         >
                           Edit
                         </button>
-                        <button
-                          onClick={() => handleToggleStatus(u.id)}
-                          className={`text-sm font-semibold transition ${u.status === 'Active' ? 'text-amber-700 hover:text-amber-800' : 'text-emerald-700 hover:text-emerald-800'}`}
-                        >
-                          {u.status === 'Active' ? 'Deactivate' : 'Activate'}
-                        </button>
+                        {u.metadata?.approval?.status === 'PENDING_APPROVAL' ? (
+                          <span className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-md font-medium border border-amber-200">
+                            Pending Review
+                          </span>
+                        ) : u.metadata?.approval?.status === 'REJECTED' ? (
+                          <span className="text-xs text-rose-700 bg-rose-50 px-2 py-1 rounded-md font-medium border border-rose-200">
+                            Rejected
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleToggleStatus(u.id)}
+                            className={`text-sm font-semibold transition ${u.status === 'Active' ? 'text-amber-700 hover:text-amber-800' : 'text-emerald-700 hover:text-emerald-800'}`}
+                          >
+                            {u.status === 'Active' ? 'Deactivate' : 'Activate'}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1044,7 +1100,7 @@ function SectionInstitutionManagement() {
       setView('list');
       setEditingInstitution(null);
       
-      alert(editingInstitution ? 'Institution updated successfully!' : 'Institution created successfully!');
+      alert(editingInstitution ? 'Institution updated successfully!' : 'Institution created and submitted for Mesob Manager approval!');
     } else {
       setFormError(result.message || 'Failed to save institution');
     }
@@ -1054,6 +1110,16 @@ function SectionInstitutionManagement() {
     const institution = institutions.find(i => i.id === id);
     if (!institution) return;
     
+    const approvalStatus = institution.metadata?.approval?.status;
+    if (approvalStatus === 'PENDING_APPROVAL') {
+      alert('This institution is currently pending Mesob Manager approval and cannot be activated directly.');
+      return;
+    }
+    if (approvalStatus === 'REJECTED') {
+      alert('This institution was rejected. Please review and resubmit via Central Approvals.');
+      return;
+    }
+
     const newStatus = institution.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
     
     // Update via API
@@ -1544,19 +1610,34 @@ function SectionInstitutionManagement() {
                   <td className="font-semibold text-slate-900">{org.name_en || org.name}</td>
                   <td className="text-slate-700">{org.name_am || org.nameAm || ''}</td>
                   <td className="text-xs font-mono text-slate-600">{org.code || ''}</td>
-                  <td><StatusBadge status={org.status} /></td>
                   <td>
-                    <div className="flex gap-3">
+                    <StatusBadge 
+                      status={org.status} 
+                      approvalStatus={org.metadata?.approval?.status} 
+                    />
+                  </td>
+                  <td>
+                    <div className="flex items-center gap-3">
                       {canCreate && (
                         <>
                           <button onClick={() => editInstitution(org)}
                             className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold transition">
                             Edit
                           </button>
-                          <button onClick={() => toggleStatus(org.id)}
-                            className={`text-sm font-semibold transition ${(org.status === 'ACTIVE' || org.status === 'Active') ? 'text-amber-700 hover:text-amber-800' : 'text-emerald-700 hover:text-emerald-800'}`}>
-                            {(org.status === 'ACTIVE' || org.status === 'Active') ? 'Deactivate' : 'Activate'}
-                          </button>
+                          {org.metadata?.approval?.status === 'PENDING_APPROVAL' ? (
+                            <span className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-md font-medium border border-amber-200">
+                              Pending Review
+                            </span>
+                          ) : org.metadata?.approval?.status === 'REJECTED' ? (
+                            <span className="text-xs text-rose-700 bg-rose-50 px-2 py-1 rounded-md font-medium border border-rose-200">
+                              Rejected
+                            </span>
+                          ) : (
+                            <button onClick={() => toggleStatus(org.id)}
+                              className={`text-sm font-semibold transition ${(org.status === 'ACTIVE' || org.status === 'Active') ? 'text-amber-700 hover:text-amber-800' : 'text-emerald-700 hover:text-emerald-800'}`}>
+                              {(org.status === 'ACTIVE' || org.status === 'Active') ? 'Deactivate' : 'Activate'}
+                            </button>
+                          )}
                           <button onClick={() => deleteInst(org.id)}
                             className="text-rose-600 hover:text-rose-700 text-sm font-semibold transition">
                             Delete
@@ -1579,9 +1660,9 @@ function SectionInstitutionManagement() {
 function SectionRolesPermissions() {
   const { getUsers } = useAuth();
   const roleDefinitions = [
-    { role: 'citizen',             label: 'Citizen',             color: ROLE_COLORS.citizen,             perms: ['View service requirements', 'Track own applications', 'View announcements', 'Submit contact forms'] },
+    { role: 'customer',            label: 'Customer',            color: ROLE_COLORS.customer,            perms: ['View service requirements', 'Track own applications', 'View announcements', 'Submit feedback & contact forms'] },
     { role: 'employee',            label: 'Employee',            color: ROLE_COLORS.employee,            perms: ['Process assigned queue items', 'Search applications', 'View service requirements', 'View announcements'] },
-    { role: 'ict_staff',          label: 'ICT Staff',          color: ROLE_COLORS.ict_staff,          perms: ['View assigned technical tasks', 'Update task status', 'Submit maintenance reports', 'View announcements'] },
+    { role: 'technician',          label: 'Technician',          color: ROLE_COLORS.technician,          perms: ['View assigned technical tasks', 'Update task status', 'Submit maintenance reports', 'View announcements'] },
     { role: 'institution_manager', label: 'Institution Manager', color: ROLE_COLORS.institution_manager, perms: ['Monitor institution queue', 'Monitor applications', 'Assign tasks to Technicians', 'View maintenance', 'View institution reports', 'View announcements'] },
     { role: 'mesob_manager',       label: 'MESOB Manager',       color: ROLE_COLORS.mesob_manager,       perms: ['Monitor all institutions', 'Monitor MESOB-wide queue', 'Monitor applications', 'Monitor maintenance', 'View analytics', 'View reports', 'View announcements'] },
     { role: 'super_admin',         label: 'Super Admin',         color: ROLE_COLORS.super_admin,         perms: ['User Management', 'Institution Management', 'Roles & Permissions', 'System Settings', 'System Reports', 'System Analytics', 'Manage Announcements'] },
@@ -1983,7 +2064,7 @@ function QueueReportTab() {
             <thead>
               <tr>
                 <th>Queue Number</th>
-                <th>Citizen</th>
+                <th>Customer</th>
                 <th>Institution</th>
                 <th>Status</th>
                 <th>Created</th>
@@ -1995,7 +2076,7 @@ function QueueReportTab() {
                 return (
                   <tr key={q.id}>
                     <td className="font-medium">{q.queueNumber || q.queue_number || 'N/A'}</td>
-                    <td>{q.citizenName || 'Citizen'}</td>
+                    <td>{q.citizenName || 'Customer'}</td>
                     <td>{inst?.name_en || 'Unknown'}</td>
                     <td>
                       <span className={`badge ${
@@ -2107,7 +2188,11 @@ function SectionReports() {
 function SectionAnalytics() {
   const { getUsers } = useAuth();
   const users = getUsers().map(stripPassword);
-  const byRole = Object.entries(ROLE_LABELS).map(([k, v]) => ({ role: k, label: v, count: users.filter(u => u.role === k).length }));
+  const byRole = Object.entries(ROLE_LABELS).map(([k, v]) => ({
+    role: k,
+    label: v,
+    count: users.filter(u => u.role === k || (k === 'technician' && u.role === 'ict_staff') || (k === 'customer' && u.role === 'citizen')).length
+  }));
 
   return (
     <>
@@ -2352,7 +2437,7 @@ function SectionAnnouncements() {
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Audience <span className="text-rose-500">*</span></label>
               <select value={form.scope} onChange={e => setForm(f => ({ ...f, scope: e.target.value, targetRoles: [], institutionId: '' }))}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white">
-                <option value="PUBLIC">Public - Visible to everyone including citizens</option>
+                <option value="PUBLIC">Public - Visible to everyone including customers</option>
                 <option value="INTERNAL">Internal - Staff only (employees, managers, admins)</option>
                 <option value="SYSTEM">System - Admins and managers only</option>
                 <option value="ROLE">Role - Specific role(s)</option>
@@ -2364,7 +2449,7 @@ function SectionAnnouncements() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Target Roles <span className="text-rose-500">*</span></label>
                 <div className="space-y-2">
-                  {['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'ICT_STAFF', 'CITIZEN'].map(role => (
+                  {['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'CUSTOMER'].map(role => (
                     <label key={role} className="flex items-center gap-2 text-sm">
                       <input type="checkbox" 
                         checked={form.targetRoles.includes(role)}
@@ -2395,8 +2480,8 @@ function SectionAnnouncements() {
             
             <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-800">
               <strong className="text-slate-900">Scope: {form.scope}</strong>
-              {form.scope === 'PUBLIC' && <p className="mt-1 text-slate-600">This announcement will be visible to all users including citizens.</p>}
-              {form.scope === 'INTERNAL' && <p className="mt-1 text-slate-600">This announcement will be visible only to staff (not citizens).</p>}
+              {form.scope === 'PUBLIC' && <p className="mt-1 text-slate-600">This announcement will be visible to all users including customers.</p>}
+              {form.scope === 'INTERNAL' && <p className="mt-1 text-slate-600">This announcement will be visible only to staff (not customers).</p>}
               {form.scope === 'SYSTEM' && <p className="mt-1 text-slate-600">This announcement will be visible only to admins and managers.</p>}
               {form.scope === 'ROLE' && <p className="mt-1 text-slate-600">This announcement will be visible only to the selected role(s).</p>}
               {form.scope === 'INSTITUTION' && <p className="mt-1 text-slate-600">This announcement will be visible only to users in the selected institution.</p>}
@@ -2506,10 +2591,13 @@ export default function SuperAdminDashboard() {
 
   function renderSection() {
     switch (activeSection) {
-      case t.dashboard:             return <SectionDashboard setActiveSection={navigate} />;
-      case t.user_management:       return <SectionUserManagement />;
-      case t.institution_management:return <SectionInstitutionManagement />;
-      case t.roles_permissions:   return <SectionRolesPermissions />;
+      case t.dashboard:                                return <SectionDashboard setActiveSection={navigate} />;
+      case t.user_management:                          return <SectionUserManagement />;
+      case t.institution_management:                   return <SectionInstitutionManagement />;
+      case t.central_approvals || 'Central Approvals': return <ApprovalsManagement isManagerView={false} />;
+      case 'Central Approvals':                        return <ApprovalsManagement isManagerView={false} />;
+      case 'Approvals':                                return <ApprovalsManagement isManagerView={false} />;
+      case t.roles_permissions:                        return <SectionRolesPermissions />;
       case t.system_settings:       return <SectionSystemSettings />;
       case t.reports:               return <SectionReports />;
       case t.analytics:             return <SectionAnalytics />;
@@ -2567,6 +2655,7 @@ export default function SuperAdminDashboard() {
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
+              <NotificationBell onNavigate={(section) => navigate(section)} />
               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-[#1e3a8a] border border-blue-200">Super Admin</span>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-semibold text-slate-900">{user?.name}</p>

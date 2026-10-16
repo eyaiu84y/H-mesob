@@ -83,7 +83,7 @@ export default function OnlineServicesPage() {
   // Get user's applications
   const myApplications = useMemo(() => {
     if (!user) return [];
-    return applications.filter(app => app.citizenId === user.id);
+    return applications.filter(app => (app.customerId === user.id || app.citizenId === user.id));
   }, [applications, user]);
 
   const handleServiceClick = (service) => {
@@ -97,8 +97,9 @@ export default function OnlineServicesPage() {
       return;
     }
 
-    if (user.role !== 'CITIZEN') {
-      alert('Only citizens can apply for online services');
+    const roleUpper = user.role?.toUpperCase();
+    if (roleUpper !== 'CUSTOMER') {
+      alert('Only customers can apply for online services');
       return;
     }
 
@@ -316,7 +317,7 @@ export default function OnlineServicesPage() {
           </div>
 
           {/* Application Tracking Section */}
-          {user && user.role === 'CITIZEN' && (
+          {user && user.role?.toUpperCase() === 'CUSTOMER' && (
             <div id="application-tracking" className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
                 <i className="fas fa-clipboard-list mr-3 text-blue-600"></i>

@@ -1,0 +1,787 @@
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import api from '../../utils/api';
+import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
+
+export default function ApprovalsManagement({ isManagerView = false }) {
+  const { user } = useAuth();
+  const { refreshNotifications } = useNotifications();
+
+  const [approvals, setApprovals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState('PENDING_APPROVAL'); // 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'ALL'
+  const [typeFilter, setTypeFilter] = useState('ALL'); // 'ALL' | 'INSTITUTION' | 'USER'
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Modals state
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [decisionModalOpen, setDecisionModalOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [decisionAction, setDecisionAction] = useState(null); // 'APPROVE' | 'REJECT'
+  const [submittingDecision, setSubmittingDecision] = useState(false);
+
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+
+  // Resubmit modal for Admin
+  const [resubmitModalOpen, setResubmitModalOpen] = useState(false);
+  const [resubmitData, setResubmitData] = useState({});
+  const [resubmitNotes, setResubmitNotes] = useState('');
+  const [submittingResubmit, setSubmittingResubmit] = useState(false);
+
+  // Fetch approvals from backend
+  const fetchApprovals = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await api.get('/approvals');
+      const isSuccess = res?.success ?? res?.data?.success;
+      const dataPayload = res?.data ?? res?.data?.data;
+
+      if (isSuccess && Array.isArray(dataPayload)) {
+        setApprovals(dataPayload);
+      } else {
+        setApprovals([]);
+      }
+    } catch (err) {
+      console.error('Failed to load approvals:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to load approvals.');
+      setApprovals([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchApprovals();
+  }, [fetchApprovals]);
+
+  // Counts
+  const counts = useMemo(() => {
+    return {
+      all: approvals.length,
+      pending: approvals.filter(a => a.status === 'PENDING_APPROVAL').length,
+      approved: approvals.filter(a => a.status === 'APPROVED').length,
+      rejected: approvals.filter(a => a.status === 'REJECTED').length
+    };
+  }, [approvals]);
+
+  // Filtered approvals
+  const filteredApprovals = useMemo(() => {
+    return approvals.filter(item => {
+      // Status filter
+      if (statusFilter !== 'ALL' && item.status !== statusFilter) return false;
+      // Type filter
+      if (typeFilter !== 'ALL' && item.entityType !== typeFilter) return false;
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const nameMatch = (item.entityName || '').toLowerCase().includes(q);
+        const codeMatch = (item.code || '').toLowerCase().includes(q);
+        const emailMatch = (item.details?.email || '').toLowerCase().includes(q);
+        const roleMatch = (item.requestedRole || '').toLowerCase().includes(q);
+        return nameMatch || codeMatch || emailMatch || roleMatch;
+      }
+      return true;
+    });
+  }, [approvals, statusFilter, typeFilter, searchQuery]);
+
+  // Handle Review Decision (Mesob Manager)
+  const handleDecisionSubmit = async () => {
+    if (!selectedRequest || !decisionAction) return;
+
+    if (decisionAction === 'REJECT' && !rejectionReason.trim()) {
+      alert('Please enter a mandatory rejection reason explaining what needs correction.');
+      return;
+    }
+
+    try {
+      setSubmittingDecision(true);
+      const res = await api.patch(
+        `/approvals/${selectedRequest.entityType}/${selectedRequest.entityId}/decision`,
+        {
+          decision: decisionAction === 'APPROVE' ? 'APPROVED' : 'REJECTED',
+          reason: rejectionReason.trim() || undefined
+        }
+      );
+
+      const isSuccess = res?.success ?? res?.data?.success;
+      if (isSuccess) {
+        setDecisionModalOpen(false);
+        setSelectedRequest(null);
+        setRejectionReason('');
+        setDecisionAction(null);
+        await fetchApprovals();
+        await refreshNotifications();
+      } else {
+        alert(res?.message || 'Failed to record decision.');
+      }
+    } catch (err) {
+      console.error('Decision error:', err);
+      alert(err.response?.data?.message || err.message || 'Failed to submit decision.');
+    } finally {
+      setSubmittingDecision(false);
+    }
+  };
+
+  // Handle Resubmit (Super Admin)
+  const handleResubmit = async () => {
+    if (!selectedRequest) return;
+    try {
+      setSubmittingResubmit(true);
+      const type = selectedRequest.entityType.toLowerCase();
+      const endpoint = `/approvals/${type}/${selectedRequest.entityId}/resubmit`;
+
+      const res = await api.post(endpoint, {
+        ...resubmitData,
+        resubmitNotes: resubmitNotes.trim()
+      });
+
+      const isSuccess = res?.success ?? res?.data?.success;
+      if (isSuccess) {
+        setResubmitModalOpen(false);
+        setSelectedRequest(null);
+        setResubmitData({});
+        setResubmitNotes('');
+        await fetchApprovals();
+        await refreshNotifications();
+      } else {
+        alert(res?.message || 'Failed to resubmit request.');
+      }
+    } catch (err) {
+      console.error('Resubmit error:', err);
+      alert(err.response?.data?.message || err.message || 'Failed to resubmit.');
+    } finally {
+      setSubmittingResubmit(false);
+    }
+  };
+
+  const openResubmitModal = (item) => {
+    setSelectedRequest(item);
+    setResubmitData({
+      name: item.entityName,
+      nameAm: item.nameAm,
+      phone: item.details?.phone || '',
+      email: item.details?.email || '',
+      description: item.details?.description || '',
+      address: item.details?.address || '',
+      fullName: item.entityName,
+      employeeId: item.details?.employeeId || ''
+    });
+    setResubmitNotes('');
+    setResubmitModalOpen(true);
+  };
+
+  const formatDateTime = (iso) => {
+    if (!iso) return '-';
+    try {
+      const d = new Date(iso);
+      return `${d.toLocaleDateString()} at ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    } catch {
+      return iso;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header and KPI cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Submissions</p>
+          <p className="text-2xl font-bold text-slate-900">{counts.all}</p>
+          <p className="text-xs text-slate-500 mt-1">Institutions & user accounts</p>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-amber-200/90 p-5 shadow-xs bg-gradient-to-br from-amber-50/40 to-white">
+          <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-1">Pending Review</p>
+          <p className="text-2xl font-bold text-amber-600">{counts.pending}</p>
+          <p className="text-xs text-amber-700 mt-1 font-medium">Awaiting Mesob decision</p>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-emerald-200/90 p-5 shadow-xs bg-gradient-to-br from-emerald-50/40 to-white">
+          <p className="text-xs font-semibold text-emerald-800 uppercase tracking-wider mb-1">Approved & Active</p>
+          <p className="text-2xl font-bold text-emerald-600">{counts.approved}</p>
+          <p className="text-xs text-emerald-700 mt-1 font-medium">Successfully activated</p>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-rose-200/90 p-5 shadow-xs bg-gradient-to-br from-rose-50/40 to-white">
+          <p className="text-xs font-semibold text-rose-800 uppercase tracking-wider mb-1">Rejected</p>
+          <p className="text-2xl font-bold text-rose-600">{counts.rejected}</p>
+          <p className="text-xs text-rose-700 mt-1 font-medium">Corrections required</p>
+        </div>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+        {/* Status Tabs */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl text-xs font-semibold w-full md:w-auto overflow-x-auto">
+          <button
+            onClick={() => setStatusFilter('PENDING_APPROVAL')}
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              statusFilter === 'PENDING_APPROVAL'
+                ? 'bg-white text-amber-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Pending ({counts.pending})
+          </button>
+          <button
+            onClick={() => setStatusFilter('APPROVED')}
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              statusFilter === 'APPROVED'
+                ? 'bg-white text-emerald-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Approved ({counts.approved})
+          </button>
+          <button
+            onClick={() => setStatusFilter('REJECTED')}
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              statusFilter === 'REJECTED'
+                ? 'bg-white text-rose-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Rejected ({counts.rejected})
+          </button>
+          <button
+            onClick={() => setStatusFilter('ALL')}
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              statusFilter === 'ALL'
+                ? 'bg-white text-[#314ea1] shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            All ({counts.all})
+          </button>
+        </div>
+
+        {/* Search & Type filter */}
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-[#314ea1]/20"
+          >
+            <option value="ALL">All Entities</option>
+            <option value="INSTITUTION">Institutions</option>
+            <option value="USER">User Accounts</option>
+          </select>
+
+          <div className="relative flex-1 md:w-64">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search name, code, email..."
+              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 bg-white text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#314ea1]/20"
+            />
+            <svg
+              className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+
+          <button
+            onClick={fetchApprovals}
+            title="Refresh list"
+            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors border border-slate-200"
+          >
+            <svg className={`w-4 h-4 ${loading ? 'animate-spin text-[#314ea1]' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Approvals Table */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+        {loading && approvals.length === 0 ? (
+          <div className="p-12 text-center text-slate-400">
+            <div className="w-8 h-8 border-3 border-[#314ea1] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-sm font-semibold text-slate-600">Loading approval queue...</p>
+          </div>
+        ) : error ? (
+          <div className="p-8 text-center text-rose-600">
+            <p className="text-sm font-semibold">{error}</p>
+            <button onClick={fetchApprovals} className="mt-2 text-xs font-bold underline">Try again</button>
+          </div>
+        ) : filteredApprovals.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-sm font-bold text-slate-800">No requests in this view</p>
+            <p className="text-xs text-slate-500 mt-1">
+              {statusFilter === 'PENDING_APPROVAL'
+                ? 'All pending approval requests have been processed.'
+                : 'No submissions matched your search and filter criteria.'}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="py-3.5 px-4">Entity</th>
+                  <th className="py-3.5 px-4">Identifier / Role</th>
+                  <th className="py-3.5 px-4">Submitted By</th>
+                  <th className="py-3.5 px-4">Submission Date</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs">
+                {filteredApprovals.map((item) => {
+                  const isPending = item.status === 'PENDING_APPROVAL';
+                  const isApproved = item.status === 'APPROVED';
+                  const isRejected = item.status === 'REJECTED';
+
+                  return (
+                    <tr key={`${item.entityType}-${item.entityId}`} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0 ${
+                              item.entityType === 'INSTITUTION'
+                                ? 'bg-blue-100 text-[#314ea1]'
+                                : 'bg-purple-100 text-purple-800'
+                            }`}
+                          >
+                            {item.entityType === 'INSTITUTION' ? 'INSTITUTION' : 'USER'}
+                          </span>
+                          <div>
+                            <p className="font-bold text-slate-900">{item.entityName}</p>
+                            {item.nameAm && (
+                              <p className="text-[11px] text-slate-400">{item.nameAm}</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        {item.entityType === 'INSTITUTION' ? (
+                          <span className="font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">
+                            {item.code}
+                          </span>
+                        ) : (
+                          <div>
+                            <span className="font-semibold text-slate-800">{item.requestedRole}</span>
+                            <p className="text-[11px] text-slate-500 truncate max-w-[180px]">{item.details?.email}</p>
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-slate-700">
+                        <p className="font-medium text-slate-900">{item.submittingAdmin?.name}</p>
+                        <p className="text-[11px] text-slate-500">{item.submittingAdmin?.email}</p>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
+                        {formatDateTime(item.submittedAt)}
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        {isPending && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            Pending Review
+                          </span>
+                        )}
+                        {isApproved && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Approved
+                          </span>
+                        )}
+                        {isRejected && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                            Rejected
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {/* MESOB_MANAGER Decision button */}
+                          {isManagerView && isPending && (
+                            <button
+                              onClick={() => {
+                                setSelectedRequest(item);
+                                setDecisionAction('APPROVE');
+                                setRejectionReason('');
+                                setDecisionModalOpen(true);
+                              }}
+                              className="px-3 py-1.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] text-white font-semibold text-xs rounded-lg hover:from-[#253d82] hover:to-[#172554] transition shadow-xs"
+                            >
+                              Review & Decide
+                            </button>
+                          )}
+
+                          {/* Rejection reason button */}
+                          {isRejected && (
+                            <button
+                              onClick={() => {
+                                setSelectedRequest(item);
+                                setHistoryModalOpen(true);
+                              }}
+                              className="px-2.5 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-semibold text-xs rounded-lg transition"
+                            >
+                              Reason
+                            </button>
+                          )}
+
+                          {/* Resubmit button for Super Admin */}
+                          {!isManagerView && isRejected && (
+                            <button
+                              onClick={() => openResubmitModal(item)}
+                              className="px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 font-semibold text-xs rounded-lg transition"
+                            >
+                              Resubmit
+                            </button>
+                          )}
+
+                          {/* Details & History button */}
+                          <button
+                            onClick={() => {
+                              setSelectedRequest(item);
+                              setHistoryModalOpen(true);
+                            }}
+                            className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
+                            title="View Details & History"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* DECISION MODAL (Mesob Manager Fulfillment Review) */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {decisionModalOpen && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-[#314ea1]">
+                  {selectedRequest.entityType}
+                </span>
+                <h3 className="font-bold text-slate-900 text-lg">Central Approval Review</h3>
+              </div>
+              <button
+                onClick={() => setDecisionModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Request Summary */}
+            <div className="my-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-semibold">Entity Name:</span>
+                <span className="font-bold text-slate-900">{selectedRequest.entityName}</span>
+              </div>
+              {selectedRequest.entityType === 'INSTITUTION' ? (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-semibold">Code:</span>
+                    <span className="font-mono text-slate-800">{selectedRequest.code}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-semibold">Contact Email:</span>
+                    <span className="text-slate-800">{selectedRequest.details?.email || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-semibold">Phone:</span>
+                    <span className="text-slate-800">{selectedRequest.details?.phone || 'N/A'}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-semibold">Requested Role:</span>
+                    <span className="font-bold text-slate-900">{selectedRequest.requestedRole}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-semibold">Email:</span>
+                    <span className="text-slate-800">{selectedRequest.details?.email}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-semibold">Assigned Institution:</span>
+                    <span className="text-slate-800">{selectedRequest.institutionName}</span>
+                  </div>
+                </>
+              )}
+              <div className="flex justify-between border-t border-slate-200/80 pt-2">
+                <span className="text-slate-500 font-semibold">Submitting Admin:</span>
+                <span className="text-slate-800 font-medium">
+                  {selectedRequest.submittingAdmin?.name} ({selectedRequest.submittingAdmin?.email})
+                </span>
+              </div>
+            </div>
+
+            {/* Decision Toggle */}
+            <div className="space-y-4">
+              <label className="block text-xs font-bold text-slate-700">Decision Outcome:</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDecisionAction('APPROVE')}
+                  className={`p-3 rounded-xl border text-center transition-all ${
+                    decisionAction === 'APPROVE'
+                      ? 'border-emerald-500 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-500/20 font-bold'
+                      : 'border-slate-200 hover:bg-slate-50 text-slate-700 font-medium'
+                  }`}
+                >
+                  ✓ Approve & Activate
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDecisionAction('REJECT')}
+                  className={`p-3 rounded-xl border text-center transition-all ${
+                    decisionAction === 'REJECT'
+                      ? 'border-rose-500 bg-rose-50 text-rose-800 ring-2 ring-rose-500/20 font-bold'
+                      : 'border-slate-200 hover:bg-slate-50 text-slate-700 font-medium'
+                  }`}
+                >
+                  ✕ Reject with Reason
+                </button>
+              </div>
+
+              {/* Rejection Reason (Mandatory if Reject) */}
+              {decisionAction === 'REJECT' && (
+                <div className="space-y-1.5 animate-in fade-in duration-150">
+                  <label className="block text-xs font-bold text-rose-700">
+                    Mandatory Rejection Reason <span className="text-rose-600">*</span>:
+                  </label>
+                  <textarea
+                    rows="3"
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="Clearly explain the missing requirements, policy non-compliance, or needed corrections for the submitting Super Admin..."
+                    className="w-full p-3 text-xs rounded-xl border border-rose-300 focus:outline-hidden focus:ring-2 focus:ring-rose-500/30 text-slate-800"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setDecisionModalOpen(false)}
+                className="px-4 py-2 border border-slate-300 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDecisionSubmit}
+                disabled={submittingDecision || (decisionAction === 'REJECT' && !rejectionReason.trim())}
+                className={`px-5 py-2 text-white font-semibold text-xs rounded-xl shadow-xs transition disabled:opacity-50 ${
+                  decisionAction === 'APPROVE'
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-rose-600 hover:bg-rose-700'
+                }`}
+              >
+                {submittingDecision ? 'Recording...' : `Confirm ${decisionAction === 'APPROVE' ? 'Approval' : 'Rejection'}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* DETAILS & AUDIT HISTORY MODAL */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {historyModalOpen && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">{selectedRequest.entityName}</h3>
+                <p className="text-xs text-slate-500">Approval Request Details & History</p>
+              </div>
+              <button
+                onClick={() => setHistoryModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="my-4 max-h-[400px] overflow-y-auto space-y-4 pr-1">
+              {/* Rejection Alert if rejected */}
+              {selectedRequest.status === 'REJECTED' && (
+                <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs">
+                  <p className="font-bold text-rose-800 mb-1">Rejection Reason:</p>
+                  <p className="text-rose-900 leading-relaxed font-medium">
+                    {selectedRequest.rejectionReason || 'No detailed reason provided.'}
+                  </p>
+                  <p className="text-[10px] text-rose-600 mt-2">
+                    Reviewed by {selectedRequest.reviewedBy?.name} on {formatDateTime(selectedRequest.reviewedAt)}
+                  </p>
+                </div>
+              )}
+
+              {/* General Details */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
+                <p className="font-bold text-slate-800 uppercase tracking-wider text-[10px] mb-2">Request Metadata</p>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Status:</span>
+                  <span className="font-bold">{selectedRequest.status}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Submitting Admin:</span>
+                  <span className="text-slate-800">{selectedRequest.submittingAdmin?.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Submitted At:</span>
+                  <span className="text-slate-800">{formatDateTime(selectedRequest.submittedAt)}</span>
+                </div>
+                {selectedRequest.reviewedBy && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Reviewed By:</span>
+                    <span className="text-slate-800">{selectedRequest.reviewedBy.name}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Audit History Timeline */}
+              <div>
+                <p className="font-bold text-slate-800 text-xs mb-3">Decision History</p>
+                {selectedRequest.history?.length > 0 ? (
+                  <div className="space-y-3 relative border-l-2 border-slate-200 ml-2 pl-4">
+                    {selectedRequest.history.map((h, i) => (
+                      <div key={i} className="relative">
+                        <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#314ea1] ring-4 ring-white" />
+                        <p className="text-xs font-bold text-slate-800">
+                          {h.action} <span className="font-normal text-slate-500 text-[11px]">by {h.by_name || 'Admin'}</span>
+                        </p>
+                        <p className="text-[10px] text-slate-400">{formatDateTime(h.timestamp)}</p>
+                        {h.reason && <p className="text-xs text-rose-700 mt-0.5">Reason: {h.reason}</p>}
+                        {h.notes && <p className="text-xs text-slate-600 mt-0.5">{h.notes}</p>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400">No previous review cycles recorded.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setHistoryModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-200 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* RESUBMIT MODAL (Super Admin) */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {resubmitModalOpen && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Resubmit Request for Approval</h3>
+                <p className="text-xs text-slate-500">Correct deficiencies and resubmit to Mesob Manager</p>
+              </div>
+              <button
+                onClick={() => setResubmitModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Prior Rejection Reason Reminder */}
+            <div className="my-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs">
+              <p className="font-bold text-rose-800 mb-0.5">Prior Rejection Reason:</p>
+              <p className="text-rose-900">{selectedRequest.rejectionReason || 'Requirements not fulfilled.'}</p>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={resubmitData.name || resubmitData.fullName || ''}
+                  onChange={(e) => setResubmitData(prev => ({ ...prev, name: e.target.value, fullName: e.target.value }))}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Phone</label>
+                <input
+                  type="text"
+                  value={resubmitData.phone || ''}
+                  onChange={(e) => setResubmitData(prev => ({ ...prev, phone: e.target.value }))}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Resubmission Explanation Notes</label>
+                <textarea
+                  rows="2"
+                  value={resubmitNotes}
+                  onChange={(e) => setResubmitNotes(e.target.value)}
+                  placeholder="Explain what was updated or attached to address the manager's review comments..."
+                  className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20"
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setResubmitModalOpen(false)}
+                className="px-4 py-2 border border-slate-300 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleResubmit}
+                disabled={submittingResubmit}
+                className="px-5 py-2 bg-[#314ea1] hover:bg-[#1e3a8a] text-white font-semibold text-xs rounded-xl shadow-xs transition disabled:opacity-50"
+              >
+                {submittingResubmit ? 'Submitting...' : 'Submit to Mesob Manager'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

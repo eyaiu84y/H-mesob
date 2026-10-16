@@ -1,4 +1,5 @@
 import { supabase } from '../config/supabase.js';
+import { createNotification } from './notificationService.js';
 
 /**
  * Create new application
@@ -85,13 +86,24 @@ export const createApplication = async (applicationData, currentUser) => {
       };
     }
 
-    // Create notification for institution employees
+    // Notify the applicant (Customer)
+    await createNotification({
+      recipientId: currentUser.id,
+      type: 'APPLICATION_UPDATE',
+      title: 'Application Submitted',
+      message: `Your application #${applicationNumber} has been submitted successfully.`,
+      relatedEntityId: newApplication.id,
+      relatedEntityType: 'application'
+    });
+
+    // Create notification for institution employees and manager
     if (finalInstitutionId) {
       await createNotification({
         institutionId: finalInstitutionId,
+        roles: ['INSTITUTION_MANAGER', 'EMPLOYEE'],
         type: 'APPLICATION_UPDATE',
         title: 'New Application Submitted',
-        message: `New application ${applicationNumber} has been submitted`,
+        message: `New application #${applicationNumber} has been submitted for review.`,
         relatedEntityId: newApplication.id,
         relatedEntityType: 'application'
       });
@@ -156,10 +168,11 @@ export const getApplications = async (filters, currentUser) => {
       .order('created_at', { ascending: false });
 
     // Role-based filtering
-    if (currentUser.role === 'CITIZEN') {
-      // Citizens see only their applications
+    const userRole = (currentUser.role || '').toUpperCase();
+    if (userRole === 'CITIZEN' || userRole === 'CUSTOMER') {
+      // Customers see only their applications
       query = query.eq('citizen_id', currentUser.id);
-    } else if (currentUser.role === 'EMPLOYEE' || currentUser.role === 'ICT_STAFF' || currentUser.role === 'INSTITUTION_MANAGER') {
+    } else if (['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(userRole)) {
       // Institution staff see only their institution's applications
       query = query.eq('institution_id', currentUser.institution_id);
     }
@@ -192,11 +205,15 @@ export const getApplications = async (filters, currentUser) => {
         success: false,
         message: 'Failed to fetch applications.'
       };
-    }
+    const enrichedData = (data || []).map(item => ({
+      ...item,
+      customer_id: item.citizen_id,
+      customer: item.users
+    }));
 
     return {
       success: true,
-      data: data || []
+      data: enrichedData
     };
 
   } catch (error) {
@@ -254,14 +271,15 @@ export const getApplicationById = async (applicationId, currentUser) => {
     }
 
     // Authorization check
-    if (currentUser.role === 'CITIZEN' && application.citizen_id !== currentUser.id) {
+    const userRole = (currentUser.role || '').toUpperCase();
+    if ((userRole === 'CITIZEN' || userRole === 'CUSTOMER') && application.citizen_id !== currentUser.id) {
       return {
         success: false,
         message: 'You do not have permission to view this application.'
       };
     }
 
-    if ((currentUser.role === 'EMPLOYEE' || currentUser.role === 'ICT_STAFF' || currentUser.role === 'INSTITUTION_MANAGER') 
+    if (['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(userRole) 
         && application.institution_id !== currentUser.institution_id) {
       return {
         success: false,
@@ -271,7 +289,11 @@ export const getApplicationById = async (applicationId, currentUser) => {
 
     return {
       success: true,
-      data: application
+      data: {
+        ...application,
+        customer_id: application.citizen_id,
+        customer: application.users
+      }
     };
 
   } catch (error) {
@@ -361,12 +383,28 @@ export const updateApplicationStatus = async (applicationId, status, notes, curr
       };
     }
 
-    // Notify citizen
+    // Notify customer with appropriate title and status context
+    let statusTitle = 'Application Status Updated';
+    let statusMsg = `Your application #${application.application_number} status is now ${status}.`;
+    if (status === 'REQUIRES_DOCUMENTS') {
+      statusTitle = 'Additional Documents Required';
+      statusMsg = `Please provide required additional documents for application #${application.application_number}.`;
+    } else if (status === 'APPROVED') {
+      statusTitle = 'Application Approved';
+      statusMsg = `Congratulations! Your application #${application.application_number} has been approved.`;
+    } else if (status === 'COMPLETED') {
+      statusTitle = 'Application Completed';
+      statusMsg = `Your application #${application.application_number} has been completed.`;
+    } else if (status === 'REJECTED') {
+      statusTitle = 'Application Decision';
+      statusMsg = `Your application #${application.application_number} has been reviewed and rejected.${reviewNotes ? ` Reason: ${reviewNotes}` : ''}`;
+    }
+
     await createNotification({
-      userId: application.citizen_id,
+      recipientId: application.citizen_id,
       type: 'APPLICATION_UPDATE',
-      title: 'Application Status Updated',
-      message: `Your application ${application.application_number} status has been updated to ${status}`,
+      title: statusTitle,
+      message: statusMsg,
       relatedEntityId: applicationId,
       relatedEntityType: 'application'
     });
@@ -412,10 +450,25 @@ export const assignApplication = async (applicationId, employeeId, currentUser) 
       };
     }
 
-    // Verify employee exists and belongs to same institution
+    // Authorization check: only authorized managers can assign work within permitted institutional scope
+    const assignerRole = (currentUser.role || '').toUpperCase();
+    if (!['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER'].includes(assignerRole)) {
+      return {
+        success: false,
+        message: 'You do not have permission to assign applications.'
+      };
+    }
+    if (assignerRole === 'INSTITUTION_MANAGER' && currentUser.institution_id !== application.institution_id) {
+      return {
+        success: false,
+        message: 'You can only assign applications within your own institution.'
+      };
+    }
+
+    // Verify employee exists, is an EMPLOYEE (not customer/technician), and belongs to same institution
     const { data: employee } = await supabase
       .from('users')
-      .select('id, institution_id, full_name')
+      .select('id, institution_id, full_name, role')
       .eq('id', employeeId)
       .eq('role', 'EMPLOYEE')
       .single();
@@ -448,10 +501,10 @@ export const assignApplication = async (applicationId, employeeId, currentUser) 
 
     // Notify employee
     await createNotification({
-      userId: employeeId,
+      recipientId: employeeId,
       type: 'APPLICATION_UPDATE',
       title: 'New Application Assigned',
-      message: `Application ${application.application_number} has been assigned to you`,
+      message: `Application #${application.application_number} has been assigned to you for processing.`,
       relatedEntityId: applicationId,
       relatedEntityType: 'application'
     });
@@ -481,52 +534,7 @@ const generateApplicationNumber = () => {
   return `APP-${timestamp}-${random}`;
 };
 
-// Helper: Create notification
-const createNotification = async (notificationData) => {
-  try {
-    const { userId, institutionId, type, title, message, relatedEntityId, relatedEntityType } = notificationData;
 
-    if (userId) {
-      // Single user notification
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: userId,
-          type,
-          title,
-          message,
-          related_entity_id: relatedEntityId,
-          related_entity_type: relatedEntityType,
-          is_read: false,
-          created_at: new Date().toISOString()
-        });
-    } else if (institutionId) {
-      // Notify all employees in institution
-      const { data: employees } = await supabase
-        .from('users')
-        .select('id')
-        .eq('institution_id', institutionId)
-        .in('role', ['EMPLOYEE', 'INSTITUTION_MANAGER']);
-
-      if (employees && employees.length > 0) {
-        const notifications = employees.map(emp => ({
-          user_id: emp.id,
-          type,
-          title,
-          message,
-          related_entity_id: relatedEntityId,
-          related_entity_type: relatedEntityType,
-          is_read: false,
-          created_at: new Date().toISOString()
-        }));
-
-        await supabase.from('notifications').insert(notifications);
-      }
-    }
-  } catch (error) {
-    console.error('Failed to create notification:', error);
-  }
-};
 
 // Helper: Log audit event
 const logAudit = async (userId, action, details) => {

@@ -7,10 +7,15 @@ import {
 
 export const getNotificationsController = async (req, res) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
+
     const filters = {
       isRead: req.query.isRead === 'true' ? true : req.query.isRead === 'false' ? false : undefined,
       type: req.query.type,
-      limit: req.query.limit ? parseInt(req.query.limit) : undefined
+      limit: req.query.limit ? parseInt(req.query.limit) : undefined,
+      offset: req.query.offset ? parseInt(req.query.offset) : undefined
     };
 
     const result = await getNotifications(req.user, filters);
@@ -35,8 +40,15 @@ export const getUnreadCountController = async (req, res) => {
 
 export const patchMarkAsRead = async (req, res) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
+
     const result = await markAsRead(req.params.id, req.user);
-    if (!result.success) return res.status(400).json(result);
+    if (!result.success) {
+      const status = result.message?.includes('not found') ? 404 : 400;
+      return res.status(status).json(result);
+    }
     res.status(200).json(result);
   } catch (error) {
     console.error('Mark as read controller error:', error);

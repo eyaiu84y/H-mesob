@@ -38,14 +38,14 @@ const CUSTOM_PASSWORDS = {
   'manager@mesobcenter.et': 'MesobManager@2026',
   'inst.manager@mesobcenter.et': 'InstManager@2026',
   'employee@mesobcenter.et': 'Employee@2026',
-  'ict.staff@mesobcenter.et': 'IctStaff@2026',
-  'citizen@mesobcenter.et': 'Citizen@2026',
+  'tech@mesobcenter.et': 'tech@2026',
+  'customer@mesobcenter.et': 'customer@2026',
   'cbe.manager@mesobcenter.et': 'CbeManager@2026',
   'cbe.employee@mesobcenter.et': 'CbeEmployee@2026',
-  'cbe.ict@mesobcenter.et': 'CbeIct@2026',
+  'cbe.tech@mesobcenter.et': 'tech@2026',
   'ethiotel.manager@mesobcenter.et': 'EthioManager@2026',
   'ethiotel.employee@mesobcenter.et': 'EthioEmployee@2026',
-  'ethiotel.ict@mesobcenter.et': 'EthioIct@2026',
+  'ethiotel.tech@mesobcenter.et': 'tech@2026',
 };
 
 // OPTION 2: Generate random strong passwords (for production)
@@ -54,14 +54,14 @@ const RANDOM_PASSWORDS = {
   'manager@mesobcenter.et': generateStrongPassword(),
   'inst.manager@mesobcenter.et': generateStrongPassword(),
   'employee@mesobcenter.et': generateStrongPassword(),
-  'ict.staff@mesobcenter.et': generateStrongPassword(),
-  'citizen@mesobcenter.et': generateStrongPassword(),
+  'tech@mesobcenter.et': generateStrongPassword(),
+  'customer@mesobcenter.et': generateStrongPassword(),
   'cbe.manager@mesobcenter.et': generateStrongPassword(),
   'cbe.employee@mesobcenter.et': generateStrongPassword(),
-  'cbe.ict@mesobcenter.et': generateStrongPassword(),
+  'cbe.tech@mesobcenter.et': generateStrongPassword(),
   'ethiotel.manager@mesobcenter.et': generateStrongPassword(),
   'ethiotel.employee@mesobcenter.et': generateStrongPassword(),
-  'ethiotel.ict@mesobcenter.et': generateStrongPassword(),
+  'ethiotel.tech@mesobcenter.et': generateStrongPassword(),
 };
 
 const PASSWORDS = USE_CUSTOM_PASSWORDS ? CUSTOM_PASSWORDS : RANDOM_PASSWORDS;
@@ -154,8 +154,8 @@ function getRoleFromEmail(email) {
   if (email.includes('manager') && !email.includes('inst') && !email.includes('cbe') && !email.includes('ethiotel')) return 'MESOB_MANAGER';
   if (email.includes('inst.manager') || email.includes('.manager')) return 'INSTITUTION_MANAGER';
   if (email.includes('employee')) return 'EMPLOYEE';
-  if (email.includes('ict')) return 'ICT_STAFF';
-  if (email.includes('citizen')) return 'CITIZEN';
+  if (email.includes('technician') || email.includes('ict')) return 'TECHNICIAN';
+  if (email.includes('customer') || email.includes('citizen')) return 'CUSTOMER';
   return 'UNKNOWN';
 }
 

@@ -20,7 +20,7 @@ const router = express.Router();
  */
 router.post('/reports', 
   authenticate,
-  authorize('EMPLOYEE', 'ICT_STAFF', 'INSTITUTION_MANAGER'),
+  authorize('EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'),
   postMaintenanceReport
 );
 
@@ -62,7 +62,7 @@ router.post('/reports/:id/assign',
  */
 router.get('/my-tasks', 
   authenticate,
-  authorize('ICT_STAFF'),
+  authorize('TECHNICIAN', 'ICT_STAFF'),
   getMyTasksController
 );
 
@@ -73,7 +73,7 @@ router.get('/my-tasks',
  */
 router.get('/tasks/:id', 
   authenticate,
-  authorize('ICT_STAFF', 'INSTITUTION_MANAGER', 'SUPER_ADMIN', 'MESOB_MANAGER'),
+  authorize('TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER', 'SUPER_ADMIN', 'MESOB_MANAGER'),
   getTask
 );
 
@@ -84,7 +84,7 @@ router.get('/tasks/:id',
  */
 router.patch('/tasks/:id/status', 
   authenticate,
-  authorize('ICT_STAFF', 'INSTITUTION_MANAGER'),
+  authorize('TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'),
   patchTaskStatus
 );
 
@@ -95,7 +95,7 @@ router.patch('/tasks/:id/status',
  */
 router.patch('/tasks/:id/resolve', 
   authenticate,
-  authorize('ICT_STAFF', 'INSTITUTION_MANAGER'),
+  authorize('TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'),
   patchResolveTask
 );
 

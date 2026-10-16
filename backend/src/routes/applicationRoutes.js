@@ -11,7 +11,7 @@ const router = express.Router();
  */
 router.post('/', 
   authenticate,
-  authorize('CITIZEN'),
+  authorize('CUSTOMER', 'CITIZEN'),
   postApplication
 );
 

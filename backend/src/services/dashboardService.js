@@ -20,9 +20,11 @@ export const getDashboardData = async (currentUser) => {
       case 'EMPLOYEE':
         dashboardData = await getEmployeeDashboard(currentUser.id, currentUser.institution_id);
         break;
+      case 'TECHNICIAN':
       case 'ICT_STAFF':
         dashboardData = await getIctStaffDashboard(currentUser.id, currentUser.institution_id);
         break;
+      case 'CUSTOMER':
       case 'CITIZEN':
         dashboardData = await getCitizenDashboard(currentUser.id);
         break;
@@ -132,7 +134,7 @@ const getInstitutionManagerDashboard = async (institutionId) => {
     .from('users')
     .select('id', { count: 'exact', head: true })
     .eq('institution_id', institutionId)
-    .in('role', ['EMPLOYEE', 'ICT_STAFF'])
+    .in('role', ['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'])
     .eq('status', 'ACTIVE');
 
   // Applications (last 30 days)

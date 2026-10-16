@@ -56,6 +56,8 @@ function transformQueueEntry(backendQueue, allQueues = []) {
     completedAt: backendQueue.completed_at,
     priority: backendQueue.priority,
     assignedTo: backendQueue.assigned_to,
+    customerId: backendQueue.customer_id || backendQueue.citizen_id,
+    customerName: backendQueue.users?.full_name,
   };
 }
 

@@ -8,6 +8,7 @@ import { useQueue } from '../../context/QueueContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import { createTaskAssignmentNotification } from '../../utils/sharedData';
 import InstitutionFeedback from '../../components/dashboard/InstitutionFeedback';
+import NotificationBell from '../../components/dashboard/NotificationBell';
 import api from '../../utils/api';
 
 // ─── Navigation sections ──────────────────────────────────────────
@@ -150,7 +151,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
               <span className="text-sm text-slate-600 font-medium">Active Tickets</span>
               <span className="text-2xl font-bold text-slate-900">{activeQueue}</span>
             </div>
-            <p className="text-xs text-slate-500">Citizens are currently in queue at your institution.</p>
+            <p className="text-xs text-slate-500">Customers are currently in queue at your institution.</p>
           </div>
         ) : (
           <div className="p-6 text-center text-slate-400 py-10">
@@ -158,7 +159,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
             <p className="text-sm font-medium text-slate-700">No active queue items</p>
-            <p className="text-xs text-slate-400 mt-1">Queue tickets will appear here when citizens check in.</p>
+            <p className="text-xs text-slate-400 mt-1">Queue tickets will appear here when customers check in.</p>
           </div>
         )}
       </div>
@@ -183,7 +184,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <p className="text-sm font-medium text-slate-700">No pending applications</p>
-            <p className="text-xs text-slate-400 mt-1">New applications will appear here when citizens submit them.</p>
+            <p className="text-xs text-slate-400 mt-1">New applications will appear here when customers submit them.</p>
           </div>
         )}
       </div>
@@ -259,7 +260,7 @@ function SectionQueueManagement({ userInstitution }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
             <p className="text-sm font-medium text-slate-700 mb-1">No Active Queue Items</p>
-            <p className="text-xs text-slate-400">Queue items will appear here when citizens register for services at your institution.</p>
+            <p className="text-xs text-slate-400">Queue items will appear here when customers register for services at your institution.</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
@@ -388,7 +389,7 @@ function SectionApplications({ userInstitution }) {
           </div>
 
           <div className="border-t border-slate-100 pt-6 mb-6">
-            <h3 className="text-base font-bold text-slate-900 mb-4">Citizen Information</h3>
+            <h3 className="text-base font-bold text-slate-900 mb-4">Customer Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
                 <label className="text-xs text-slate-500">Name</label>
@@ -502,7 +503,7 @@ function SectionApplications({ userInstitution }) {
               <thead>
                 <tr>
                   <th>Application ID</th>
-                  <th>Citizen</th>
+                  <th>Customer</th>
                   <th>Service</th>
                   <th>Status</th>
                   <th>Submitted</th>
@@ -590,13 +591,13 @@ function SectionMaintenance({ userInstitution }) {
 
     async function loadTechnicians() {
       try {
-        const response = await api.get("/users?role=ICT_STAFF&status=ACTIVE");
+        const response = await api.get("/users?status=ACTIVE");
 
         if (!cancelled && response.success) {
           const users = Array.isArray(response.data) ? response.data : [];
           setTechnicianList(
             users
-              .filter(user => String(user.role).toUpperCase() === "ICT_STAFF")
+              .filter(user => ['TECHNICIAN', 'ICT_STAFF'].includes(String(user.role).toUpperCase()))
               .map(user => ({
                 ...user,
                 name: user.full_name || user.name || "Unnamed Technician",
@@ -1032,14 +1033,14 @@ function SectionTaskAssignment({ userInstitution }) {
 
     async function loadTechnicians() {
       try {
-        const response = await api.get('/users?role=ICT_STAFF&status=ACTIVE');
+        const response = await api.get('/users?status=ACTIVE');
 
         if (!cancelled && response.success) {
           const users = Array.isArray(response.data) ? response.data : [];
 
           setTechnicianList(
             users
-              .filter(user => String(user.role).toUpperCase() === 'ICT_STAFF')
+              .filter(user => ['TECHNICIAN', 'ICT_STAFF'].includes(String(user.role).toUpperCase()))
               .map(user => ({
                 ...user,
                 name: user.full_name || user.name || 'Unnamed Technician',
@@ -1552,9 +1553,9 @@ function SectionStaffManagement({ userInstitution }) {
         if (!cancelled && response.success) {
           const users = Array.isArray(response.data) ? response.data : [];
           
-          // Filter to only show EMPLOYEE and ICT_STAFF roles
+          // Filter to only show EMPLOYEE and TECHNICIAN / ICT_STAFF roles
           const institutionStaff = users.filter(u => 
-            ['EMPLOYEE', 'ICT_STAFF'].includes(String(u.role).toUpperCase())
+            ['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'].includes(String(u.role).toUpperCase())
           );
           
           setStaff(institutionStaff);
@@ -1582,7 +1583,8 @@ function SectionStaffManagement({ userInstitution }) {
       (s.email && s.email.toLowerCase().includes(q)) ||
       (s.employee_id && s.employee_id.toLowerCase().includes(q));
     
-    const matchR = !filterRole || String(s.role).toUpperCase() === filterRole.toUpperCase();
+    const matchR = !filterRole || String(s.role).toUpperCase() === filterRole.toUpperCase() ||
+      (filterRole === 'TECHNICIAN' && String(s.role).toUpperCase() === 'ICT_STAFF');
     const matchS = !filterStatus || String(s.status).toUpperCase() === filterStatus.toUpperCase();
     
     return matchQ && matchR && matchS;
@@ -1592,7 +1594,8 @@ function SectionStaffManagement({ userInstitution }) {
   function displayRole(role) {
     const roleMap = {
       'EMPLOYEE': 'Employee',
-      'ICT_STAFF': 'ICT Staff'
+      'TECHNICIAN': 'Technician',
+      'ICT_STAFF': 'Technician'
     };
     return roleMap[String(role).toUpperCase()] || role;
   }
@@ -1610,7 +1613,7 @@ function SectionStaffManagement({ userInstitution }) {
     <>
       <div className="mb-6">
         <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">Staff Management</h2>
-        <p className="text-sm text-slate-500 font-normal">View employees and ICT staff in {userInstitution || 'your institution'}.</p>
+        <p className="text-sm text-slate-500 font-normal">View employees and technicians in {userInstitution || 'your institution'}.</p>
       </div>
 
       {/* Info Banner */}
@@ -1640,7 +1643,7 @@ function SectionStaffManagement({ userInstitution }) {
             >
               <option value="">All Roles</option>
               <option value="EMPLOYEE">Employee</option>
-              <option value="ICT_STAFF">ICT Staff</option>
+              <option value="TECHNICIAN">Technician</option>
             </select>
           </div>
           <div>
@@ -1862,7 +1865,7 @@ function SectionAnnouncements({ userInstitution }) {
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Audience <span className="text-red-500">*</span></label>
               <select value={form.scope} onChange={e => setForm(f => ({ ...f, scope: e.target.value }))}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white">
-                <option value="PUBLIC">Public - Visible to everyone including citizens</option>
+                <option value="PUBLIC">Public - Visible to everyone including customers</option>
                 <option value="INTERNAL">Internal - Staff only (employees, managers, admins)</option>
                 <option value="INSTITUTION">Institution - Staff and employees in {userInstitution || 'your institution'}</option>
               </select>
@@ -1870,8 +1873,8 @@ function SectionAnnouncements({ userInstitution }) {
             
             <div className="p-4 bg-[#314ea1]/5 border border-[#314ea1]/20 rounded-xl text-xs font-medium text-[#1e3a8a]">
               <strong>Scope: {form.scope}</strong>
-              {form.scope === 'PUBLIC' && <p className="mt-1">This announcement will be visible to all users including citizens.</p>}
-              {form.scope === 'INTERNAL' && <p className="mt-1">This announcement will be visible only to staff (not citizens).</p>}
+              {form.scope === 'PUBLIC' && <p className="mt-1">This announcement will be visible to all users including customers.</p>}
+              {form.scope === 'INTERNAL' && <p className="mt-1">This announcement will be visible only to staff (not customers).</p>}
               {form.scope === 'INSTITUTION' && <p className="mt-1">This announcement will be visible to staff and employees in {userInstitution || 'your institution'}.</p>}
             </div>
             
@@ -2096,6 +2099,7 @@ export default function InstitutionManagerDashboard() {
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
+              <NotificationBell onNavigate={(section) => navigate(section)} />
               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#314ea1]/10 text-[#1e3a8a] border border-[#314ea1]/20">Institution Manager</span>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-semibold text-slate-900">{user?.name}</p>

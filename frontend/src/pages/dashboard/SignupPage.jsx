@@ -42,10 +42,10 @@ export default function SignupPage() {
     
     if (password !== confirm) { setError('Passwords do not match.'); return; }
 
-    // Public signup ONLY creates Citizen accounts - STAFF ROLES BLOCKED
+    // Public signup ONLY creates Customer accounts - STAFF ROLES BLOCKED
     // Staff roles (super_admin, mesob_manager, institution_manager, employee, technician)
     // can ONLY be created by Super Admin through User Management
-    const result = await signup(name, email, password, 'citizen');
+    const result = await signup(name, email, password, 'customer');
     if (!result.success) {
       setError(result.message);
       return;
@@ -92,7 +92,7 @@ export default function SignupPage() {
                     Current Role: <span className="font-semibold">{ROLE_LABELS[user.role] || user.role}</span> ({user.email})
                   </p>
                   <p className="text-xs text-amber-600 mt-1">
-                    To register a new citizen account, sign out first or fill out the form below.
+                    To register a new customer account, sign out first or fill out the form below.
                   </p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <button
@@ -172,7 +172,7 @@ export default function SignupPage() {
               />
             </div>
 
-            {/* Account Type Info - Citizens Only */}
+            {/* Account Type Info - Customers Only */}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0">
@@ -181,12 +181,12 @@ export default function SignupPage() {
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <h4 className="text-sm font-semibold text-blue-900 mb-1">Citizen Account Only</h4>
+                  <h4 className="text-sm font-semibold text-blue-900 mb-1">Customer Account Only</h4>
                   <p className="text-xs text-blue-700 leading-relaxed mb-2">
-                    Public registration creates Citizen accounts only. You cannot self-register as staff.
+                    Public registration creates Customer accounts only. You cannot self-register as staff.
                   </p>
                   <p className="text-xs text-blue-700 leading-relaxed">
-                    <strong>Staff accounts</strong> (Super Admin, MESOB Manager, Institution Manager, Employee, ICT Staff) can only be created by administrators.
+                    <strong>Staff accounts</strong> (Super Admin, MESOB Manager, Institution Manager, Employee, Technician) can only be created by administrators.
                   </p>
                 </div>
               </div>

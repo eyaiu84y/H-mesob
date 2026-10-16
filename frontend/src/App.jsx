@@ -31,6 +31,7 @@ const CitizenDashboard = lazy(() => import('./pages/dashboard/CitizenDashboard')
 
 // Route guard
 import RequireAuth from './components/dashboard/RequireAuth';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Loading fallback component
 function LoadingFallback() {
@@ -47,7 +48,7 @@ function LoadingFallback() {
 // General Dashboard Route - redirects based on role to avoid duplicate route rendering
 function DashboardRedirect() {
   const { user } = useAuth();
-  const dest = (user && ROLE_ROUTES[user.role]) || '/dashboard/citizen';
+  const dest = (user && ROLE_ROUTES[user.role]) || '/dashboard/customer';
   return <Navigate to={dest} replace />;
 }
 
@@ -62,7 +63,8 @@ export default function App() {
                 <AnnouncementProvider>
                   <FeedbackProvider>
                     <QueueProvider>
-                      <Suspense fallback={<LoadingFallback />}>
+                      <ErrorBoundary>
+                        <Suspense fallback={<LoadingFallback />}>
                 <Routes>
                   {/* Public */}
                   <Route path="/" element={<HomePage />} />
@@ -79,7 +81,7 @@ export default function App() {
                   <Route
                     path="/dashboard"
                     element={
-                      <RequireAuth allowedRoles={['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'ict_staff', 'citizen']}>
+                      <RequireAuth allowedRoles={['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'technician', 'customer', 'ict_staff', 'citizen']}>
                         <DashboardRedirect />
                       </RequireAuth>
                     }
@@ -119,24 +121,28 @@ export default function App() {
                     }
                   />
                   <Route
-                    path="/dashboard/ict-staff"
+                    path="/dashboard/technician"
                     element={
-                      <RequireAuth allowedRoles={['ict_staff']}>
+                      <RequireAuth allowedRoles={['technician', 'ict_staff']}>
                         <ICTStaffDashboard />
                       </RequireAuth>
                     }
                   />
                   <Route
-                    path="/dashboard/citizen"
+                    path="/dashboard/customer"
                     element={
-                      <RequireAuth allowedRoles={['citizen']}>
+                      <RequireAuth allowedRoles={['customer', 'citizen']}>
                         <CitizenDashboard />
                       </RequireAuth>
                     }
                   />
+                  {/* Legacy route redirects */}
+                  <Route path="/dashboard/ict-staff" element={<Navigate to="/dashboard/technician" replace />} />
+                  <Route path="/dashboard/citizen" element={<Navigate to="/dashboard/customer" replace />} />
                 </Routes>
-              </Suspense>
-            </QueueProvider>
+                        </Suspense>
+                      </ErrorBoundary>
+                    </QueueProvider>
           </FeedbackProvider>
           </AnnouncementProvider>
         </NotificationProvider>

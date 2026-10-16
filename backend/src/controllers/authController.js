@@ -20,7 +20,8 @@ export const login = async (req, res) => {
     const result = await loginUser(email, password);
 
     if (!result.success) {
-      return res.status(401).json(result);
+      const status = result.message?.includes('inactive') || result.message?.includes('suspended') || result.message?.includes('approval') ? 403 : 401;
+      return res.status(status).json(result);
     }
 
     res.status(200).json(result);

@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { useAnnouncements } from '../../context/AnnouncementContext';
-// import { useMaintenance } from '../../context/MaintenanceContext'; // Not used
 import LanguageSwitcher from '../../components/LanguageSwitcher';
+import NotificationBell from '../../components/dashboard/NotificationBell';
 
 // ─── Navigation sections ─────────────────────────────────────────
 const SECTIONS = [
@@ -879,6 +879,7 @@ export default function ICTStaffDashboard() {
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
+              <NotificationBell onNavigate={(section) => navigate(section)} />
               <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold">Technician</span>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-semibold text-slate-900">{user?.name}</p>

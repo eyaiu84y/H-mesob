@@ -92,7 +92,15 @@ export const authorize = (...allowedRoles) => {
       });
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const userRole = (req.user.role || '').toUpperCase();
+    const normalizedAllowed = allowedRoles.flatMap(r => {
+      const upper = (r || '').toUpperCase();
+      if (upper === 'TECHNICIAN' || upper === 'ICT_STAFF') return ['TECHNICIAN', 'ICT_STAFF'];
+      if (upper === 'CUSTOMER' || upper === 'CITIZEN') return ['CUSTOMER', 'CITIZEN'];
+      return [upper];
+    });
+
+    if (!normalizedAllowed.includes(userRole)) {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to access this resource.',

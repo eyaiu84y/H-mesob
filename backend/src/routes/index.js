@@ -12,6 +12,7 @@ import announcementRoutes from './announcementRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
 import dashboardRoutes from './dashboardRoutes.js';
 import feedbackRoutes from './feedbackRoutes.js';
+import approvalRoutes from './approvalRoutes.js';
 
 const router = express.Router();
 
@@ -28,6 +29,9 @@ router.use('/auth', authRoutes);
 
 // User management
 router.use('/users', userRoutes);
+
+// Central Approval Workflow (Institutions & User Accounts)
+router.use('/approvals', approvalRoutes);
 
 // Institution management
 router.use('/institutions', institutionRoutes);

@@ -18,7 +18,7 @@ export default function CitizenDashboard() {
   const { applications, getActiveApplications, getCompletedApplications } = useApplications();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [applyKey, setApplyKey] = useState(0);
-  const firstName = user?.name?.split(' ')[0] || t.citizen;
+  const firstName = user?.name?.split(' ')[0] || t.customer || 'Customer';
   const activeQueueCount = getActiveTickets().length;
   
   // Get application counts
@@ -45,6 +45,7 @@ export default function CitizenDashboard() {
   return (
     <DashboardLayout
       title={t.my_account}
+      onNavigate={handleNavClick}
       navLinks={navLinks.map(link => ({
         label: link.label,
         href: '#',
@@ -55,7 +56,7 @@ export default function CitizenDashboard() {
         }
       }))}
       letter="C"
-      subtitle={t.citizen_portal}
+      subtitle={t.customer_portal || 'Customer Portal'}
     >
       {/* My Dashboard Section */}
       {activeSection === 'dashboard' && (
@@ -300,7 +301,7 @@ export default function CitizenDashboard() {
               ℹ️
             </div>
             <div className="text-xs sm:text-sm text-blue-950 leading-relaxed">
-              <strong className="font-semibold text-[#1e3a8a]">Citizen Services Portal:</strong> Submit applications, join service queues remotely, and track approvals. All official status updates and notices are linked directly to your account.
+              <strong className="font-semibold text-[#1e3a8a]">Customer Services Portal:</strong> Submit applications, join service queues remotely, and track approvals. All official status updates and notices are linked directly to your account.
             </div>
           </div>
         </>
@@ -328,7 +329,7 @@ export default function CitizenDashboard() {
 
       {/* Announcements Section */}
       {activeSection === 'announcements' && (
-        <CitizenAnnouncements />
+        <CustomerAnnouncements />
       )}
 
       {/* Profile & Documents Section */}
@@ -353,7 +354,7 @@ export default function CitizenDashboard() {
                       <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">Full Name</label>
                       <input
                         type="text"
-                        defaultValue={user?.name || 'Citizen'}
+                        defaultValue={user?.name || 'Customer'}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 text-sm"
                       />
                     </div>
@@ -496,7 +497,7 @@ export default function CitizenDashboard() {
                   </div>
                   <div>
                     <p className="text-xs text-blue-200 uppercase tracking-wide">Account Status</p>
-                    <p className="text-lg font-bold">Active Citizen Account</p>
+                    <p className="text-lg font-bold">Active Customer Account</p>
                   </div>
                 </div>
                 <div className="space-y-2.5 text-sm pt-3 border-t border-white/10">
@@ -819,6 +820,19 @@ function ApplyForServiceSection({ user, setActiveSection }) {
     });
   }, [uniqueInstitutions, searchQuery, getServicesByInstitution]);
 
+  // Services list view (after institution selected) - hook must be called at top level
+  // Deduplicate services to prevent repeated service cards
+  const institutionServices = useMemo(() => {
+    if (!selectedInstitution?.id) return [];
+    const rawServices = getServicesByInstitution(selectedInstitution.id);
+    const seen = new Set();
+    return rawServices.filter(svc => {
+      if (!svc?.id || seen.has(svc.id)) return false;
+      seen.add(svc.id);
+      return true;
+    });
+  }, [selectedInstitution, getServicesByInstitution]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -853,8 +867,8 @@ function ApplyForServiceSection({ user, setActiveSection }) {
         phone: formData.phone,
         address: formData.address,
         additionalInfo: formData.additionalInfo,
-        serviceName: selectedService.name,
-        institutionName: selectedInstitution.name_en,
+        serviceName: selectedService.name || selectedService.title_en || 'Service',
+        institutionName: selectedInstitution.name_en || selectedInstitution.name || 'Institution',
         serviceDetails: {
           time: selectedService.processing_time,
           fee: selectedService.fee_amount,
@@ -973,8 +987,8 @@ function ApplyForServiceSection({ user, setActiveSection }) {
         <div className="max-w-3xl mx-auto">
           <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
             <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-blue-50/80 via-slate-50 to-blue-50/80">
-              <h2 className="text-xl font-bold text-slate-900 mb-1">Application Form</h2>
-              <p className="text-sm text-slate-600">{selectedService.name} — {selectedInstitution.name_en}</p>
+              <h2 className="text-xl font-bold text-slate-900 mb-1">{selectedService.name || selectedService.title_en || 'Service'}</h2>
+              <p className="text-sm text-slate-600">{(selectedService.name || selectedService.title_en || 'Service')} — {(selectedInstitution.name_en || selectedInstitution.name || 'Institution')}</p>
             </div>
 
             <form onSubmit={handleSubmitApplication} className="p-6 space-y-6">
@@ -1104,8 +1118,8 @@ function ApplyForServiceSection({ user, setActiveSection }) {
         <div className="max-w-3xl mx-auto">
           <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
             <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-blue-50/80 via-slate-50 to-blue-50/80">
-              <h2 className="text-2xl font-bold text-slate-900 mb-1">{selectedService.name}</h2>
-              <p className="text-sm text-slate-600">{selectedInstitution.name_en}</p>
+              <h2 className="text-2xl font-bold text-slate-900 mb-1">{selectedService.name || selectedService.title_en || 'Service'}</h2>
+              <p className="text-sm text-slate-600">{selectedInstitution.name_en || selectedInstitution.name || 'Institution'}</p>
             </div>
 
             <div className="p-6 space-y-6">
@@ -1159,19 +1173,6 @@ function ApplyForServiceSection({ user, setActiveSection }) {
       </>
     );
   }
-
-  // Services list view (after institution selected)
-  // Deduplicate services to prevent repeated service cards
-  const institutionServices = useMemo(() => {
-    if (!selectedInstitution?.id) return [];
-    const rawServices = getServicesByInstitution(selectedInstitution.id);
-    const seen = new Set();
-    return rawServices.filter(svc => {
-      if (!svc?.id || seen.has(svc.id)) return false;
-      seen.add(svc.id);
-      return true;
-    });
-  }, [selectedInstitution, getServicesByInstitution]);
 
   if (selectedInstitution) {
     
@@ -1502,8 +1503,8 @@ function MyFeedbackSection() {
   );
 }
 
-// ─── Citizen Announcements Component ──────────────────────────────
-function CitizenAnnouncements() {
+// ─── Customer Announcements Component ──────────────────────────────
+function CustomerAnnouncements() {
   const { announcements, loading } = useAnnouncements();
   const [selected, setSelected] = useState(null);
 

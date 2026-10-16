@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useAuth, ROLE_LABELS, ROLE_BADGE } from '../../context/AuthContext';
 import LanguageSwitcher from '../LanguageSwitcher';
+import NotificationBell from './NotificationBell';
 
-export default function DashboardLayout({ title, navLinks = [], letter, subtitle, children }) {
+export default function DashboardLayout({ title, navLinks = [], letter, subtitle, children, onNavigate }) {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -91,6 +92,7 @@ export default function DashboardLayout({ title, navLinks = [], letter, subtitle
             {/* Right: badge + user info */}
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
+              <NotificationBell onNavigate={onNavigate} />
               <span className={`badge ${badgeClass}`}>{roleLabel}</span>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-gray-900">{user?.name}</p>

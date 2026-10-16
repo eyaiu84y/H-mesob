@@ -1,12 +1,21 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api, { saveToken, removeToken } from '../utils/api';
-import { transformUserFromBackend } from '../utils/roleMapper';
+import { transformUserFromBackend, toBackendRole } from '../utils/roleMapper';
 
 const AuthContext = createContext(null);
 
 // Valid roles that can be authenticated
-const VALID_ROLES = ['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'ict_staff', 'citizen'];
+const VALID_ROLES = [
+  'super_admin',
+  'mesob_manager',
+  'institution_manager',
+  'employee',
+  'technician',
+  'customer',
+  'ict_staff',
+  'citizen'
+];
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -135,14 +144,14 @@ export function AuthProvider({ children }) {
         return { success: false, message: "Invalid role." };
       }
       
-      const institutionRequiredRoles = ['institution_manager', 'employee', 'ict_staff'];
+      const institutionRequiredRoles = ['institution_manager', 'employee', 'technician', 'ict_staff'];
       if (institutionRequiredRoles.includes(userData.role)) {
         if (!userData.institution?.trim()) {
           return { success: false, message: `Institution is required for ${ROLE_LABELS[userData.role]}.` };
         }
       }
       
-      const employeeIdRequiredRoles = ['institution_manager', 'employee', 'ict_staff'];
+      const employeeIdRequiredRoles = ['institution_manager', 'employee', 'technician', 'ict_staff'];
       if (employeeIdRequiredRoles.includes(userData.role)) {
         if (!userData.employeeId?.trim()) {
           return { success: false, message: `Employee/Staff ID is required for ${ROLE_LABELS[userData.role]}.` };
@@ -162,7 +171,7 @@ export function AuthProvider({ children }) {
         password: tempPassword,
         fullName: userData.name.trim(),
         phone: userData.phone?.trim() || null,
-        role: userData.role.toUpperCase(), // Backend expects UPPERCASE roles
+        role: toBackendRole(userData.role) || userData.role.toUpperCase(), // Backend expects UPPERCASE roles
         institutionId: userData.institution?.trim() || null,
         employeeId: userData.employeeId?.trim() || null,
         nationalId: userData.nationalId?.trim() || null
@@ -204,7 +213,7 @@ export function AuthProvider({ children }) {
       const apiUpdates = {
         fullName: updates.name,
         phone: updates.phone,
-        role: updates.role ? updates.role.toUpperCase() : undefined,
+        role: updates.role ? (toBackendRole(updates.role) || updates.role.toUpperCase()) : undefined,
         institutionId: updates.institution,
         employeeId: updates.employeeId,
         nationalId: updates.nationalId
@@ -363,13 +372,13 @@ export function AuthProvider({ children }) {
       }
       
       // Block staff role self-registration
-      const STAFF_ROLES = ['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'ict_staff'];
+      const STAFF_ROLES = ['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'technician', 'ict_staff'];
       if (STAFF_ROLES.includes(role)) {
         return { success: false, message: "Staff accounts can only be created by administrators." };
       }
       
-      // Validate role is 'citizen' for public signup
-      if (role !== 'citizen') {
+      // Validate role is 'customer' or 'citizen' for public signup
+      if (role !== 'customer' && role !== 'citizen') {
         return { success: false, message: "Invalid role for public registration." };
       }
       
@@ -379,7 +388,7 @@ export function AuthProvider({ children }) {
         password: password,
         firstName: name.trim().split(' ')[0],
         lastName: name.trim().split(' ').slice(1).join(' ') || name.trim().split(' ')[0],
-        role: 'CITIZEN', // Backend expects UPPERCASE
+        role: 'CUSTOMER', // Backend expects UPPERCASE
       });
       
       if (!response.success) {
@@ -441,24 +450,33 @@ export const ROLE_ROUTES = {
   mesob_manager:        "/dashboard/mesob-manager",
   institution_manager:  "/dashboard/institution-manager",
   employee:             "/dashboard/employee",
-  ict_staff:            "/dashboard/ict-staff",
-  citizen:              "/dashboard/citizen",
+  technician:           "/dashboard/technician",
+  customer:             "/dashboard/customer",
 };
+// Legacy route aliases for compatibility (non-enumerable so Object.entries / Object.keys don't produce duplicate items)
+Object.defineProperty(ROLE_ROUTES, 'ict_staff', { value: '/dashboard/technician', enumerable: false, writable: true, configurable: true });
+Object.defineProperty(ROLE_ROUTES, 'citizen', { value: '/dashboard/customer', enumerable: false, writable: true, configurable: true });
 
 export const ROLE_LABELS = {
   super_admin:          "Super Admin",
   mesob_manager:        "MESOB Manager",
   institution_manager:  "Institution Manager",
   employee:             "Employee",
-  ict_staff:            "ICT Staff",
-  citizen:              "Citizen",
+  technician:           "Technician",
+  customer:             "Customer",
 };
+// Legacy label aliases (non-enumerable so Object.entries / Object.keys don't produce duplicate items)
+Object.defineProperty(ROLE_LABELS, 'ict_staff', { value: 'Technician', enumerable: false, writable: true, configurable: true });
+Object.defineProperty(ROLE_LABELS, 'citizen', { value: 'Customer', enumerable: false, writable: true, configurable: true });
 
 export const ROLE_BADGE = {
   super_admin:          "bg-slate-100 text-slate-800 border border-slate-300 font-medium",
   mesob_manager:        "bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium",
   institution_manager:  "bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium",
   employee:             "bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium",
-  ict_staff:            "bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium",
-  citizen:              "bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium",
+  technician:           "bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium",
+  customer:             "bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium",
 };
+// Legacy aliases (non-enumerable)
+Object.defineProperty(ROLE_BADGE, 'ict_staff', { value: 'bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium', enumerable: false, writable: true, configurable: true });
+Object.defineProperty(ROLE_BADGE, 'citizen', { value: 'bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium', enumerable: false, writable: true, configurable: true });

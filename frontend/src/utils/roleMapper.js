@@ -9,21 +9,27 @@
 
 /**
  * Convert frontend role to backend role format
- * @param {string} frontendRole - Frontend role (e.g., 'super_admin')
- * @returns {string} Backend role (e.g., 'SUPER_ADMIN')
+ * @param {string} frontendRole - Frontend role (e.g., 'customer', 'technician')
+ * @returns {string} Backend role (e.g., 'CUSTOMER', 'TECHNICIAN')
  */
 export function toBackendRole(frontendRole) {
   if (!frontendRole) return null;
+  const role = frontendRole.toLowerCase();
+  if (role === 'citizen' || role === 'customer') return 'CUSTOMER';
+  if (role === 'ict_staff' || role === 'technician') return 'TECHNICIAN';
   return frontendRole.toUpperCase();
 }
 
 /**
  * Convert backend role to frontend role format
- * @param {string} backendRole - Backend role (e.g., 'SUPER_ADMIN')
- * @returns {string} Frontend role (e.g., 'super_admin')
+ * @param {string} backendRole - Backend role (e.g., 'CUSTOMER', 'TECHNICIAN')
+ * @returns {string} Frontend role (e.g., 'customer', 'technician')
  */
 export function toFrontendRole(backendRole) {
   if (!backendRole) return null;
+  const role = backendRole.toUpperCase();
+  if (role === 'CITIZEN' || role === 'CUSTOMER') return 'customer';
+  if (role === 'ICT_STAFF' || role === 'TECHNICIAN') return 'technician';
   return backendRole.toLowerCase();
 }
 

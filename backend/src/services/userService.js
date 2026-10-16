@@ -25,16 +25,24 @@ export const getAllUsers = async (filters = {}, user) => {
       .order('created_at', { ascending: false });
 
     // Institution-scoped filtering
-    if (user.role === 'INSTITUTION_MANAGER' || user.role === 'EMPLOYEE' || user.role === 'ICT_STAFF') {
+    if (user.role === 'INSTITUTION_MANAGER' || user.role === 'EMPLOYEE' || user.role === 'TECHNICIAN' || user.role === 'ICT_STAFF') {
       query = query.eq('institution_id', user.institution_id);
     }
 
     // Apply filters
     if (filters.role) {
-      query = query.eq('role', filters.role);
+      const upperRole = String(filters.role).toUpperCase();
+      if (upperRole === 'CUSTOMER' || upperRole === 'CITIZEN') {
+        query = query.in('role', ['CUSTOMER', 'CITIZEN']);
+      } else if (upperRole === 'TECHNICIAN' || upperRole === 'ICT_STAFF') {
+        query = query.in('role', ['TECHNICIAN', 'ICT_STAFF']);
+      } else {
+        query = query.eq('role', upperRole);
+      }
     }
     if (filters.status) {
-      query = query.eq('status', filters.status);
+      const upperStatus = String(filters.status).toUpperCase();
+      query = query.eq('status', upperStatus);
     }
     if (filters.institutionId && (user.role === 'SUPER_ADMIN' || user.role === 'MESOB_MANAGER')) {
       query = query.eq('institution_id', filters.institutionId);
@@ -151,7 +159,7 @@ export const createUser = async (userData, currentUser) => {
     }
 
     // Role validation
-    const validRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'ICT_STAFF', 'CITIZEN'];
+    const validRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'CUSTOMER', 'ICT_STAFF', 'CITIZEN'];
     if (!validRoles.includes(role)) {
       return {
         success: false,
@@ -159,8 +167,14 @@ export const createUser = async (userData, currentUser) => {
       };
     }
 
+    // For INSTITUTION_MANAGER accounts, route through central Mesob Manager approval workflow
+    if (role === 'INSTITUTION_MANAGER') {
+      const { submitUser } = await import('./approvalService.js');
+      return submitUser(userData, currentUser);
+    }
+
     // Institution validation for institutional roles
-    if (['INSTITUTION_MANAGER', 'EMPLOYEE', 'ICT_STAFF'].includes(role) && !institutionId) {
+    if (['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'].includes(role) && !institutionId) {
       return {
         success: false,
         message: 'Institution ID is required for this role.'
@@ -170,7 +184,7 @@ export const createUser = async (userData, currentUser) => {
     // Resolve institution ID to UUID for institutional roles
 let institutionUuid = null;
 
-if (institutionId && ['INSTITUTION_MANAGER', 'EMPLOYEE', 'ICT_STAFF'].includes(role)) {
+if (institutionId && ['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'].includes(role)) {
   const { data: institution, error: instError } = await supabase
     .from('institutions')
     .select('id')
@@ -205,7 +219,7 @@ if (institutionId && ['INSTITUTION_MANAGER', 'EMPLOYEE', 'ICT_STAFF'].includes(r
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Create user
-    const { data: newUser, error } = await supabase
+    let { data: newUser, error } = await supabase
       .from('users')
       .insert({
         email: email.toLowerCase(),
@@ -232,6 +246,41 @@ if (institutionId && ['INSTITUTION_MANAGER', 'EMPLOYEE', 'ICT_STAFF'].includes(r
         created_at
       `)
       .single();
+
+    if (error && error.code === '22P02') {
+      const fallbackRole = role === 'CUSTOMER' ? 'CITIZEN' : role === 'TECHNICIAN' ? 'ICT_STAFF' : null;
+      if (fallbackRole) {
+        const fallbackRes = await supabase
+          .from('users')
+          .insert({
+            email: email.toLowerCase(),
+            password_hash: passwordHash,
+            full_name: fullName,
+            phone,
+            role: fallbackRole,
+            institution_id: institutionUuid || null,
+            employee_id: employeeId || null,
+            national_id: nationalId || null,
+            status: 'ACTIVE',
+            created_by: currentUser.id,
+            created_at: new Date().toISOString()
+          })
+          .select(`
+            id,
+            email,
+            full_name,
+            phone,
+            role,
+            status,
+            institution_id,
+            employee_id,
+            created_at
+          `)
+          .single();
+        newUser = fallbackRes.data;
+        error = fallbackRes.error;
+      }
+    }
 
     if (error) {
       console.error('Create user error:', error);
@@ -316,7 +365,7 @@ export const updateUser = async (userId, updates, currentUser) => {
 
     // Only admins can change role
     if (updates.role && (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MESOB_MANAGER')) {
-      updateData.role = updates.role;
+      updateData.role = String(updates.role).toUpperCase();
     }
 
     // Only admins can change institution
@@ -331,7 +380,7 @@ export const updateUser = async (userId, updates, currentUser) => {
     }
 
     // Update user
-    const { data: updatedUser, error } = await supabase
+    let { data: updatedUser, error } = await supabase
       .from('users')
       .update(updateData)
       .eq('id', userId)
@@ -346,6 +395,29 @@ export const updateUser = async (userId, updates, currentUser) => {
         updated_at
       `)
       .single();
+
+    if (error && error.code === '22P02' && updateData.role) {
+      const fallbackRole = updateData.role === 'CUSTOMER' ? 'CITIZEN' : updateData.role === 'TECHNICIAN' ? 'ICT_STAFF' : null;
+      if (fallbackRole) {
+        const fallbackRes = await supabase
+          .from('users')
+          .update({ ...updateData, role: fallbackRole })
+          .eq('id', userId)
+          .select(`
+            id,
+            email,
+            full_name,
+            phone,
+            role,
+            status,
+            institution_id,
+            updated_at
+          `)
+          .single();
+        updatedUser = fallbackRes.data;
+        error = fallbackRes.error;
+      }
+    }
 
     if (error) {
       console.error('Update user error:', error);
@@ -401,7 +473,7 @@ export const updateUserStatus = async (userId, status, currentUser) => {
     // Get user
     const { data: user } = await supabase
       .from('users')
-      .select('institution_id, email')
+      .select('institution_id, email, metadata')
       .eq('id', userId)
       .single();
 
@@ -410,6 +482,19 @@ export const updateUserStatus = async (userId, status, currentUser) => {
         success: false,
         message: 'User not found.'
       };
+    }
+
+    // Anti-privilege escalation: cannot directly activate if pending central approval
+    if (status === 'ACTIVE') {
+      const approvalStatus = user.metadata?.approval?.status;
+      if (approvalStatus === 'PENDING_APPROVAL' || approvalStatus === 'REJECTED') {
+        if (currentUser.role !== 'MESOB_MANAGER') {
+          return {
+            success: false,
+            message: 'Anti-privilege escalation: User accounts pending or rejected in central approval can only be activated by Mesob Manager through the central approval workflow.'
+          };
+        }
+      }
     }
 
     // Institution managers can only update users in their institution

@@ -121,88 +121,14 @@ export const getInstitutionById = async (institutionId) => {
 
 /**
  * Create new institution
+ * Directs through Central Mesob Manager approval workflow
  * @param {Object} institutionData - Institution data
  * @param {Object} currentUser - Current authenticated user
- * @returns {Promise<Object>} Created institution
+ * @returns {Promise<Object>} Created institution pending approval
  */
 export const createInstitution = async (institutionData, currentUser) => {
-  try {
-    const { name, nameAm, code, description, descriptionAm, details, detailsAm, logoUrl, websiteUrl, phone, email, address, addressAm } = institutionData;
-
-    // Validation
-    if (!name || !code) {
-      return {
-        success: false,
-        message: 'Name and code are required.'
-      };
-    }
-
-    // Check if code exists
-    const { data: existingInstitution } = await supabase
-      .from('institutions')
-      .select('id')
-      .eq('code', code)
-      .single();
-
-    if (existingInstitution) {
-      return {
-        success: false,
-        message: 'An institution with this code already exists.'
-      };
-    }
-
-    // Create institution
-    const { data: newInstitution, error } = await supabase
-      .from('institutions')
-      .insert({
-        name_en: name,
-        name_am: nameAm,
-        code,
-        description,
-        logo_url: logoUrl,
-        website_url: websiteUrl,
-        phone,
-        email,
-        address,
-        status: 'ACTIVE',
-        created_at: new Date().toISOString()
-      })
-      .select(`
-        id,
-        name_en,
-        name_am,
-        code,
-        description,
-        logo_url,
-        status,
-        created_at
-      `)
-      .single();
-
-    if (error) {
-      console.error('Create institution error:', error);
-      return {
-        success: false,
-        message: 'Failed to create institution.'
-      };
-    }
-
-    // Log audit
-    await logAudit(currentUser.id, 'INSTITUTION_CREATE', `Created institution: ${newInstitution.name_en}`);
-
-    return {
-      success: true,
-      message: 'Institution created successfully',
-      data: newInstitution
-    };
-
-  } catch (error) {
-    console.error('Create institution error:', error);
-    return {
-      success: false,
-      message: 'An error occurred while creating institution.'
-    };
-  }
+  const { submitInstitution } = await import('./approvalService.js');
+  return submitInstitution(institutionData, currentUser);
 };
 
 /**
@@ -217,7 +143,7 @@ export const updateInstitution = async (institutionId, updates, currentUser) => 
     // Get existing institution
     const { data: existingInstitution, error: fetchError } = await supabase
       .from('institutions')
-      .select('id, name_en')
+      .select('id, name_en, metadata, status')
       .eq('id', institutionId)
       .single();
 
@@ -226,6 +152,17 @@ export const updateInstitution = async (institutionId, updates, currentUser) => 
         success: false,
         message: 'Institution not found.'
       };
+    }
+
+    // Anti-privilege escalation: cannot directly activate if pending central approval
+    if (updates.status === 'ACTIVE' || updates.status === 'Active') {
+      const approvalStatus = existingInstitution.metadata?.approval?.status;
+      if (approvalStatus === 'PENDING_APPROVAL' || approvalStatus === 'REJECTED') {
+        return {
+          success: false,
+          message: 'Anti-privilege escalation: Institutions pending or rejected in central approval can only be activated through the central approval workflow.'
+        };
+      }
     }
 
     // Prepare update data

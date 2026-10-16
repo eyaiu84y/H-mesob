@@ -53,16 +53,18 @@ app.use(errorHandler);
 // ─── Start Server ──────────────────────────────────────────
 const PORT = config.port;
 
-app.listen(PORT, () => {
-  console.log('\n╔════════════════════════════════════════════════════════╗');
-  console.log('║     🚀 Hawassa MESOB Backend Server Started          ║');
-  console.log('╚════════════════════════════════════════════════════════╝\n');
-  console.log(`📍 Server running on: http://localhost:${PORT}`);
-  console.log(`🌍 Environment: ${config.nodeEnv}`);
-  console.log(`🔗 Frontend URL: ${config.frontendUrl}`);
-  console.log(`📊 Health Check: http://localhost:${PORT}/api/health`);
-  console.log(`\n✅ Server is ready to accept requests\n`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log('\n╔════════════════════════════════════════════════════════╗');
+    console.log('║     🚀 Hawassa MESOB Backend Server Started          ║');
+    console.log('╚════════════════════════════════════════════════════════╝\n');
+    console.log(`📍 Server running on: http://localhost:${PORT}`);
+    console.log(`🌍 Environment: ${config.nodeEnv}`);
+    console.log(`🔗 Frontend URL: ${config.frontendUrl}`);
+    console.log(`📊 Health Check: http://localhost:${PORT}/api/health`);
+    console.log(`\n✅ Server is ready to accept requests\n`);
+  });
+}
 
 // ─── Graceful Shutdown ─────────────────────────────────────
 process.on('SIGTERM', () => {

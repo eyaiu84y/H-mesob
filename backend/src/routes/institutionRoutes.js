@@ -57,6 +57,12 @@ router.patch('/:id',
   patchInstitution
 );
 
+router.put('/:id', 
+  authenticate,
+  authorize('SUPER_ADMIN', 'MESOB_MANAGER'),
+  patchInstitution
+);
+
 /**
  * @route   DELETE /api/institutions/:id
  * @desc    Delete institution (soft delete)

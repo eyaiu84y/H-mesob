@@ -384,9 +384,10 @@ export const translations = {
     mesob_manager: 'MESOB Manager',
     institution_manager: 'Institution Manager',
     employee: 'Employee',
-    ict_staff: 'ICT Staff',
+    ict_staff: 'Technician',
     technician: 'Technician',
-    citizen: 'Citizen',
+    citizen: 'Customer',
+    customer: 'Customer',
     roles_permissions: 'Roles & Permissions',
     
     // ========== INSTITUTIONS ==========
@@ -423,9 +424,10 @@ export const translations = {
     application_number: 'Application Number',
     application_date: 'Application Date',
     
-    // ========== CITIZEN DASHBOARD ==========
+    // ========== CUSTOMER DASHBOARD ==========
     my_dashboard: 'My Dashboard',
-    citizen_portal: 'Citizen Portal',
+    citizen_portal: 'Customer Portal',
+    customer_portal: 'Customer Portal',
     welcome_back: 'Welcome back',
     track_applications: 'Track your applications and apply for services at MESOB Center.',
     active_applications: 'Active Applications',
@@ -920,9 +922,10 @@ export const translations = {
     mesob_manager: 'የመሶብ አስተዳዳሪ',
     institution_manager: 'የተቋም አስተዳዳሪ',
     employee: 'ሠራተኛ',
-    ict_staff: 'የአይሲቲ ሰራተኛ',
+    ict_staff: 'ቴክኒሻን',
     technician: 'ቴክኒሻን',
-    citizen: 'ዜጋ',
+    citizen: 'ደንበኛ',
+    customer: 'ደንበኛ',
     roles_permissions: 'ሚናዎች እና ፈቃዶች',
     
     // ========== INSTITUTIONS ==========
@@ -959,9 +962,10 @@ export const translations = {
     application_number: 'የማመልከቻ ቁጥር',
     application_date: 'የማመልከቻ ቀን',
     
-    // ========== CITIZEN DASHBOARD ==========
+    // ========== CUSTOMER DASHBOARD ==========
     my_dashboard: 'የኔ ዳሽቦርድ',
-    citizen_portal: 'የዜጋ መግቢያ',
+    citizen_portal: 'የደንበኛ መግቢያ',
+    customer_portal: 'የደንበኛ መግቢያ',
     welcome_back: 'እንደገና እንኳን ደህና መጡ',
     track_applications: 'ማመልከቻዎችዎን ይከታተሉ እና በመሶብ ማዕከል አገልግሎቶችን ያመልክቱ።',
     active_applications: 'ንቁ ማመልከቻዎች',

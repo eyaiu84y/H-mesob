@@ -9,8 +9,8 @@ const testUsers = {
   MESOB_MANAGER: { email: 'manager@mesobcenter.et', password: 'MesobManager@2026' },
   INSTITUTION_MANAGER: { email: 'inst.manager@mesobcenter.et', password: 'InstManager@2026' }, // Fayda
   EMPLOYEE: { email: 'employee@mesobcenter.et', password: 'Employee@2026' }, // Fayda
-  ICT_STAFF: { email: 'ict.staff@mesobcenter.et', password: 'IctStaff@2026' }, // Fayda
-  CITIZEN: { email: 'citizen@mesobcenter.et', password: 'Citizen@2026' }
+  ICT_STAFF: { email: 'tech@mesobcenter.et', password: 'tech@2026' }, // Fayda
+  CITIZEN: { email: 'customer@mesobcenter.et', password: 'customer@2026' }
 };
 
 let tokens = {};

@@ -45,11 +45,12 @@ export async function submitFeedback(req, res) {
       });
     }
 
-    // Ensure user is a citizen
-    if (req.user.role !== 'CITIZEN') {
+    // Ensure user is a customer/citizen
+    const role = (req.user.role || '').toUpperCase();
+    if (role !== 'CUSTOMER' && role !== 'CITIZEN') {
       return res.status(403).json({
         success: false,
-        message: 'Only citizens can submit feedback'
+        message: 'Only customers can submit feedback'
       });
     }
 
@@ -103,11 +104,12 @@ export async function getMyFeedback(req, res) {
   try {
     const { institution_id, service_id, rating } = req.query;
 
-    // Only citizens can access their own feedback
-    if (req.user.role !== 'CITIZEN') {
+    // Only customers can access their own feedback
+    const role = (req.user.role || '').toUpperCase();
+    if (role !== 'CUSTOMER' && role !== 'CITIZEN') {
       return res.status(403).json({
         success: false,
-        message: 'Only citizens can access this endpoint'
+        message: 'Only customers can access this endpoint'
       });
     }
 
@@ -303,11 +305,12 @@ export async function checkCanSubmit(req, res) {
   try {
     const { application_id, queue_entry_id } = req.query;
 
-    // Only citizens can check feedback eligibility
-    if (req.user.role !== 'CITIZEN') {
+    // Only customers can check feedback eligibility
+    const role = (req.user.role || '').toUpperCase();
+    if (role !== 'CUSTOMER' && role !== 'CITIZEN') {
       return res.status(403).json({
         success: false,
-        message: 'Only citizens can check feedback eligibility'
+        message: 'Only customers can check feedback eligibility'
       });
     }
 

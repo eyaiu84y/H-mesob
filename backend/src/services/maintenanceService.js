@@ -1,4 +1,5 @@
 import { supabase } from '../config/supabase.js';
+import { createNotification } from './notificationService.js';
 
 /**
  * Create maintenance report
@@ -19,9 +20,9 @@ export const createMaintenanceReport = async (reportData, currentUser) => {
     }
 
     // Institution authorization check
-    // EMPLOYEE and ICT_STAFF can only create reports for their own institution
+    // EMPLOYEE, TECHNICIAN, and ICT_STAFF can only create reports for their own institution
     const userRole = (currentUser.role || '').toUpperCase();
-    if (['EMPLOYEE', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(userRole)) {
+    if (['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(userRole)) {
       if (currentUser.institution_id !== institutionId) {
         return {
           success: false,
@@ -140,8 +141,16 @@ export const createMaintenanceReport = async (reportData, currentUser) => {
       }
     }
 
-    // Notify ICT staff
-    await notifyIctStaff(institutionId, newReport.id, `New ${priority} maintenance report: ${problemType}`);
+    // Notify institution technicians and manager
+    await createNotification({
+      institutionId,
+      roles: ['TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'],
+      type: 'MAINTENANCE_ASSIGNMENT',
+      title: 'New Maintenance Report',
+      message: `New ${priority} priority maintenance issue: ${problemType}`,
+      relatedEntityId: newReport.id,
+      relatedEntityType: 'maintenance_report'
+    });
 
     // Log audit
     await logAudit(currentUser.id, 'MAINTENANCE_REPORT_CREATE', `Created maintenance report ${newReport.report_number}`);
@@ -224,20 +233,20 @@ export const getMaintenanceReports = async (filters, currentUser) => {
       .order('created_at', { ascending: false });
 
     // Role-based filtering
-    if (userRole === 'CITIZEN') {
-      // Citizens cannot access maintenance reports
-      console.log('❌ Access denied - CITIZEN role');
+    if (userRole === 'CITIZEN' || userRole === 'CUSTOMER') {
+      // Customers cannot access maintenance reports
+      console.log('❌ Access denied - CUSTOMER/CITIZEN role');
       return {
         success: false,
-        message: 'Access denied. Citizens cannot view maintenance reports.'
+        message: 'Access denied. Customers cannot view maintenance reports.'
       };
     } else if (userRole === 'EMPLOYEE') {
       // Employees see reports they created in their institution
       console.log('Filtering for EMPLOYEE - institution:', currentUser.institution_id);
       query = query.eq('institution_id', currentUser.institution_id);
-    } else if (userRole === 'ICT_STAFF') {
-      // ICT staff see all reports in their institution
-      console.log('Filtering for ICT_STAFF - institution:', currentUser.institution_id);
+    } else if (userRole === 'TECHNICIAN' || userRole === 'ICT_STAFF') {
+      // Technicians see all reports in their institution
+      console.log('Filtering for TECHNICIAN/ICT_STAFF - institution:', currentUser.institution_id);
       query = query.eq('institution_id', currentUser.institution_id);
     } else if (userRole === 'INSTITUTION_MANAGER') {
       // Institution managers see all reports in their institution
@@ -351,7 +360,7 @@ export const getMaintenanceReportById = async (reportId, currentUser) => {
 
     // Authorization check
     const userRole = (currentUser.role || '').toUpperCase();
-    if (['EMPLOYEE', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(userRole)
+    if (['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(userRole)
         && report.institution_id !== currentUser.institution_id
         && report.reported_by !== currentUser.id) {
       return {
@@ -397,18 +406,33 @@ export const assignMaintenanceReport = async (reportId, ictStaffId, currentUser)
       };
     }
 
-    // Verify ICT staff
+    // Authorization check: only authorized managers can assign tasks within their scope
+    const assignerRole = (currentUser.role || '').toUpperCase();
+    if (!['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER'].includes(assignerRole)) {
+      return {
+        success: false,
+        message: 'You do not have permission to assign maintenance tasks.'
+      };
+    }
+    if (assignerRole === 'INSTITUTION_MANAGER' && currentUser.institution_id !== report.institution_id) {
+      return {
+        success: false,
+        message: 'You can only assign maintenance tasks within your own institution.'
+      };
+    }
+
+    // Verify Technician (or legacy ICT_STAFF)
     const { data: ictStaff } = await supabase
       .from('users')
-      .select('id, institution_id, full_name')
+      .select('id, institution_id, full_name, role')
       .eq('id', ictStaffId)
-      .eq('role', 'ICT_STAFF')
+      .in('role', ['TECHNICIAN', 'ICT_STAFF'])
       .single();
 
     if (!ictStaff || ictStaff.institution_id !== report.institution_id) {
       return {
         success: false,
-        message: 'ICT staff not found or does not belong to this institution.'
+        message: 'Technician not found or does not belong to this institution.'
       };
     }
 
@@ -447,12 +471,12 @@ export const assignMaintenanceReport = async (reportId, ictStaffId, currentUser)
         created_at: new Date().toISOString()
       });
 
-    // Notify ICT staff
+    // Notify technician
     await createNotification({
-      userId: ictStaffId,
+      recipientId: ictStaffId,
       type: 'MAINTENANCE_ASSIGNMENT',
       title: 'Maintenance Task Assigned',
-      message: `You have been assigned a maintenance task: ${report.title}`,
+      message: `You have been assigned a maintenance task: ${report.title || 'Maintenance Task'}`,
       relatedEntityId: reportId,
       relatedEntityType: 'maintenance_report'
     });
@@ -580,9 +604,9 @@ export const getTaskById = async (taskId, currentUser) => {
       };
     }
 
-    // Authorization: only assigned ICT or managers can view
+    // Authorization: only assigned Technician or managers can view
     const userRole = (currentUser.role || '').toUpperCase();
-    if (userRole === 'ICT_STAFF' && task.assigned_to !== currentUser.id) {
+    if (['TECHNICIAN', 'ICT_STAFF'].includes(userRole) && task.assigned_to !== currentUser.id) {
       return {
         success: false,
         message: 'You do not have permission to view this task.'
@@ -637,7 +661,7 @@ export const updateTaskStatus = async (taskId, status, currentUser) => {
 
     // Authorization
     const userRole = (currentUser.role || '').toUpperCase();
-    if (userRole === 'ICT_STAFF' && task.assigned_to !== currentUser.id) {
+    if (['TECHNICIAN', 'ICT_STAFF'].includes(userRole) && task.assigned_to !== currentUser.id) {
       return {
         success: false,
         message: 'You can only update your own tasks.'
@@ -737,7 +761,7 @@ export const resolveTask = async (taskId, resolutionNotes, currentUser) => {
 
     // Authorization
     const userRole = (currentUser.role || '').toUpperCase();
-    if (userRole === 'ICT_STAFF' && task.assigned_to !== currentUser.id) {
+    if (['TECHNICIAN', 'ICT_STAFF'].includes(userRole) && task.assigned_to !== currentUser.id) {
       return {
         success: false,
         message: 'You can only resolve your own tasks.'
@@ -782,37 +806,29 @@ export const resolveTask = async (taskId, resolutionNotes, currentUser) => {
     }
 
     // Notify reporter (employee who submitted the report)
-    await createNotification({
-      userId: updatedReport.reported_by,
-      type: 'MAINTENANCE_ASSIGNMENT',
-      title: 'Maintenance Issue Resolved',
-      message: `Your maintenance report has been resolved: ${updatedReport.title}`,
-      relatedEntityId: task.maintenance_report_id,
-      relatedEntityType: 'maintenance_report'
-    });
+    if (updatedReport.reported_by) {
+      await createNotification({
+        recipientId: updatedReport.reported_by,
+        type: 'MAINTENANCE_ASSIGNMENT',
+        title: 'Maintenance Issue Resolved',
+        message: `Your maintenance report has been resolved: ${updatedReport.title || 'Report'}`,
+        relatedEntityId: task.maintenance_report_id,
+        relatedEntityType: 'maintenance_report'
+      });
+    }
 
     // Notify Institution Manager
     const institutionId = task.maintenance_reports?.institution_id;
     if (institutionId) {
-      const { data: managers } = await supabase
-        .from('users')
-        .select('id')
-        .eq('institution_id', institutionId)
-        .eq('role', 'INSTITUTION_MANAGER')
-        .eq('status', 'ACTIVE');
-
-      if (managers && managers.length > 0) {
-        for (const manager of managers) {
-          await createNotification({
-            userId: manager.id,
-            type: 'MAINTENANCE_ASSIGNMENT',
-            title: 'Maintenance Task Completed',
-            message: `ICT staff has completed maintenance task: ${updatedReport.title}`,
-            relatedEntityId: task.maintenance_report_id,
-            relatedEntityType: 'maintenance_report'
-          });
-        }
-      }
+      await createNotification({
+        institutionId,
+        roles: ['INSTITUTION_MANAGER'],
+        type: 'MAINTENANCE_ASSIGNMENT',
+        title: 'Maintenance Task Completed',
+        message: `Technician has completed maintenance task: ${updatedReport.title || 'Task'}`,
+        relatedEntityId: task.maintenance_report_id,
+        relatedEntityType: 'maintenance_report'
+      });
     }
 
     // Log audit
@@ -841,56 +857,8 @@ export const resolveTask = async (taskId, resolutionNotes, currentUser) => {
   }
 };
 
-// Helper: Notify ICT staff
-const notifyIctStaff = async (institutionId, reportId, message) => {
-  try {
-    const { data: ictStaff } = await supabase
-      .from('users')
-      .select('id')
-      .eq('institution_id', institutionId)
-      .eq('role', 'ICT_STAFF')
-      .eq('status', 'ACTIVE');
+// Helper: Notify Technicians
 
-    if (ictStaff && ictStaff.length > 0) {
-      const notifications = ictStaff.map(ict => ({
-        user_id: ict.id,
-        type: 'MAINTENANCE_ASSIGNMENT',
-        title: 'New Maintenance Report',
-        message,
-        related_entity_id: reportId,
-        related_entity_type: 'maintenance_report',
-        is_read: false,
-        created_at: new Date().toISOString()
-      }));
-
-      await supabase.from('notifications').insert(notifications);
-    }
-  } catch (error) {
-    console.error('Failed to notify ICT staff:', error);
-  }
-};
-
-// Helper: Create notification
-const createNotification = async (notificationData) => {
-  try {
-    const { userId, type, title, message, relatedEntityId, relatedEntityType } = notificationData;
-
-    await supabase
-      .from('notifications')
-      .insert({
-        user_id: userId,
-        type,
-        title,
-        message,
-        related_entity_id: relatedEntityId,
-        related_entity_type: relatedEntityType,
-        is_read: false,
-        created_at: new Date().toISOString()
-      });
-  } catch (error) {
-    console.error('Failed to create notification:', error);
-  }
-};
 
 // Helper: Log audit event
 const logAudit = async (userId, action, details) => {

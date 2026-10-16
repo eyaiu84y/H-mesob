@@ -16,7 +16,13 @@ const corsOptions = {
       'http://localhost:3000'
     ];
 
-    if (!origin || allowedOrigins.includes(origin)) {
+    const isAllowed = 
+      !origin || 
+      allowedOrigins.includes(origin) || 
+      (typeof origin === 'string' && origin.endsWith('.vercel.app')) ||
+      (config.frontendUrl && origin === config.frontendUrl);
+
+    if (isAllowed) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

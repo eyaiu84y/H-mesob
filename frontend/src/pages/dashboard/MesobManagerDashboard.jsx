@@ -8,11 +8,14 @@ import { useApplications } from '../../context/ApplicationContext';
 import { useApp } from '../../context/AppContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import MesobFeedbackOverview from '../../components/dashboard/MesobFeedbackOverview';
+import NotificationBell from '../../components/dashboard/NotificationBell';
+import ApprovalsManagement from '../../components/dashboard/ApprovalsManagement';
 
 // ─── Navigation sections ──────────────────────────────────────────
 function getSections(t) {
   return [
     t.dashboard,
+    t.central_approvals || 'Central Approvals',
     t.institution_monitoring,
     t.queue_monitoring,
     t.application_monitoring,
@@ -325,7 +328,7 @@ function SectionQueueMonitoring() {
         {myTickets.length > 0 ? (
           <div className="table-container border-0 rounded-none">
             <table className="data-table">
-              <thead><tr><th>Ticket</th><th>Citizen</th><th>Service</th><th>Priority</th><th>Status</th></tr></thead>
+              <thead><tr><th>Ticket</th><th>Customer</th><th>Service</th><th>Priority</th><th>Status</th></tr></thead>
               <tbody>
                 {myTickets.slice(0, 20).map(ticket => (
                   <tr key={ticket.id}>
@@ -1044,7 +1047,7 @@ function SectionAnalytics() {
                         {detailView.type === 'queue' && (
                           <>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Queue #</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Citizen</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Customer</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Service</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Status</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Registered Time</th>
@@ -1055,7 +1058,7 @@ function SectionAnalytics() {
                         {detailView.type === 'app' && (
                           <>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">App #</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Citizen</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Customer</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Service</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Status</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Submitted Time</th>
@@ -1080,7 +1083,7 @@ function SectionAnalytics() {
                           {detailView.type === 'queue' && (
                             <>
                               <td className="px-4 py-3 font-semibold text-slate-800">{item.queueNumber || item.queue_number || 'N/A'}</td>
-                              <td className="px-4 py-3">{item.citizenName || 'Citizen'}</td>
+                              <td className="px-4 py-3">{item.citizenName || 'Customer'}</td>
                               <td className="px-4 py-3">{item.serviceName || 'Service'}</td>
                               <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
                               <td className="px-4 py-3 text-sm text-slate-500">
@@ -1109,7 +1112,7 @@ function SectionAnalytics() {
                           {detailView.type === 'app' && (
                             <>
                               <td className="px-4 py-3 font-semibold text-slate-800">{item.applicationNumber || 'N/A'}</td>
-                              <td className="px-4 py-3">{item.citizenName || 'Citizen'}</td>
+                              <td className="px-4 py-3">{item.citizenName || 'Customer'}</td>
                               <td className="px-4 py-3">{item.service || 'Service'}</td>
                               <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
                               <td className="px-4 py-3 text-sm text-slate-500">
@@ -1311,7 +1314,7 @@ function SectionAnnouncements() {
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Audience <span className="text-rose-500">*</span></label>
               <select value={form.scope} onChange={e => setForm(f => ({ ...f, scope: e.target.value, targetRoles: [] }))}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white">
-                <option value="PUBLIC">Public - Visible to everyone including citizens</option>
+                <option value="PUBLIC">Public - Visible to everyone including customers</option>
                 <option value="INTERNAL">Internal - Staff only (employees, managers, admins)</option>
                 <option value="ROLE">Role - Specific role(s)</option>
               </select>
@@ -1321,7 +1324,7 @@ function SectionAnnouncements() {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Target Roles <span className="text-rose-500">*</span></label>
                 <div className="space-y-2">
-                  {['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'ICT_STAFF'].map(role => (
+                  {['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'CUSTOMER'].map(role => (
                     <label key={role} className="flex items-center gap-2 text-sm">
                       <input type="checkbox" 
                         checked={form.targetRoles.includes(role)}
@@ -1342,8 +1345,8 @@ function SectionAnnouncements() {
             
             <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-800">
               <strong className="text-slate-900">Scope: {form.scope}</strong>
-              {form.scope === 'PUBLIC' && <p className="mt-1 text-slate-600">This announcement will be visible to all users including citizens.</p>}
-              {form.scope === 'INTERNAL' && <p className="mt-1 text-slate-600">This announcement will be visible only to staff (not citizens).</p>}
+              {form.scope === 'PUBLIC' && <p className="mt-1 text-slate-600">This announcement will be visible to all users including customers.</p>}
+              {form.scope === 'INTERNAL' && <p className="mt-1 text-slate-600">This announcement will be visible only to staff (not customers).</p>}
               {form.scope === 'ROLE' && <p className="mt-1 text-slate-600">This announcement will be visible only to the selected role(s).</p>}
             </div>
             
@@ -1505,8 +1508,11 @@ export default function MesobManagerDashboard() {
 
   function renderSection() {
     switch (activeSection) {
-      case t.dashboard:              return <SectionDashboard setActiveSection={navigate} />;
-      case t.institution_monitoring: return <SectionInstitutionMonitoring />;
+      case t.dashboard:                                return <SectionDashboard setActiveSection={navigate} />;
+      case t.central_approvals || 'Central Approvals': return <ApprovalsManagement isManagerView={true} />;
+      case 'Central Approvals':                        return <ApprovalsManagement isManagerView={true} />;
+      case 'Approvals':                                return <ApprovalsManagement isManagerView={true} />;
+      case t.institution_monitoring:                   return <SectionInstitutionMonitoring />;
       case t.queue_monitoring:       return <SectionQueueMonitoring />;
       case t.application_monitoring: return <SectionApplicationMonitoring />;
       case t.maintenance_oversight:  return <SectionMaintenanceOversight />;
@@ -1567,6 +1573,7 @@ export default function MesobManagerDashboard() {
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
+              <NotificationBell onNavigate={(section) => navigate(section)} />
               <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold">MESOB Manager</span>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-semibold text-slate-900">{user?.name}</p>

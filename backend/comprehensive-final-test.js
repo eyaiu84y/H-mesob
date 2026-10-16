@@ -41,8 +41,8 @@ const testUsers = {
   MESOB_MANAGER: { email: 'manager@mesobcenter.et', password: 'Manager@2026' },
   INSTITUTION_MANAGER: { email: 'inst.manager@mesobcenter.et', password: 'Manager@2026' },
   EMPLOYEE: { email: 'employee@mesobcenter.et', password: 'Employee@2026' },
-  ICT_STAFF: { email: 'ict.staff@mesobcenter.et', password: 'IctStaff@2026' },
-  CITIZEN: { email: 'citizen@mesobcenter.et', password: 'Citizen@2026' },
+  ICT_STAFF: { email: 'tech@mesobcenter.et', password: 'tech@2026' },
+  CITIZEN: { email: 'customer@mesobcenter.et', password: 'customer@2026' },
   CBE_EMPLOYEE: { email: 'cbe.employee@mesobcenter.et', password: 'Employee@2026' }
 };
 
@@ -144,7 +144,7 @@ async function runTests() {
 
     subsection('TEST 1.2: Invalid Credentials');
     try {
-      const token = await login('citizen@mesobcenter.et', 'WrongPassword123!');
+      const token = await login('customer@mesobcenter.et', 'WrongPassword123!');
       if (!token) {
         pass('Invalid password correctly rejected');
       } else {

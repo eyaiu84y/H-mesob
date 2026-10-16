@@ -68,6 +68,10 @@ serviceName_am: backendApp.services?.title_am || backendApp.services?.name_am,
 institution: backendApp.institutions?.name_en || backendApp.application_data?.institutionName || 'Unknown Institution',
 
     institutionName_am: backendApp.institutions?.name_am,
+    customerName: backendApp.users?.full_name,
+    customerEmail: backendApp.users?.email,
+    customerPhone: backendApp.users?.phone,
+    customerId: backendApp.customer_id || backendApp.citizen_id,
     citizenName: backendApp.users?.full_name,
     citizenEmail: backendApp.users?.email,
     citizenPhone: backendApp.users?.phone,
@@ -81,7 +85,7 @@ institution: backendApp.institutions?.name_en || backendApp.application_data?.in
     // Keep backend IDs for API calls
     serviceId: backendApp.services?.id,
     institutionId: backendApp.institutions?.id,
-    citizenId: backendApp.citizen_id,
+    citizenId: backendApp.customer_id || backendApp.citizen_id,
   };
 }
 

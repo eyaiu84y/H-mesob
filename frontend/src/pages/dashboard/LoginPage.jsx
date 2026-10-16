@@ -10,8 +10,8 @@ const DEMO_ACCOUNTS = [
   { label: 'MESOB Manager',       email: 'manager@mesobcenter.et',           password: 'MesobManager@2026' },
   { label: 'Institution Manager', email: 'inst.manager@mesobcenter.et',      password: 'InstManager@2026' },
   { label: 'Employee',            email: 'employee@mesobcenter.et',          password: 'Employee@2026' },
-  { label: 'ICT Staff',           email: 'ict.staff@mesobcenter.et',         password: 'IctStaff@2026' },
-  { label: 'Citizen',             email: 'citizen@mesobcenter.et',           password: 'Citizen@2026' },
+  { label: 'Technician',          email: 'tech@mesobcenter.et',              password: 'tech@2026' },
+  { label: 'Customer',            email: 'customer@mesobcenter.et',          password: 'customer@2026' },
 ];
 
 export default function LoginPage() {

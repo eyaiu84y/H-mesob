@@ -36,14 +36,22 @@ export async function submitFeedback(feedbackData) {
       throw new Error('Rating must be an integer between 1 and 5');
     }
 
-    console.log('Checking citizen...');
-    // Verify citizen exists and is active
-    const { data: citizen, error: citizenError } = await supabase
+    const customerId = feedbackData.customer_id || feedbackData.citizen_id;
+    if (!customerId) {
+      throw new Error('Customer ID is required');
+    }
+
+    console.log('Checking customer...');
+    // Verify customer exists and is active
+    const { data: customer, error: customerError } = await supabase
       .from('users')
       .select('id, role, status')
-      .eq('id', feedbackData.citizen_id)
-      .eq('role', 'CITIZEN')
+      .eq('id', customerId)
+      .in('role', ['CUSTOMER', 'CITIZEN'])
       .maybeSingle();
+
+    const citizen = customer;
+    const citizenError = customerError;
 
     if (citizenError) {
       console.error('Citizen query error:', citizenError);
@@ -157,7 +165,7 @@ export async function submitFeedback(feedbackData) {
     const { data: feedback, error: insertError } = await supabase
       .from('service_feedback')
       .insert({
-        citizen_id: feedbackData.citizen_id,
+        citizen_id: customerId,
         institution_id: feedbackData.institution_id,
         service_id: feedbackData.service_id,
         application_id: feedbackData.application_id || null,

@@ -74,9 +74,10 @@ export default function PopularServices() {
       return;
     }
 
-    // Check if user is a citizen
-    if (user.role !== 'CITIZEN') {
-      alert('Only citizens can apply for online services');
+    // Check if user is a customer
+    const roleUpper = user.role?.toUpperCase();
+    if (roleUpper !== 'CUSTOMER' && roleUpper !== 'CITIZEN') {
+      alert('Only customers can apply for online services');
       return;
     }
 

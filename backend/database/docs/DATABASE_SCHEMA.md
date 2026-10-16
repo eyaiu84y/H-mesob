@@ -26,16 +26,111 @@ This document describes the complete PostgreSQL database schema for the Hawassa 
 
 ---
 
-## 🎯 User Roles
+## 🎯 User Roles & Workflow Responsibilities
 
 The system has **exactly 6 approved roles**:
 
-1. **SUPER_ADMIN** - Full system access
-2. **MESOB_MANAGER** - MESOB-wide management
-3. **INSTITUTION_MANAGER** - Institution-level management
-4. **EMPLOYEE** - Service processing staff
-5. **ICT_STAFF** - Technical maintenance staff
-6. **CITIZEN** - Service applicants
+1. **CUSTOMER**: End-user service applicant and queue ticket holder. **Requesters only**; cannot receive task assignments.
+2. **EMPLOYEE**: Institutional operational staff. **Service-application work assignees**; cannot receive maintenance tasks or assign work across institutions.
+3. **TECHNICIAN**: Institutional IT maintenance specialists. **Maintenance task assignees**; cannot receive service application work.
+4. **INSTITUTION_MANAGER**: Institutional director. **Task assigner & supervisor within permitted institutional scope only**.
+5. **MESOB_MANAGER**: Center-wide operations manager. Cross-institutional oversight.
+6. **SUPER_ADMIN**: System administrator. Complete system and user management access.
+
+---
+
+## 🗺️ Entity-Relationship (ER) Diagram
+
+```mermaid
+erDiagram
+    users {
+        UUID id PK
+        VARCHAR email UK
+        user_role role "CUSTOMER | EMPLOYEE | TECHNICIAN | INSTITUTION_MANAGER | MESOB_MANAGER | SUPER_ADMIN"
+        UUID institution_id FK
+        VARCHAR full_name
+        user_status status
+    }
+
+    institutions {
+        UUID id PK
+        VARCHAR code UK
+        VARCHAR name_en
+        VARCHAR name_am
+        institution_status status
+    }
+
+    services {
+        UUID id PK
+        UUID institution_id FK
+        VARCHAR code
+        VARCHAR title_en
+        VARCHAR title_am
+        BOOLEAN is_active
+    }
+
+    applications {
+        UUID id PK
+        VARCHAR application_number UK
+        UUID customer_id FK "Requester: users.id (CUSTOMER)"
+        UUID service_id FK "Requested Service: services.id"
+        UUID institution_id FK "Target Institution: institutions.id"
+        UUID assigned_to FK "Assignee: users.id (EMPLOYEE only)"
+        UUID reviewed_by FK "Reviewer: users.id (Manager/Employee)"
+        application_status status
+    }
+
+    queue_entries {
+        UUID id PK
+        VARCHAR queue_number UK
+        UUID customer_id FK "Requester: users.id (CUSTOMER)"
+        UUID service_id FK "services.id"
+        UUID institution_id FK "institutions.id"
+        UUID assigned_to FK "Desk Staff: users.id (EMPLOYEE only)"
+        queue_status status
+    }
+
+    maintenance_reports {
+        UUID id PK
+        VARCHAR report_number UK
+        UUID reported_by FK "Reporter: users.id (EMPLOYEE/STAFF)"
+        UUID institution_id FK "institutions.id"
+        UUID assigned_to FK "Assignee: users.id (TECHNICIAN only)"
+        UUID resolved_by FK "Resolver: users.id (TECHNICIAN)"
+        maintenance_status status
+    }
+
+    maintenance_tasks {
+        UUID id PK
+        UUID maintenance_report_id FK "maintenance_reports.id"
+        UUID assigned_to FK "Assignee: users.id (TECHNICIAN only)"
+        UUID assigned_by FK "Assigner: users.id (INSTITUTION_MANAGER/ADMIN)"
+        task_status status
+    }
+
+    service_feedback {
+        UUID id PK
+        UUID customer_id FK "Author: users.id (CUSTOMER only)"
+        UUID institution_id FK "institutions.id"
+        UUID service_id FK "services.id"
+        INTEGER rating "1 to 5"
+    }
+
+    users ||--o{ applications : "submits as Customer (customer_id)"
+    users ||--o{ applications : "processes as Employee (assigned_to)"
+    users ||--o{ queue_entries : "joins as Customer (customer_id)"
+    users ||--o{ queue_entries : "handles as Employee (assigned_to)"
+    users ||--o{ maintenance_reports : "reports as Staff (reported_by)"
+    users ||--o{ maintenance_reports : "maintains as Technician (assigned_to)"
+    users ||--o{ maintenance_tasks : "works on as Technician (assigned_to)"
+    users ||--o{ maintenance_tasks : "assigns as Manager (assigned_by)"
+    users ||--o{ service_feedback : "rates as Customer (customer_id)"
+    institutions ||--o{ users : "employs (staff roles)"
+    institutions ||--o{ services : "provides"
+    institutions ||--o{ applications : "processes"
+    institutions ||--o{ maintenance_reports : "maintains equipment"
+    services ||--o{ applications : "receives"
+```
 
 ---
 
@@ -143,13 +238,13 @@ The system has **exactly 6 approved roles**:
 ---
 
 ### 5. applications
-**Purpose:** Citizen applications for services
+**Purpose:** Customer applications for services
 
 | Column | Type | Description |
 |--------|------|-------------|
 | id | UUID | Primary key |
 | application_number | VARCHAR(50) | Unique tracking number |
-| citizen_id | UUID | FK to users (applicant) |
+| customer_id | UUID | FK to users (applicant) |
 | service_id | UUID | FK to services |
 | institution_id | UUID | FK to institutions |
 | status | application_status | Application status |
@@ -167,7 +262,7 @@ The system has **exactly 6 approved roles**:
 
 **Indexes:** 7  
 **Unique Constraints:** application_number  
-**Foreign Keys:** citizen_id, service_id, institution_id, assigned_to, reviewed_by → users  
+**Foreign Keys:** customer_id, service_id, institution_id, assigned_to, reviewed_by → users  
 
 ---
 
@@ -179,7 +274,7 @@ The system has **exactly 6 approved roles**:
 | id | UUID | Primary key |
 | queue_number | VARCHAR(50) | Unique queue number |
 | application_id | UUID | FK to applications (nullable) |
-| citizen_id | UUID | FK to users |
+| customer_id | UUID | FK to users |
 | service_id | UUID | FK to services |
 | institution_id | UUID | FK to institutions |
 | status | queue_status | Queue status |
@@ -197,7 +292,7 @@ The system has **exactly 6 approved roles**:
 
 **Indexes:** 8  
 **Unique Constraints:** queue_number  
-**Foreign Keys:** application_id, citizen_id, service_id, institution_id, assigned_to  
+**Foreign Keys:** application_id, customer_id, service_id, institution_id, assigned_to  
 
 ---
 
@@ -217,7 +312,7 @@ The system has **exactly 6 approved roles**:
 | category | VARCHAR(100) | Problem category |
 | priority | maintenance_priority | Priority level |
 | status | maintenance_status | Report status |
-| assigned_to | UUID | FK to users (ICT staff) |
+| assigned_to | UUID | FK to users (Technician) |
 | assigned_at | TIMESTAMPTZ | Assignment timestamp |
 | resolution_notes | TEXT | Resolution details |
 | resolved_at | TIMESTAMPTZ | Resolution timestamp |
@@ -262,7 +357,7 @@ The system has **exactly 6 approved roles**:
 | maintenance_report_id | UUID | FK to maintenance_reports |
 | title | VARCHAR(255) | Task title |
 | description | TEXT | Task description |
-| assigned_to | UUID | FK to users (ICT staff) |
+| assigned_to | UUID | FK to users (Technician) |
 | assigned_at | TIMESTAMPTZ | Assignment timestamp |
 | assigned_by | UUID | FK to users (assigner) |
 | status | task_status | Task status |
@@ -404,32 +499,64 @@ All tables have RLS enabled with role-based policies:
 
 - **SUPER_ADMIN**: Full access to all tables
 - **MESOB_MANAGER**: System-wide read access, limited writes
-- **INSTITUTION_MANAGER**: Institution-scoped access
-- **EMPLOYEE**: Institution-scoped, task-assigned access
-- **ICT_STAFF**: Maintenance-related access
-- **CITIZEN**: Own data access only
+- **INSTITUTION_MANAGER**: Institution-scoped access, assign tasks/applications
+- **EMPLOYEE**: Institution-scoped, assigned service-application processing
+- **TECHNICIAN**: Maintenance assignment receipt and resolution
+- **CUSTOMER**: Own data access only (applications, queues, feedback)
 
 Total RLS Policies: **50+**
 
 ---
 
-## 🔗 Relationships
+## 🔗 Relationships & Entity Relationship (ER) Model
 
-### Primary Relationships
+### Task Assignment and Service Flow Distinction
+
+The schema enforces strict separation between service requests, assignments, and execution:
+
+```
++---------------------------------------------------------------------------------------------------+
+|                                 ACTOR & ASSIGNMENT WORKFLOW                                       |
++---------------------------------------------------------------------------------------------------+
+| 1. CUSTOMER (Requester)                                                                           |
+|    - Submits service requests -> applications.customer_id (FK to users.id)                        |
+|    - Registers for queues     -> queue_entries.customer_id (FK to users.id)                       |
+|    - Submits feedback         -> service_feedback.customer_id (FK to users.id)                    |
+|    * Customers are NEVER assigned tasks or applications                                           |
+|                                                                                                   |
+| 2. AUTHORIZED MANAGERS (Assigners)                                                                |
+|    - INSTITUTION_MANAGER / MESOB_MANAGER assign applications within institution scope             |
+|    - Assigns application to Employee -> applications.assigned_to (FK to users.id, role=EMPLOYEE)  |
+|    - Creates/assigns Maintenance Task -> maintenance_tasks.created_by (FK to users.id)            |
+|                                                                                                   |
+| 3. ASSIGNED WORKERS (Receivers)                                                                   |
+|    - EMPLOYEE: Receives & processes service applications -> applications.assigned_to              |
+|    - TECHNICIAN: Receives & resolves maintenance work   -> maintenance_reports.assigned_to,       |
+|                                                            maintenance_tasks.assigned_to          |
+|    * Cross-institution assignment is strictly prohibited                                          |
++---------------------------------------------------------------------------------------------------+
+```
+
+### Primary Entity Relationships
 
 ```
 institutions (1) ─── (many) services
 services (1) ─── (many) service_requirements
 services (1) ─── (many) applications
 institutions (1) ─── (many) applications
-users (1) ─── (many) applications (as citizen)
-users (1) ─── (many) queue_entries (as citizen/employee)
-users (1) ─── (many) maintenance_reports (as reporter/ICT)
-users (1) ─── (many) notifications (as recipient)
-users (1) ─── (many) announcements (as publisher)
+users [CUSTOMER] (1) ─── (many) applications (as requesting customer: customer_id)
+users [EMPLOYEE] (1) ─── (many) applications (as assigned processor: assigned_to)
+users [CUSTOMER] (1) ─── (many) queue_entries (as requesting customer: customer_id)
+users [EMPLOYEE/STAFF] (1) ─── (many) queue_entries (as serving employee: counter_id/served_by)
+users [STAFF] (1) ─── (many) maintenance_reports (as reporter: reported_by)
+users [TECHNICIAN] (1) ─── (many) maintenance_reports (as assigned technician: assigned_to)
 maintenance_reports (1) ─── (many) maintenance_attachments
 maintenance_reports (1) ─── (many) maintenance_tasks
-users (1) ─── (1) telegram_users
+users [MANAGER] (1) ─── (many) maintenance_tasks (as assigner: created_by)
+users [TECHNICIAN] (1) ─── (many) maintenance_tasks (as assigned technician: assigned_to)
+users (1) ─── (many) notifications (as recipient: recipient_id)
+users (1) ─── (many) announcements (as publisher: published_by)
+users [CUSTOMER] (1) ─── (many) service_feedback (as feedback author: customer_id)
 ```
 
 ---
@@ -518,14 +645,14 @@ Total: **25+** with appropriate ON DELETE actions
 ```sql
 INSERT INTO applications (
   application_number,
-  citizen_id,
+  customer_id,
   service_id,
   institution_id,
   status,
   application_data
 ) VALUES (
   generate_application_number('revenue', 'tax-payment'),
-  'citizen-uuid',
+  'customer-uuid',
   'service-uuid',
   'institution-uuid',
   'SUBMITTED',

@@ -1,5 +1,6 @@
 import { supabase } from '../config/supabase.js';
 import { sendQueueCallSMS, sendQueueJoinSMS, logSMSNotification } from './smsService.js';
+import { createNotification } from './notificationService.js';
 
 /**
  * Join queue
@@ -176,12 +177,23 @@ export const joinQueue = async (queueData, currentUser) => {
       };
     }
 
-    // Notify institution employees
+    // Notify customer
+    await createNotification({
+      recipientId: currentUser.id,
+      type: 'QUEUE_ASSIGNMENT',
+      title: 'Queue Ticket Issued',
+      message: `You have joined the queue with Token #${queueNumber}.`,
+      relatedEntityId: newQueue.id,
+      relatedEntityType: 'queue'
+    });
+
+    // Notify institution employees & manager
     await createNotification({
       institutionId,
+      roles: ['EMPLOYEE', 'INSTITUTION_MANAGER'],
       type: 'QUEUE_ASSIGNMENT',
       title: 'New Queue Entry',
-      message: `Token ${queueNumber} has joined the queue`,
+      message: `Token #${queueNumber} has joined the queue.`,
       relatedEntityId: newQueue.id,
       relatedEntityType: 'queue'
     });
@@ -301,13 +313,14 @@ export const getQueues = async (filters = {}, currentUser) => {
      * ---------------------------------------------------------
      */
 
-    if (currentUser.role === 'CITIZEN') {
+    const userRole = (currentUser.role || '').toUpperCase();
+    if (userRole === 'CITIZEN' || userRole === 'CUSTOMER') {
       query = query.eq('citizen_id', currentUser.id);
     }
 
     else if (
-      ['EMPLOYEE', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(
-        currentUser.role
+      ['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(
+        userRole
       )
     ) {
       if (!currentUser.institution_id) {
@@ -616,6 +629,8 @@ export const getQueues = async (filters = {}, currentUser) => {
 
     const result = queueEntries.map(queue => ({
       ...queue,
+      customer_id: queue.citizen_id,
+      customer: citizenMap.get(queue.citizen_id) || null,
 
       services:
         serviceMap.get(queue.service_id) || null,
@@ -691,14 +706,15 @@ export const getQueueById = async (queueId, currentUser) => {
     }
 
     // Authorization check
-    if (currentUser.role === 'CITIZEN' && queue.citizen_id !== currentUser.id) {
+    const userRole = (currentUser.role || '').toUpperCase();
+    if ((userRole === 'CITIZEN' || userRole === 'CUSTOMER') && queue.citizen_id !== currentUser.id) {
       return {
         success: false,
         message: 'You do not have permission to view this queue entry.'
       };
     }
 
-    if (['EMPLOYEE', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(currentUser.role)
+    if (['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(userRole)
         && queue.institution_id !== currentUser.institution_id) {
       return {
         success: false,
@@ -829,17 +845,17 @@ export const callNext = async (queueId, currentUser) => {
 
     console.log('✅ Queue updated to IN_PROGRESS:', updatedQueue);
 
-    // Notify citizen (don't let this block success)
+    // Notify customer
     try {
       await createNotification({
-        userId: queue.citizen_id,
+        recipientId: queue.citizen_id,
         type: 'QUEUE_ASSIGNMENT',
         title: 'Your Turn in Queue',
-        message: `Token ${queue.queue_number} - Please proceed to the service desk`,
+        message: `Token #${queue.queue_number} - Please proceed to the service counter.`,
         relatedEntityId: queue.id,
         relatedEntityType: 'queue'
       });
-      console.log('✅ Notification sent to citizen');
+      console.log('✅ Notification sent to customer');
     } catch (notifError) {
       console.error('⚠️ Failed to send notification (non-critical):', notifError);
     }
@@ -983,12 +999,15 @@ export const updateQueueStatus = async (queueId, status, currentUser) => {
       };
     }
 
-    // Notify citizen
+    // Notify customer with context-aware message
+    const isCompleted = status === 'COMPLETED' || status === 'completed';
     await createNotification({
-      userId: queue.citizen_id,
+      recipientId: queue.citizen_id,
       type: 'QUEUE_ASSIGNMENT',
-      title: 'Queue Status Updated',
-      message: `Your queue entry (Token ${queue.queue_number}) status has been updated to ${status}`,
+      title: isCompleted ? 'Service Completed' : 'Queue Status Updated',
+      message: isCompleted 
+        ? `Your service for Token #${queue.queue_number} has been completed. Please rate your experience!`
+        : `Your queue entry (Token #${queue.queue_number}) status is now ${status}.`,
       relatedEntityId: queueId,
       relatedEntityType: 'queue'
     });
@@ -1070,50 +1089,7 @@ export const getQueueStatus = async (queueId) => {
   }
 };
 
-// Helper: Create notification
-const createNotification = async (notificationData) => {
-  try {
-    const { userId, institutionId, type, title, message, relatedEntityId, relatedEntityType } = notificationData;
 
-    if (userId) {
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: userId,
-          type,
-          title,
-          message,
-          related_entity_id: relatedEntityId,
-          related_entity_type: relatedEntityType,
-          is_read: false,
-          created_at: new Date().toISOString()
-        });
-    } else if (institutionId) {
-      const { data: employees } = await supabase
-        .from('users')
-        .select('id')
-        .eq('institution_id', institutionId)
-        .in('role', ['EMPLOYEE', 'INSTITUTION_MANAGER']);
-
-      if (employees && employees.length > 0) {
-        const notifications = employees.map(emp => ({
-          user_id: emp.id,
-          type,
-          title,
-          message,
-          related_entity_id: relatedEntityId,
-          related_entity_type: relatedEntityType,
-          is_read: false,
-          created_at: new Date().toISOString()
-        }));
-
-        await supabase.from('notifications').insert(notifications);
-      }
-    }
-  } catch (error) {
-    console.error('Failed to create notification:', error);
-  }
-};
 
 // Helper: Log audit event
 const logAudit = async (userId, action, details) => {
