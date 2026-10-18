@@ -39,7 +39,7 @@ export const getApprovals = async (filters = {}, currentUser) => {
     if (normType === 'ALL' || normType === 'INSTITUTION') {
       const { data: institutions, error: instError } = await supabase
         .from('institutions')
-        .select('id, name_en, name_am, code, description, email, phone, address, status, metadata, created_at, updated_at');
+        .select('id, name_en, name_am, code, description, logo_url, website_url, email, phone, address, status, metadata, created_at, updated_at');
 
       if (!instError && Array.isArray(institutions)) {
         for (const inst of institutions) {
@@ -57,6 +57,8 @@ export const getApprovals = async (filters = {}, currentUser) => {
                 nameAm: inst.name_am,
                 name_am: inst.name_am,
                 code: inst.code,
+                logoUrl: inst.logo_url || null,
+                websiteUrl: inst.website_url || null,
                 status: approval.status,
                 entityStatus: inst.status,
                 submittingAdmin: {
@@ -78,7 +80,13 @@ export const getApprovals = async (filters = {}, currentUser) => {
                   description: inst.description,
                   email: inst.email,
                   phone: inst.phone,
-                  address: inst.address
+                  address: inst.address,
+                  logoUrl: inst.logo_url || null,
+                  websiteUrl: inst.website_url || null,
+                  nameAm: inst.name_am,
+                  nameEn: inst.name_en,
+                  createdAt: inst.created_at,
+                  updatedAt: inst.updated_at
                 }
               });
             }
@@ -100,6 +108,7 @@ export const getApprovals = async (filters = {}, currentUser) => {
           status,
           institution_id,
           employee_id,
+          national_id,
           metadata,
           created_at,
           institutions:institution_id (name_en, code)
@@ -140,7 +149,9 @@ export const getApprovals = async (filters = {}, currentUser) => {
                   role: u.role,
                   institutionId: u.institution_id,
                   institutionName: u.institutions?.name_en,
-                  employeeId: u.employee_id
+                  employeeId: u.employee_id,
+                  nationalId: u.national_id,
+                  createdAt: u.created_at
                 }
               });
             }
@@ -412,7 +423,22 @@ export const submitUser = async (userData, currentUser) => {
     }
 
     // Institutional roles require valid institution
-    if (['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'].includes(normTargetRole) && !institutionId) {
+    let resolvedInstitutionId = null;
+    if (institutionId) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(institutionId);
+      if (isUuid) {
+        resolvedInstitutionId = institutionId;
+      } else {
+        const { data: inst } = await supabase
+          .from('institutions')
+          .select('id')
+          .or(`code.eq.${institutionId},name_en.ilike.${institutionId}`)
+          .maybeSingle();
+        resolvedInstitutionId = inst?.id || null;
+      }
+    }
+
+    if (['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'].includes(normTargetRole) && !resolvedInstitutionId) {
       return { success: false, message: 'An institution assignment is required for this role.' };
     }
 
@@ -450,6 +476,9 @@ export const submitUser = async (userData, currentUser) => {
       ]
     };
 
+    // Map role alias to PostgreSQL database enum user_role ('TECHNICIAN' -> 'ICT_STAFF', 'CUSTOMER' -> 'CITIZEN')
+    const dbRole = normTargetRole === 'CUSTOMER' ? 'CITIZEN' : normTargetRole === 'TECHNICIAN' ? 'ICT_STAFF' : normTargetRole;
+
     // User is created INACTIVE so login and protected endpoints are blocked until approved
     const { data: newUser, error: insertError } = await supabase
       .from('users')
@@ -458,8 +487,8 @@ export const submitUser = async (userData, currentUser) => {
         password_hash: passwordHash,
         full_name: fullName.trim(),
         phone: phone || null,
-        role: normTargetRole,
-        institution_id: institutionId || null,
+        role: dbRole,
+        institution_id: resolvedInstitutionId || null,
         employee_id: employeeId || null,
         national_id: nationalId || null,
         status: 'INACTIVE',
@@ -560,6 +589,10 @@ export const resubmitUser = async (userId, updates, currentUser) => {
     if (updates.phone) updatePayload.phone = updates.phone;
     if (updates.employeeId) updatePayload.employee_id = updates.employeeId;
     if (updates.institutionId) updatePayload.institution_id = updates.institutionId;
+    if (updates.role) {
+      const normR = String(updates.role).toUpperCase();
+      updatePayload.role = normR === 'CUSTOMER' ? 'CITIZEN' : normR === 'TECHNICIAN' ? 'ICT_STAFF' : normR;
+    }
 
     const { data: updated, error: updateErr } = await supabase
       .from('users')
@@ -658,6 +691,17 @@ export const reviewApproval = async ({ entityType, entityId, decision, reason },
       // Concurrency check: must be pending
       if (currentApproval.status !== 'PENDING_APPROVAL') {
         return { success: false, message: `This request is not pending approval (currently ${currentApproval.status}).` };
+      }
+
+      // Mandatory logo verification: cannot approve institution without a valid logo
+      if (normDecision === 'APPROVED') {
+        const hasLogo = inst.logo_url && String(inst.logo_url).trim().length > 0 && inst.logo_url !== 'null';
+        if (!hasLogo) {
+          return {
+            success: false,
+            message: 'Cannot approve institution: A valid institution logo is required before approval.'
+          };
+        }
       }
 
       const history = Array.isArray(currentApproval.history) ? [...currentApproval.history] : [];

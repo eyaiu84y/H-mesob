@@ -6,6 +6,8 @@ export default function News() {
   const { t, lang } = useApp();
   const { announcements, fetchAnnouncements, loading } = useAnnouncements();
   const [selectedNews, setSelectedNews] = useState(null);
+  const [showAll, setShowAll] = useState(false);
+  const INITIAL_LIMIT = 3;
 
   // Fetch public announcements on component mount
   useEffect(() => {
@@ -14,6 +16,7 @@ export default function News() {
 
   // Filter only PUBLIC announcements
   const publicAnnouncements = announcements.filter(a => a.scope === 'PUBLIC');
+  const displayedAnnouncements = showAll ? publicAnnouncements : publicAnnouncements.slice(0, INITIAL_LIMIT);
 
   // Format date helper
   const formatDate = (dateString) => {
@@ -48,7 +51,7 @@ export default function News() {
 
             {/* Left: News List */}
             <div className="lg:col-span-5 space-y-6">
-              {publicAnnouncements.map((announcement) => (
+              {displayedAnnouncements.map((announcement) => (
                 <div
                   key={announcement.id}
                   onClick={() => setSelectedNews(announcement)}
@@ -75,6 +78,44 @@ export default function News() {
                   </div>
                 </div>
               ))}
+
+              {/* Show More / Show Less Button if announcements count > INITIAL_LIMIT */}
+              {publicAnnouncements.length > INITIAL_LIMIT && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (showAll) {
+                        setShowAll(false);
+                        const el = document.getElementById('news');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      } else {
+                        setShowAll(true);
+                      }
+                    }}
+                    className="w-full py-3 px-5 rounded-2xl border border-blue-200/90 dark:border-blue-800/60 bg-blue-50/70 hover:bg-blue-100/90 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-[#1e3a8a] dark:text-blue-300 font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-2xs hover:shadow-xs cursor-pointer group"
+                  >
+                    <span>
+                      {showAll
+                        ? (lang === 'am' ? 'ያነሰ አሳይ' : 'Show Less')
+                        : (lang === 'am'
+                            ? `ተጨማሪ አሳይ (${publicAnnouncements.length - INITIAL_LIMIT})`
+                            : `Show More (${publicAnnouncements.length - INITIAL_LIMIT})`
+                          )
+                      }
+                    </span>
+                    <svg
+                      className={`w-4 h-4 transition-transform duration-200 ${showAll ? 'rotate-180' : 'group-hover:translate-y-0.5'}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Right: Article Content */}

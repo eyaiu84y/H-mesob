@@ -33,9 +33,9 @@ export const getAllUsers = async (filters = {}, user) => {
     if (filters.role) {
       const upperRole = String(filters.role).toUpperCase();
       if (upperRole === 'CUSTOMER' || upperRole === 'CITIZEN') {
-        query = query.in('role', ['CUSTOMER', 'CITIZEN']);
+        query = query.eq('role', 'CITIZEN');
       } else if (upperRole === 'TECHNICIAN' || upperRole === 'ICT_STAFF') {
-        query = query.in('role', ['TECHNICIAN', 'ICT_STAFF']);
+        query = query.eq('role', 'ICT_STAFF');
       } else {
         query = query.eq('role', upperRole);
       }
@@ -167,8 +167,9 @@ export const createUser = async (userData, currentUser) => {
       };
     }
 
-    // For INSTITUTION_MANAGER accounts, route through central Mesob Manager approval workflow
-    if (role === 'INSTITUTION_MANAGER') {
+    // If Super Admin creates a user or for any INSTITUTION_MANAGER accounts, route through central Mesob Manager approval workflow
+    const currentRole = (currentUser?.role || '').toUpperCase();
+    if (currentRole === 'SUPER_ADMIN' || role === 'INSTITUTION_MANAGER') {
       const { submitUser } = await import('./approvalService.js');
       return submitUser(userData, currentUser);
     }
@@ -365,7 +366,8 @@ export const updateUser = async (userId, updates, currentUser) => {
 
     // Only admins can change role
     if (updates.role && (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MESOB_MANAGER')) {
-      updateData.role = String(updates.role).toUpperCase();
+      const r = String(updates.role).toUpperCase();
+      updateData.role = r === 'CUSTOMER' ? 'CITIZEN' : r === 'TECHNICIAN' ? 'ICT_STAFF' : r;
     }
 
     // Only admins can change institution
@@ -488,12 +490,10 @@ export const updateUserStatus = async (userId, status, currentUser) => {
     if (status === 'ACTIVE') {
       const approvalStatus = user.metadata?.approval?.status;
       if (approvalStatus === 'PENDING_APPROVAL' || approvalStatus === 'REJECTED') {
-        if (currentUser.role !== 'MESOB_MANAGER') {
-          return {
-            success: false,
-            message: 'Anti-privilege escalation: User accounts pending or rejected in central approval can only be activated by Mesob Manager through the central approval workflow.'
-          };
-        }
+        return {
+          success: false,
+          message: 'Anti-privilege escalation: User accounts pending or rejected in central approval can only be activated through the central approval workflow.'
+        };
       }
     }
 

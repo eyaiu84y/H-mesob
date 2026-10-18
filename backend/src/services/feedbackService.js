@@ -47,7 +47,7 @@ export async function submitFeedback(feedbackData) {
       .from('users')
       .select('id, role, status')
       .eq('id', customerId)
-      .in('role', ['CUSTOMER', 'CITIZEN'])
+      .eq('role', 'CITIZEN')
       .maybeSingle();
 
     const citizen = customer;

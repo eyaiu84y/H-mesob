@@ -179,7 +179,7 @@ export const updateInstitution = async (institutionId, updates, currentUser) => 
     if (updates.phone) updateData.phone = updates.phone;
     if (updates.email) updateData.email = updates.email;
     if (updates.address) updateData.address = updates.address;
-    if (updates.status) updateData.status = updates.status;
+    if (updates.status) updateData.status = String(updates.status).toUpperCase();
 
     // Update institution
     const { data: updatedInstitution, error } = await supabase
@@ -207,7 +207,9 @@ export const updateInstitution = async (institutionId, updates, currentUser) => 
     }
 
     // Log audit
-    await logAudit(currentUser.id, 'INSTITUTION_UPDATE', `Updated institution: ${existingInstitution.name_en}`);
+    if (currentUser?.id) {
+      await logAudit(currentUser.id, 'INSTITUTION_UPDATE', `Updated institution: ${existingInstitution.name_en}`);
+    }
 
     return {
       success: true,
@@ -246,39 +248,39 @@ export const deleteInstitution = async (institutionId, currentUser) => {
       };
     }
 
-    // Check if institution has active users
-    const { count: activeUsersCount } = await supabase
+    // Clean up or cascade related dependencies before deletion
+    // 1. Unassign users linked to this institution
+    await supabase
       .from('users')
-      .select('id', { count: 'exact', head: true })
-      .eq('institution_id', institutionId)
-      .eq('status', 'ACTIVE');
+      .update({ institution_id: null })
+      .eq('institution_id', institutionId);
 
-    if (activeUsersCount > 0) {
-      return {
-        success: false,
-        message: `Cannot delete institution with ${activeUsersCount} active users. Please deactivate users first.`
-      };
-    }
+    // 2. Delete related records that reference this institution
+    await supabase.from('notifications').delete().eq('related_entity_id', institutionId);
+    await supabase.from('announcements').delete().eq('institution_id', institutionId);
+    await supabase.from('maintenance_reports').delete().eq('institution_id', institutionId);
+    await supabase.from('applications').delete().eq('institution_id', institutionId);
+    await supabase.from('queues').delete().eq('institution_id', institutionId);
+    await supabase.from('services').delete().eq('institution_id', institutionId);
 
-    // Soft delete (set status to INACTIVE)
+    // 3. Delete the institution from database
     const { error } = await supabase
       .from('institutions')
-      .update({
-        status: 'INACTIVE',
-        updated_at: new Date().toISOString()
-      })
+      .delete()
       .eq('id', institutionId);
 
     if (error) {
       console.error('Delete institution error:', error);
       return {
         success: false,
-        message: 'Failed to delete institution.'
+        message: 'Failed to delete institution: ' + error.message
       };
     }
 
     // Log audit
-    await logAudit(currentUser.id, 'INSTITUTION_DELETE', `Deleted institution: ${institution.name_en}`);
+    if (currentUser?.id) {
+      await logAudit(currentUser.id, 'INSTITUTION_DELETE', `Deleted institution: ${institution.name_en}`);
+    }
 
     return {
       success: true,

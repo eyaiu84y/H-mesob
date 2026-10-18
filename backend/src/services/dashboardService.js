@@ -134,7 +134,7 @@ const getInstitutionManagerDashboard = async (institutionId) => {
     .from('users')
     .select('id', { count: 'exact', head: true })
     .eq('institution_id', institutionId)
-    .in('role', ['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'])
+    .in('role', ['EMPLOYEE', 'ICT_STAFF'])
     .eq('status', 'ACTIVE');
 
   // Applications (last 30 days)

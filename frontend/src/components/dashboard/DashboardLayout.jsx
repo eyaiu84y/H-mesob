@@ -1,29 +1,31 @@
 import { useState } from 'react';
 import { useAuth, ROLE_LABELS, ROLE_BADGE } from '../../context/AuthContext';
+import { useApp } from '../../context/AppContext';
 import LanguageSwitcher from '../LanguageSwitcher';
 import NotificationBell from './NotificationBell';
 
 export default function DashboardLayout({ title, navLinks = [], letter, subtitle, children, onNavigate }) {
   const { user, logout } = useAuth();
+  const { t } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const badgeClass = user ? ROLE_BADGE[user.role] : '';
-  const roleLabel  = user ? ROLE_LABELS[user.role] : '';
+  const roleLabel  = user ? (t[user.role] || ROLE_LABELS[user.role]) : '';
 
   function closeSidebar() {
     setSidebarOpen(false);
   }
 
   return (
-    <div className="bg-gradient-to-br from-[#f8fafc] via-[#f1f5f9] to-[#edf4fc] min-h-screen text-slate-900">
-      <div className="flex min-h-screen">
+    <div className="dashboard-bg min-h-screen text-slate-900 relative">
+      <div className="flex min-h-screen relative z-10">
 
         {/* Sidebar */}
         <aside
-          className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col transition-transform duration-200 ${sidebarOpen ? 'open' : ''}`}
+          className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 flex flex-col transition-transform duration-200 ${sidebarOpen ? 'open' : ''}`}
         >
           {/* Logo area */}
-          <div className="p-5 border-b border-slate-100">
+          <div className="p-5 border-b border-blue-100/70">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-sm border border-[#314ea1]/20">
                 {letter}
@@ -58,12 +60,12 @@ export default function DashboardLayout({ title, navLinks = [], letter, subtitle
           </nav>
 
           {/* Logout */}
-          <div className="p-4 border-t border-slate-100">
+          <div className="p-4 border-t border-blue-100/70">
             <button
               onClick={logout}
               className="sidebar-link w-full text-red-600 hover:bg-red-50"
             >
-              Logout
+              {t.logout || 'Logout'}
             </button>
           </div>
         </aside>
@@ -72,7 +74,7 @@ export default function DashboardLayout({ title, navLinks = [], letter, subtitle
         <div className="flex-1 flex flex-col min-w-0">
 
           {/* Top header */}
-          <header className="bg-white/95 backdrop-blur-sm border-b border-slate-200 px-4 lg:px-8 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+          <header className="bg-white/85 backdrop-blur-xl border-b border-blue-100/80 px-4 lg:px-8 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-[0_4px_20px_-4px_rgba(30,58,138,0.04)]">
             <div className="flex items-center gap-3">
               {/* Hamburger (mobile) */}
               <button

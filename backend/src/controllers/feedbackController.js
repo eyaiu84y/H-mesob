@@ -90,7 +90,7 @@ export async function submitFeedback(req, res) {
 
     return res.status(500).json({
       success: false,
-      message: 'Failed to submit feedback'
+      message: error.message || 'Failed to submit feedback'
     });
   }
 }

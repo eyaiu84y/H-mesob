@@ -9,6 +9,49 @@ export const VALID_NOTIFICATION_TYPES = [
   'SYSTEM_MESSAGE'
 ];
 
+// Valid PostgreSQL user_role enum values in Supabase schema
+export const VALID_DB_ROLES = [
+  'SUPER_ADMIN',
+  'MESOB_MANAGER',
+  'INSTITUTION_MANAGER',
+  'EMPLOYEE',
+  'ICT_STAFF',
+  'CITIZEN'
+];
+
+/**
+ * Maps any role string/alias to the exact PostgreSQL enum value
+ * E.g., 'CUSTOMER' -> 'CITIZEN', 'TECHNICIAN' -> 'ICT_STAFF'
+ */
+export const toDbRole = (role) => {
+  if (!role) return null;
+  const upper = String(role).toUpperCase().trim();
+  if (upper === 'CUSTOMER' || upper === 'CITIZEN') return 'CITIZEN';
+  if (upper === 'TECHNICIAN' || upper === 'ICT_STAFF') return 'ICT_STAFF';
+  if (VALID_DB_ROLES.includes(upper)) return upper;
+  return null;
+};
+
+/**
+ * Checks whether a notification represents an internal administrative or approval event
+ * that customers must NEVER receive or see.
+ */
+export const isInternalAdministrativeNotification = (title = '', type = '', relatedEntityType = '', metadata = {}) => {
+  const t = String(title || '').toLowerCase();
+  const ret = String(relatedEntityType || '').toLowerCase();
+  const action = String(metadata?.action || '').toLowerCase();
+  const entityType = String(metadata?.entity_type || '').toLowerCase();
+
+  // Internal approval requests / decisions
+  if (ret === 'approval_request' || ret === 'approval_decision') return true;
+  if (t.includes('approval required') || t.includes('approval approved') || t.includes('approval rejected')) return true;
+  if (action.includes('approval') || action.includes('user_approve') || action.includes('institution_approve')) return true;
+  if (entityType === 'user account' || entityType === 'institution' || entityType === 'user') {
+    if (t.includes('approval') || action.includes('approval')) return true;
+  }
+  return false;
+};
+
 /**
  * Normalizes any notification type to one of the strict Postgres enum values
  */
@@ -36,7 +79,7 @@ export const normalizeNotificationType = (type) => {
 
 /**
  * Centralized, safe notification creator
- * Respects deduplication, validates enum types, and inserts correct column 'recipient_id'
+ * Respects deduplication, validates enum types, role-based targeting, and recipient RBAC filtering.
  * 
  * @param {Object} options
  * @param {string} [options.recipientId] - Direct user recipient ID
@@ -89,23 +132,21 @@ export const createNotification = async (options) => {
       }
 
       if (roles) {
-        const roleArray = Array.isArray(roles) ? roles : [roles];
-        // Normalize role names including legacy aliases
-        const expandedRoles = [];
-        roleArray.forEach(r => {
-          const u = String(r).toUpperCase();
-          expandedRoles.push(u);
-          if (u === 'TECHNICIAN') expandedRoles.push('ICT_STAFF');
-          if (u === 'ICT_STAFF') expandedRoles.push('TECHNICIAN');
-          if (u === 'CUSTOMER') expandedRoles.push('CITIZEN');
-          if (u === 'CITIZEN') expandedRoles.push('CUSTOMER');
-        });
-        query = query.in('role', expandedRoles);
+        const rawRoleArray = Array.isArray(roles) ? roles : [roles];
+        const dbRoles = [...new Set(rawRoleArray.map(toDbRole).filter(Boolean))];
+        if (dbRoles.length > 0) {
+          query = query.in('role', dbRoles);
+        } else {
+          // If none of the passed roles match valid roles, return no matches safely
+          query = query.eq('id', '00000000-0000-0000-0000-000000000000');
+        }
       }
 
       const { data: users, error: fetchErr } = await query;
       if (!fetchErr && users) {
         users.forEach(u => targetUserIds.add(u.id));
+      } else if (fetchErr) {
+        console.error('Failed to resolve role recipients for notification:', fetchErr);
       }
     }
 
@@ -113,7 +154,31 @@ export const createNotification = async (options) => {
       return { success: true, count: 0, message: 'No recipients resolved.' };
     }
 
-    const recipients = Array.from(targetUserIds);
+    let recipients = Array.from(targetUserIds);
+
+    // SECURITY CHECK: Customers must NEVER receive internal administrative notifications
+    const isInternal = isInternalAdministrativeNotification(title, type, relatedEntityType, metadata);
+    if (isInternal && recipients.length > 0) {
+      const { data: recipientUsers, error: recUserErr } = await supabase
+        .from('users')
+        .select('id, role')
+        .in('id', recipients);
+
+      if (!recUserErr && recipientUsers) {
+        const customerIds = new Set(
+          recipientUsers.filter(u => u.role === 'CITIZEN').map(u => u.id)
+        );
+        if (customerIds.size > 0) {
+          console.warn(`[SECURITY] Stripped ${customerIds.size} CUSTOMER/CITIZEN recipients from internal notification: "${title}"`);
+          recipients = recipients.filter(id => !customerIds.has(id));
+        }
+      }
+    }
+
+    if (recipients.length === 0) {
+      return { success: true, count: 0, message: 'No authorized recipients remaining for this notification.' };
+    }
+
     const nowIso = new Date().toISOString();
     const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
 
@@ -129,6 +194,10 @@ export const createNotification = async (options) => {
       (recentNotifs || []).map(r => `${r.recipient_id}:${r.title}:${r.related_entity_id || ''}`)
     );
 
+    const isUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+    const validRelatedEntityId = isUuid(relatedEntityId) ? relatedEntityId.trim() : null;
+    const validAnnouncementId = isUuid(announcementId) ? announcementId.trim() : null;
+
     const rowsToInsert = recipients
       .filter(recId => !recentSet.has(`${recId}:${title}:${relatedEntityId || ''}`))
       .map(recId => ({
@@ -137,12 +206,13 @@ export const createNotification = async (options) => {
         title,
         message,
         related_entity_type: relatedEntityType || null,
-        related_entity_id: relatedEntityId || null,
-        announcement_id: announcementId || null,
+        related_entity_id: validRelatedEntityId,
+        announcement_id: validAnnouncementId,
         is_read: false,
         created_at: nowIso,
         metadata: {
           ...metadata,
+          ...(relatedEntityId && !validRelatedEntityId ? { raw_related_entity_id: relatedEntityId } : {}),
           original_type: rawType !== type ? rawType : undefined
         }
       }));
@@ -170,6 +240,7 @@ export const createNotification = async (options) => {
 
 /**
  * Prepares notification dispatch for the Institution/User Approval Workflow
+ * Strictly routes to authorized MESOB_MANAGER users.
  */
 export const notifyApprovalRequest = async ({ entityType, entityId, entityName, requestingAdminId }) => {
   return createNotification({
@@ -189,6 +260,7 @@ export const notifyApprovalRequest = async ({ entityType, entityId, entityName, 
 
 /**
  * Prepares notification dispatch when an Approval Decision is made
+ * Strictly routes to the submitting administrator (requestingAdminId).
  */
 export const notifyApprovalDecision = async ({ entityType, entityId, entityName, requestingAdminId, status, decisionNotes }) => {
   if (!requestingAdminId) return { success: false, message: 'Requesting admin ID required' };
@@ -225,6 +297,8 @@ export const getNotifications = async (currentUser, filters = {}) => {
 
     const limit = Math.min(Math.max(parseInt(filters.limit) || 30, 1), 100);
     const offset = Math.max(parseInt(filters.offset) || 0, 0);
+    const userRole = toDbRole(currentUser.role);
+    const isCustomer = userRole === 'CITIZEN';
 
     // Strict Authorization: User can ONLY see their own notifications
     let query = supabase
@@ -233,6 +307,17 @@ export const getNotifications = async (currentUser, filters = {}) => {
       .eq('recipient_id', currentUser.id)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
+
+    // Defense-in-depth: Customers must never receive or see internal administrative notifications
+    if (isCustomer) {
+      query = query
+        .not('related_entity_type', 'in', '("approval_request","approval_decision")')
+        .not('title', 'ilike', '%Approval Required%')
+        .not('title', 'ilike', '%Approval APPROVED: User Account%')
+        .not('title', 'ilike', '%Approval REJECTED: User Account%')
+        .not('title', 'ilike', '%Approval APPROVED: Institution%')
+        .not('title', 'ilike', '%Approval REJECTED: Institution%');
+    }
 
     // Filter by read status
     if (filters.isRead !== undefined) {
@@ -255,9 +340,39 @@ export const getNotifications = async (currentUser, filters = {}) => {
       };
     }
 
+    // Data sanitization: Do not expose internal administrative details or personal identifiers to customers
+    const sanitizedData = (data || []).map(notif => {
+      if (isCustomer) {
+        const { metadata: rawMeta, ...rest } = notif;
+        const safeMeta = {};
+        if (rawMeta && typeof rawMeta === 'object') {
+          // Allow customer-relevant metadata attributes only
+          const allowedKeys = [
+            'action',
+            'status',
+            'application_number',
+            'queue_number',
+            'service_name',
+            'rating',
+            'feedback_id',
+            'ticket_number',
+            'counter'
+          ];
+          allowedKeys.forEach(key => {
+            if (rawMeta[key] !== undefined) safeMeta[key] = rawMeta[key];
+          });
+        }
+        return {
+          ...rest,
+          metadata: safeMeta
+        };
+      }
+      return notif;
+    });
+
     return {
       success: true,
-      data: data || [],
+      data: sanitizedData,
       total: count || 0,
       limit,
       offset
@@ -286,11 +401,27 @@ export const getUnreadCount = async (currentUser) => {
       };
     }
 
-    const { count, error } = await supabase
+    const userRole = toDbRole(currentUser.role);
+    const isCustomer = userRole === 'CITIZEN';
+
+    let query = supabase
       .from('notifications')
       .select('id', { count: 'exact', head: true })
       .eq('recipient_id', currentUser.id)
       .eq('is_read', false);
+
+    // Defense-in-depth: Exclude internal administrative notifications from customer unread count
+    if (isCustomer) {
+      query = query
+        .not('related_entity_type', 'in', '("approval_request","approval_decision")')
+        .not('title', 'ilike', '%Approval Required%')
+        .not('title', 'ilike', '%Approval APPROVED: User Account%')
+        .not('title', 'ilike', '%Approval REJECTED: User Account%')
+        .not('title', 'ilike', '%Approval APPROVED: Institution%')
+        .not('title', 'ilike', '%Approval REJECTED: Institution%');
+    }
+
+    const { count, error } = await query;
 
     if (error) {
       console.error('Get unread count error:', error);
@@ -332,14 +463,25 @@ export const markAsRead = async (notificationId, currentUser) => {
       return { success: false, message: 'Notification ID is required.' };
     }
 
-    // Verify ownership: notification must belong to current user
+    const userRole = toDbRole(currentUser.role);
+    const isCustomer = userRole === 'CITIZEN';
+
+    // Verify ownership: notification must exist and belong strictly to current user
     const { data: notification, error: findError } = await supabase
       .from('notifications')
-      .select('id, recipient_id, is_read')
+      .select('id, recipient_id, is_read, title, type, related_entity_type, metadata')
       .eq('id', notificationId)
       .single();
 
     if (findError || !notification || notification.recipient_id !== currentUser.id) {
+      return {
+        success: false,
+        message: 'Notification not found or access denied.'
+      };
+    }
+
+    // Customer security: customer cannot access or mark internal administrative notifications as read
+    if (isCustomer && isInternalAdministrativeNotification(notification.title, notification.type, notification.related_entity_type, notification.metadata)) {
       return {
         success: false,
         message: 'Notification not found or access denied.'
@@ -392,6 +534,8 @@ export const markAsRead = async (notificationId, currentUser) => {
 
 /**
  * Mark all notifications as read for current user
+ * Strictly applies only to the authenticated user's authorized notifications.
+ * 
  * @param {Object} currentUser - Current authenticated user
  * @returns {Promise<Object>} Result
  */
@@ -401,7 +545,10 @@ export const markAllAsRead = async (currentUser) => {
       return { success: false, message: 'Authentication required.' };
     }
 
-    const { error } = await supabase
+    const userRole = toDbRole(currentUser.role);
+    const isCustomer = userRole === 'CITIZEN';
+
+    let updateQuery = supabase
       .from('notifications')
       .update({
         is_read: true,
@@ -409,6 +556,18 @@ export const markAllAsRead = async (currentUser) => {
       })
       .eq('recipient_id', currentUser.id)
       .eq('is_read', false);
+
+    if (isCustomer) {
+      updateQuery = updateQuery
+        .not('related_entity_type', 'in', '("approval_request","approval_decision")')
+        .not('title', 'ilike', '%Approval Required%')
+        .not('title', 'ilike', '%Approval APPROVED: User Account%')
+        .not('title', 'ilike', '%Approval REJECTED: User Account%')
+        .not('title', 'ilike', '%Approval APPROVED: Institution%')
+        .not('title', 'ilike', '%Approval REJECTED: Institution%');
+    }
+
+    const { error } = await updateQuery;
 
     if (error) {
       console.error('Mark all as read error:', error);

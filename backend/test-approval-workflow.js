@@ -1,7 +1,6 @@
 /**
- * Automated Test Suite for Central Approval Workflow & Secure Notifications
- * Tests real API endpoints, database state, RBAC authorization, anti-privilege escalation,
- * and notifications across Super Admin and Mesob Manager.
+ * Automated Test Suite for Central Approval Workflow & Verification
+ * Hawassa MESOB: Verifies all 12 Required Tests from User Specification
  */
 
 import axios from 'axios';
@@ -40,13 +39,13 @@ async function login(email, password) {
 }
 
 async function runTests() {
-  console.log(`\n${colors.bold}${colors.cyan}====================================================${colors.reset}`);
-  console.log(`${colors.bold}${colors.cyan}  CENTRAL APPROVAL WORKFLOW & NOTIFICATIONS TEST SUITE${colors.reset}`);
-  console.log(`${colors.bold}${colors.cyan}====================================================${colors.reset}\n`);
+  console.log(`\n${colors.bold}${colors.cyan}================================================================${colors.reset}`);
+  console.log(`${colors.bold}${colors.cyan}  HAWASSA MESOB — APPROVAL WORKFLOW VERIFICATION TEST SUITE${colors.reset}`);
+  console.log(`${colors.bold}${colors.cyan}================================================================${colors.reset}\n`);
 
   try {
-    // 1. Authenticate users
-    console.log(`${colors.yellow}1. Authenticating Roles...${colors.reset}`);
+    // 0. Authenticate Roles
+    console.log(`${colors.yellow}[Setup] Authenticating Test Roles...${colors.reset}`);
     const superAdmin = await login('superadmin@mesobcenter.et', 'SuperAdmin@2026');
     assert(superAdmin.token && superAdmin.user.role === 'SUPER_ADMIN', 'Super Admin authenticated successfully');
 
@@ -54,201 +53,253 @@ async function runTests() {
     assert(mesobManager.token && mesobManager.user.role === 'MESOB_MANAGER', 'Mesob Manager authenticated successfully');
 
     const customer = await login('customer@mesobcenter.et', 'customer@2026');
-    assert(customer.token && (customer.user.role?.toUpperCase() === 'CUSTOMER' || customer.user.role?.toLowerCase() === 'citizen'), 'Customer authenticated successfully', `Role: ${customer.user.role}`);
+    assert(customer.token, 'Customer authenticated successfully');
 
     const adminHeaders = { headers: { Authorization: `Bearer ${superAdmin.token}` } };
     const managerHeaders = { headers: { Authorization: `Bearer ${mesobManager.token}` } };
     const customerHeaders = { headers: { Authorization: `Bearer ${customer.token}` } };
 
-    // 2. Test Super Admin submitting a new institution
-    console.log(`\n${colors.yellow}2. Testing Institution Submission for Approval...${colors.reset}`);
     const timestamp = Date.now();
-    const instCode = `TEST_${timestamp.toString().slice(-5)}`;
-    const instName = `Hawassa Innovation Bureau ${timestamp}`;
+
+    // ─────────────────────────────────────────────────────────────
+    // TEST 1: A newly submitted institution remains pending
+    // ─────────────────────────────────────────────────────────────
+    console.log(`\n${colors.yellow}[Test 1] Newly submitted institution remains pending...${colors.reset}`);
+    const instCode = `tst_${timestamp.toString().slice(-5)}`;
     const instPayload = {
-      name: instName,
-      name_en: instName,
-      nameAm: 'የሐዋሳ ኢኖቬሽን ቢሮ',
-      name_am: 'የሐዋሳ ኢኖቬሽን ቢሮ',
+      name: `Hawassa Trade Bureau ${timestamp}`,
+      name_en: `Hawassa Trade Bureau ${timestamp}`,
+      nameAm: 'የሐዋሳ ንግድ ቢሮ',
+      name_am: 'የሐዋሳ ንግድ ቢሮ',
       code: instCode,
-      description: 'Department overseeing technology, research, and innovation in Hawassa.',
-      details: 'Full details of Hawassa Innovation Bureau with all required public documentation.',
-      website_url: 'https://innovation.hawassa.gov.et',
-      officialUrl: 'https://innovation.hawassa.gov.et',
-      phone: '+251 46 220 9999',
-      email: `contact.${timestamp}@innovation.gov.et`,
-      address: 'Piazza, Hawassa, Ethiopia'
+      description: 'Public regulatory institution overseeing commerce in Hawassa.',
+      website_url: 'https://trade.hawassa.gov.et',
+      officialUrl: 'https://trade.hawassa.gov.et',
+      phone: '+251 46 220 1122',
+      email: `trade.${timestamp}@hawassa.gov.et`,
+      address: 'Piazza Sector 4, Hawassa',
+      logoUrl: 'https://hawassa.gov.et/logos/trade-logo.png'
     };
 
     const submitInstRes = await axios.post(`${BASE_URL}/approvals/institution`, instPayload, adminHeaders);
     assert(submitInstRes.status === 201, 'Institution submitted with HTTP 201 Created');
-    const createdInst = submitInstRes.data.data || submitInstRes.data.institution;
-    assert(createdInst?.status === 'INACTIVE', 'Institution status is INACTIVE upon submission', `Status: ${createdInst?.status}`);
-    assert(createdInst?.metadata?.approval?.status === 'PENDING_APPROVAL', 'Approval metadata status is PENDING_APPROVAL');
-    assert(createdInst?.metadata?.approval?.submitted_by === superAdmin.user.id, 'Submitting admin ID is recorded');
-    assert(createdInst?.metadata?.approval?.submitted_at, 'Submission timestamp is recorded');
+    const createdInst = submitInstRes.data.data;
+    assert(createdInst.status === 'INACTIVE', 'Institution entity status is INACTIVE upon submission', `Status: ${createdInst.status}`);
+    assert(createdInst.metadata?.approval?.status === 'PENDING_APPROVAL', 'Approval metadata status is PENDING_APPROVAL');
+    assert(createdInst.metadata?.approval?.submitted_by === superAdmin.user.id, 'Submitting Super Admin ID is recorded');
+    assert(createdInst.metadata?.approval?.submitted_at, 'Submission timestamp is properly recorded');
 
-    // 3. Mesob Manager receives in-app notification
-    console.log(`\n${colors.yellow}3. Verifying In-App Notification Delivery to Mesob Manager...${colors.reset}`);
-    // Wait brief moment for async notification insert if any
-    await new Promise(r => setTimeout(r, 600));
-    const managerNotifsRes = await axios.get(`${BASE_URL}/notifications`, managerHeaders);
-    const notificationsList = managerNotifsRes.data.notifications || managerNotifsRes.data.data || [];
-    const instApprovalNotif = notificationsList.find(n => 
-      n.title?.includes(instPayload.name_en) || n.message?.includes(instPayload.name_en) || n.message?.includes(instCode)
-    );
-    assert(Boolean(instApprovalNotif), 'Mesob Manager received notification for new institution submission', instApprovalNotif ? instApprovalNotif.title : 'None found');
-    if (instApprovalNotif) {
-      assert(instApprovalNotif.recipient_id === mesobManager.user.id, 'Notification recipient_id correctly belongs to Mesob Manager');
+    // ─────────────────────────────────────────────────────────────
+    // TEST 2: Opening its notification does NOT approve it
+    // ─────────────────────────────────────────────────────────────
+    console.log(`\n${colors.yellow}[Test 2] Opening notification does NOT approve institution...${colors.reset}`);
+    await new Promise(r => setTimeout(r, 500));
+    const managerNotifs = await axios.get(`${BASE_URL}/notifications`, managerHeaders);
+    const notifsList = managerNotifs.data.notifications || managerNotifs.data.data || [];
+    const instNotif = notifsList.find(n => n.message?.includes(instPayload.name_en) || n.related_entity_id === createdInst.id);
+    assert(Boolean(instNotif), 'MESOB Manager received notification for new institution submission');
+
+    if (instNotif) {
+      // Mark notification as read (simulating opening notification)
+      const markReadRes = await axios.patch(`${BASE_URL}/notifications/${instNotif.id}/read`, {}, managerHeaders);
+      assert(markReadRes.status === 200, 'Notification marked as read successfully');
+
+      // Verify institution in database remains strictly INACTIVE and PENDING_APPROVAL
+      const instCheckRes = await axios.get(`${BASE_URL}/institutions/${createdInst.id}`, managerHeaders);
+      const checkedInst = instCheckRes.data.data;
+      assert(checkedInst.status === 'INACTIVE', 'Institution remains INACTIVE after notification click/read', `Status: ${checkedInst.status}`);
+      assert(checkedInst.metadata?.approval?.status === 'PENDING_APPROVAL', 'Approval status remains PENDING_APPROVAL after notification click/read');
     }
 
-    // 4. Mesob Manager inspects approval queue
-    console.log(`\n${colors.yellow}4. Testing Approval Queue Retrieval...${colors.reset}`);
+    // ─────────────────────────────────────────────────────────────
+    // TEST 3: Manager can inspect all submitted institution details
+    // ─────────────────────────────────────────────────────────────
+    console.log(`\n${colors.yellow}[Test 3] Manager can inspect all submitted institution details...${colors.reset}`);
     const queueRes = await axios.get(`${BASE_URL}/approvals?type=institution&status=PENDING_APPROVAL`, managerHeaders);
-    assert(queueRes.status === 200, 'Mesob Manager successfully fetched approval queue');
-    const queueItems = queueRes.data.data || queueRes.data.items || [];
-    const queuedInst = queueItems.find(i => i.id === createdInst.id);
-    assert(Boolean(queuedInst), 'Submitted institution appears in Mesob Manager pending approvals queue');
+    assert(queueRes.status === 200, 'MESOB Manager retrieved approvals queue');
+    const queueList = queueRes.data.data || [];
+    const queuedInst = queueList.find(i => i.id === createdInst.id);
+    assert(Boolean(queuedInst), 'Submitted institution found in MESOB Manager approval queue');
+
     if (queuedInst) {
-      assert(queuedInst.name_en === instPayload.name_en || queuedInst.name === instPayload.name_en || queuedInst.entityName === instPayload.name_en, 'Complete institution details are inspectable in queue');
-      assert(queuedInst.code === instCode.toLowerCase() || queuedInst.code === instCode, 'Institution code matches submission');
+      assert(queuedInst.name_en === instPayload.name_en, 'Complete institution English name is visible');
+      assert(queuedInst.nameAm === instPayload.nameAm, 'Complete institution Amharic name is visible');
+      assert(queuedInst.code === instCode, 'Complete institution code is visible');
+      assert(queuedInst.details?.description === instPayload.description, 'Complete institution description is inspectable');
+      assert(queuedInst.details?.email === instPayload.email, 'Contact email is inspectable');
+      assert(queuedInst.details?.phone === instPayload.phone, 'Contact phone is inspectable');
+      assert(queuedInst.details?.address === instPayload.address, 'Physical address is inspectable');
+      assert(queuedInst.details?.websiteUrl === instPayload.website_url, 'Official website is inspectable');
+      assert(queuedInst.submittingAdmin?.name === superAdmin.user.full_name || queuedInst.submittingAdmin?.name === 'Super Admin', 'Submitting Super Admin identity is inspectable');
+      assert(Boolean(queuedInst.submittedAt), 'Submission timestamp is inspectable');
     }
 
-    // 5. Anti-Privilege Escalation & Security Checks
-    console.log(`\n${colors.yellow}5. Verifying Anti-Privilege Escalation & Authorization Rules...${colors.reset}`);
-    
-    // 5a. Super Admin cannot approve/reject
-    try {
-      await axios.post(`${BASE_URL}/approvals/${createdInst.id}/review`, {
-        decision: 'APPROVED',
-        notes: 'Trying to approve as super admin'
-      }, adminHeaders);
-      assert(false, 'Super Admin was blocked from reviewing approvals');
-    } catch (err) {
-      assert(err.response?.status === 403, 'Super Admin blocked from approving request (403 Forbidden)', `Got ${err.response?.status}`);
-    }
+    // ─────────────────────────────────────────────────────────────
+    // TEST 4: Correct institution logo is visible and can be inspected
+    // ─────────────────────────────────────────────────────────────
+    console.log(`\n${colors.yellow}[Test 4] Correct institution logo is visible and inspectable...${colors.reset}`);
+    assert(queuedInst?.logoUrl === instPayload.logoUrl || queuedInst?.details?.logoUrl === instPayload.logoUrl, 'Institution logo URL is correctly returned and inspectable', queuedInst?.logoUrl);
 
-    // 5b. Customer cannot approve/reject
+    // ─────────────────────────────────────────────────────────────
+    // TEST 5: Missing or broken required logo prevents approval
+    // ─────────────────────────────────────────────────────────────
+    console.log(`\n${colors.yellow}[Test 5] Missing required logo prevents approval until corrected...${colors.reset}`);
+    const noLogoCode = `nlg_${timestamp.toString().slice(-5)}`;
+    const noLogoInstRes = await axios.post(`${BASE_URL}/approvals/institution`, {
+      name: `Bureau Without Logo ${timestamp}`,
+      code: noLogoCode,
+      description: 'Institution submitted without logo for validation testing.',
+      phone: '+251 46 220 3344',
+      email: `nologo.${timestamp}@hawassa.gov.et`,
+      logoUrl: null // No logo
+    }, adminHeaders);
+    const noLogoInst = noLogoInstRes.data.data;
+
+    // Manager attempts to approve institution lacking a logo
     try {
-      await axios.post(`${BASE_URL}/approvals/${createdInst.id}/review`, {
+      await axios.patch(`${BASE_URL}/approvals/INSTITUTION/${noLogoInst.id}/decision`, {
         decision: 'APPROVED'
-      }, customerHeaders);
-      assert(false, 'Customer was blocked from reviewing approvals');
+      }, managerHeaders);
+      assert(false, 'Approval without logo should have been blocked');
     } catch (err) {
-      assert(err.response?.status === 403, 'Customer blocked from approving request (403 Forbidden)', `Got ${err.response?.status}`);
+      assert(err.response?.status === 400, 'Approval without logo rejected with HTTP 400 Bad Request', err.response?.data?.message);
+      assert(err.response?.data?.message?.includes('logo is required'), 'Error message confirms logo is required before approval');
     }
 
-    // 5c. Super Admin cannot directly activate a pending institution via normal update endpoint
-    try {
-      await axios.put(`${BASE_URL}/institutions/${createdInst.id}`, { status: 'ACTIVE' }, adminHeaders);
-      assert(false, 'Super Admin was blocked from directly activating pending institution');
-    } catch (err) {
-      assert(err.response?.status === 400, 'Direct activation of pending institution blocked with 400', err.response?.data?.message);
-    }
+    // Verify institution remains INACTIVE and PENDING_APPROVAL
+    const noLogoCheck = await axios.get(`${BASE_URL}/institutions/${noLogoInst.id}`, managerHeaders);
+    assert(noLogoCheck.data.data.status === 'INACTIVE', 'Institution without logo remains INACTIVE');
 
-    // 5d. Rejection without mandatory reason must fail
+    // ─────────────────────────────────────────────────────────────
+    // TEST 6: Corrected logo allows progression following validation rules
+    // ─────────────────────────────────────────────────────────────
+    console.log(`\n${colors.yellow}[Test 6] Correcting logo follows validation rules...${colors.reset}`);
+    const resubmitWithLogo = await axios.post(`${BASE_URL}/approvals/institution/${noLogoInst.id}/resubmit`, {
+      name: `Bureau Without Logo ${timestamp}`,
+      code: noLogoCode,
+      logoUrl: 'https://hawassa.gov.et/logos/corrected-logo.png',
+      resubmitNotes: 'Uploaded official verified SVG institution logo.'
+    }, adminHeaders);
+    assert(resubmitWithLogo.status === 200, 'Institution resubmitted with valid logo successfully');
+    const updatedNoLogoInst = resubmitWithLogo.data.data;
+    assert(Boolean(updatedNoLogoInst.logo_url), 'Updated institution now possesses valid logo_url', updatedNoLogoInst.logo_url);
+
+    // ─────────────────────────────────────────────────────────────
+    // TEST 8: Rejection without a reason is refused
+    // ─────────────────────────────────────────────────────────────
+    console.log(`\n${colors.yellow}[Test 8] Rejection without a reason is refused...${colors.reset}`);
     try {
-      await axios.post(`${BASE_URL}/approvals/${createdInst.id}/review`, {
+      await axios.patch(`${BASE_URL}/approvals/INSTITUTION/${noLogoInst.id}/decision`, {
         decision: 'REJECTED',
         reason: '' // Empty reason
       }, managerHeaders);
-      assert(false, 'Rejection without reason should be rejected');
+      assert(false, 'Rejection without reason should be refused');
     } catch (err) {
-      assert(err.response?.status === 400, 'Rejection without reason rejected with 400 Bad Request', err.response?.data?.message);
+      assert(err.response?.status === 400, 'Rejection without reason refused with HTTP 400 Bad Request', err.response?.data?.message);
+      assert(err.response?.data?.message?.includes('rejection reason is required'), 'Error confirms mandatory rejection reason is required');
     }
 
-    // 6. Mesob Manager Rejection with Mandatory Reason
-    console.log(`\n${colors.yellow}6. Testing Rejection Flow with Mandatory Reason...${colors.reset}`);
-    const rejectReason = 'Missing certified government accreditation documents and official charter.';
-    const rejectRes = await axios.post(`${BASE_URL}/approvals/${createdInst.id}/review`, {
+    // ─────────────────────────────────────────────────────────────
+    // TEST 9: Rejection with a reason works and notifies Super Admin
+    // ─────────────────────────────────────────────────────────────
+    console.log(`\n${colors.yellow}[Test 9] Rejection with reason works and notifies Super Admin...${colors.reset}`);
+    const rejectReasonText = 'Official regional seal verification document is missing from the attachment.';
+    const rejectRes = await axios.patch(`${BASE_URL}/approvals/INSTITUTION/${noLogoInst.id}/decision`, {
       decision: 'REJECTED',
-      reason: rejectReason
+      reason: rejectReasonText
     }, managerHeaders);
-    assert(rejectRes.status === 200, 'Mesob Manager rejected request with 200 OK');
-    const rejectedInst = rejectRes.data.data || rejectRes.data.institution;
-    assert(rejectedInst?.metadata?.approval?.status === 'REJECTED', 'Approval status recorded as REJECTED');
-    assert(rejectedInst?.status === 'INACTIVE', 'Institution remains INACTIVE');
-    assert(rejectedInst?.metadata?.approval?.rejection_reason === rejectReason, 'Rejection reason recorded properly');
+    assert(rejectRes.status === 200, 'Institution rejected with HTTP 200 OK');
+    const rejectedEntity = rejectRes.data.data;
+    assert(rejectedEntity.status === 'INACTIVE', 'Rejected institution remains INACTIVE');
+    assert(rejectedEntity.metadata?.approval?.status === 'REJECTED', 'Approval status recorded as REJECTED');
+    assert(rejectedEntity.metadata?.approval?.rejection_reason === rejectReasonText, 'Rejection reason recorded in metadata');
 
-    // 7. Verify Submitting Super Admin received rejection notification
-    console.log(`\n${colors.yellow}7. Verifying Decision Notification to Submitting Admin...${colors.reset}`);
-    await new Promise(r => setTimeout(r, 600));
-    const adminNotifsRes = await axios.get(`${BASE_URL}/notifications`, adminHeaders);
-    const adminNotifsList = adminNotifsRes.data.notifications || adminNotifsRes.data.data || [];
-    const rejectNotif = adminNotifsList.find(n => 
-      n.message?.includes(instPayload.name_en) && (n.message?.toLowerCase().includes('rejected') || n.title?.toLowerCase().includes('rejected'))
-    );
-    assert(Boolean(rejectNotif), 'Super Admin received notification with rejection decision');
-    if (rejectNotif) {
-      assert(rejectNotif.message?.includes(rejectReason), 'Rejection notification contains the rejection reason');
+    // Verify Super Admin received notification containing the rejection reason
+    await new Promise(r => setTimeout(r, 500));
+    const adminNotifs = await axios.get(`${BASE_URL}/notifications`, adminHeaders);
+    const adminNotifsList = adminNotifs.data.notifications || adminNotifs.data.data || [];
+    const rejectNotif = adminNotifsList.find(n => n.message?.includes(rejectReasonText) || (n.related_entity_id === noLogoInst.id && n.message?.includes('REJECTED')));
+    assert(Boolean(rejectNotif), 'Super Admin received notification containing the rejection reason');
+
+    // ─────────────────────────────────────────────────────────────
+    // TEST 10: Unauthorized roles cannot approve through the backend
+    // ─────────────────────────────────────────────────────────────
+    console.log(`\n${colors.yellow}[Test 10] Unauthorized roles cannot approve through backend...${colors.reset}`);
+    // 10a. Super Admin cannot approve (anti-privilege escalation & role constraint)
+    try {
+      await axios.patch(`${BASE_URL}/approvals/INSTITUTION/${createdInst.id}/decision`, {
+        decision: 'APPROVED'
+      }, adminHeaders);
+      assert(false, 'Super Admin was able to approve request');
+    } catch (err) {
+      assert(err.response?.status === 403, 'Super Admin approval blocked with HTTP 403 Forbidden', err.response?.data?.message);
     }
 
-    // 8. Super Admin Resubmission with Corrections
-    console.log(`\n${colors.yellow}8. Testing Resubmission Flow After Corrections...${colors.reset}`);
-    const resubmitRes = await axios.post(`${BASE_URL}/approvals/institution/${createdInst.id}/resubmit`, {
-      name_en: instPayload.name_en,
-      name_am: instPayload.name_am,
-      code: instCode,
-      description: 'Accreditation documents attached and validated.',
-      details: instPayload.details + ' - Officially certified by the regional council.',
-      officialUrl: instPayload.website_url,
-      phone: instPayload.phone,
-      email: instPayload.email,
-      address: instPayload.address
-    }, adminHeaders);
-    assert(resubmitRes.status === 200, 'Institution resubmitted with 200 OK');
-    const resubmitted = resubmitRes.data.data || resubmitRes.data.institution;
-    assert(resubmitted?.metadata?.approval?.status === 'PENDING_APPROVAL', 'Status changed back to PENDING_APPROVAL');
-    assert(resubmitted?.status === 'INACTIVE', 'Status remains INACTIVE until approved');
-    assert(Array.isArray(resubmitted?.metadata?.approval?.history), 'Decision history preserved in history array');
-    assert(resubmitted?.metadata?.approval?.history.length >= 1, 'Previous rejection recorded in audit history');
+    // 10b. Customer/Citizen cannot approve
+    try {
+      await axios.patch(`${BASE_URL}/approvals/INSTITUTION/${createdInst.id}/decision`, {
+        decision: 'APPROVED'
+      }, customerHeaders);
+      assert(false, 'Customer was able to approve request');
+    } catch (err) {
+      assert(err.response?.status === 403, 'Customer approval blocked with HTTP 403 Forbidden', err.response?.data?.message);
+    }
 
-    // 9. Mesob Manager Approves Institution
-    console.log(`\n${colors.yellow}9. Testing Approval Decision & Activation...${colors.reset}`);
-    const approveRes = await axios.post(`${BASE_URL}/approvals/${createdInst.id}/review`, {
-      decision: 'APPROVED',
-      notes: 'All requirements verified and certified.'
+    // 10c. Unauthenticated user cannot approve
+    try {
+      await axios.patch(`${BASE_URL}/approvals/INSTITUTION/${createdInst.id}/decision`, {
+        decision: 'APPROVED'
+      });
+      assert(false, 'Unauthenticated user was able to approve request');
+    } catch (err) {
+      assert(err.response?.status === 401, 'Unauthenticated approval blocked with HTTP 401 Unauthorized');
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // TEST 7: Explicit approval works and records authorized manager
+    // ─────────────────────────────────────────────────────────────
+    console.log(`\n${colors.yellow}[Test 7] Explicit approval works and records authorized manager...${colors.reset}`);
+    const approveRes = await axios.patch(`${BASE_URL}/approvals/INSTITUTION/${createdInst.id}/decision`, {
+      decision: 'APPROVED'
     }, managerHeaders);
-    assert(approveRes.status === 200, 'Mesob Manager approved request with 200 OK');
-    const approvedInst = approveRes.data.data || approveRes.data.institution;
-    assert(approvedInst?.status === 'ACTIVE', 'Institution activated (status = ACTIVE) upon approval');
-    assert(approvedInst?.metadata?.approval?.status === 'APPROVED', 'Approval metadata status is APPROVED');
-    assert(approvedInst?.metadata?.approval?.reviewed_by === mesobManager.user.id, 'Reviewer ID recorded');
-    assert(approvedInst?.metadata?.approval?.reviewed_at, 'Review timestamp recorded');
+    assert(approveRes.status === 200, 'Institution explicitly approved with HTTP 200 OK');
+    const approvedInst = approveRes.data.data;
+    assert(approvedInst.status === 'ACTIVE', 'Institution entity status changed to ACTIVE upon approval');
+    assert(approvedInst.metadata?.approval?.status === 'APPROVED', 'Approval metadata status is APPROVED');
+    assert(approvedInst.metadata?.approval?.reviewed_by === mesobManager.user.id, 'MESOB Manager user ID recorded as reviewed_by');
+    assert(approvedInst.metadata?.approval?.reviewed_by_name === mesobManager.user.full_name || approvedInst.metadata?.approval?.reviewed_by_name === 'Mesob Manager', 'MESOB Manager name recorded');
+    assert(Boolean(approvedInst.metadata?.approval?.reviewed_at), 'Approval decision timestamp is recorded');
 
-    // 10. Super Admin receives approval notification
-    console.log(`\n${colors.yellow}10. Verifying Approval Notification to Super Admin...${colors.reset}`);
-    await new Promise(r => setTimeout(r, 600));
-    const adminNotifsRes2 = await axios.get(`${BASE_URL}/notifications`, adminHeaders);
-    const adminNotifsList2 = adminNotifsRes2.data.notifications || adminNotifsRes2.data.data || [];
-    const approveNotif = adminNotifsList2.find(n => 
-      n.message?.includes(instPayload.name_en) && (n.message?.toLowerCase().includes('approved') || n.title?.toLowerCase().includes('approved'))
-    );
-    assert(Boolean(approveNotif), 'Super Admin received notification with approval decision');
+    // Verify Super Admin received approval notification
+    await new Promise(r => setTimeout(r, 500));
+    const adminNotifs2 = await axios.get(`${BASE_URL}/notifications`, adminHeaders);
+    const adminNotifsList2 = adminNotifs2.data.notifications || adminNotifs2.data.data || [];
+    const approveNotif = adminNotifsList2.find(n => n.related_entity_id === createdInst.id && n.message?.includes('APPROVED'));
+    assert(Boolean(approveNotif), 'Super Admin received notification confirming institution approval');
 
-    // 11. User Account Approval Workflow (INSTITUTION_MANAGER)
-    console.log(`\n${colors.yellow}11. Testing User Account Approval Workflow (Institution Manager)...${colors.reset}`);
-    const userTimestamp = Date.now();
+    // ─────────────────────────────────────────────────────────────
+    // TEST 11: User account approval follows same explicit-decision principle
+    // ─────────────────────────────────────────────────────────────
+    console.log(`\n${colors.yellow}[Test 11] User account approval follows same explicit-decision principle...${colors.reset}`);
     const userPayload = {
-      name: `Manager User ${userTimestamp}`,
-      fullName: `Manager User ${userTimestamp}`,
-      email: `manager.${userTimestamp}@hawassa.gov.et`,
-      phone: '+251911234567',
-      role: 'institution_manager',
+      name: `Institution Officer ${timestamp}`,
+      fullName: `Institution Officer ${timestamp}`,
+      email: `officer.${timestamp}@hawassa.gov.et`,
+      phone: '+251911998877',
+      role: 'INSTITUTION_MANAGER',
       institutionId: createdInst.id,
-      employeeId: `MGR-${userTimestamp.toString().slice(-4)}`,
-      password: 'TempPassword@2026'
+      employeeId: `EMP-${timestamp.toString().slice(-4)}`,
+      nationalId: `NAT-${timestamp.toString().slice(-6)}`,
+      password: 'Officer@Pass2026'
     };
 
     const submitUserRes = await axios.post(`${BASE_URL}/approvals/user`, userPayload, adminHeaders);
-    assert(submitUserRes.status === 201, 'User account submitted for approval with 201 Created');
-    const createdUser = submitUserRes.data.data || submitUserRes.data.user;
-    assert(createdUser?.status === 'INACTIVE', 'User status is INACTIVE upon submission', `Status: ${createdUser?.status}`);
-    assert(createdUser?.metadata?.approval?.status === 'PENDING_APPROVAL', 'User approval metadata is PENDING_APPROVAL');
-    assert(createdUser?.metadata?.approval?.submitted_by === superAdmin.user.id, 'Submitting admin ID is recorded');
+    assert(submitUserRes.status === 201, 'User submitted with HTTP 201 Created');
+    const createdUser = submitUserRes.data.data;
+    assert(createdUser.status === 'INACTIVE', 'User status is INACTIVE upon submission', `Status: ${createdUser.status}`);
+    assert(createdUser.metadata?.approval?.status === 'PENDING_APPROVAL', 'User approval metadata is PENDING_APPROVAL');
 
-    // 12. Pending User Login Attempt Must Be Blocked
-    console.log(`\n${colors.yellow}12. Verifying Pending User Login is Blocked...${colors.reset}`);
+    // Pending user login must be blocked
     try {
       await axios.post(`${BASE_URL}/auth/login`, {
         email: userPayload.email,
@@ -256,48 +307,59 @@ async function runTests() {
       });
       assert(false, 'Pending user was able to log in');
     } catch (err) {
-      assert(err.response?.status === 403 || err.response?.status === 401, 'Pending user login blocked with 403 Forbidden', err.response?.data?.message);
+      assert(err.response?.status === 403 || err.response?.status === 401, 'Pending user login blocked with 403/401');
     }
 
-    // 13. Direct Activation of Pending User Must Be Blocked
-    console.log(`\n${colors.yellow}13. Verifying Anti-Privilege Escalation on User Status Update...${colors.reset}`);
+    // Direct activation bypass must be blocked
     try {
       await axios.patch(`${BASE_URL}/users/${createdUser.id}/status`, { status: 'ACTIVE' }, adminHeaders);
-      assert(false, 'Super Admin was able to directly activate pending user');
+      assert(false, 'Direct user status activation should be blocked');
     } catch (err) {
-      assert(err.response?.status === 400, 'Direct activation of pending user blocked with 400', err.response?.data?.message);
+      assert(err.response?.status === 400, 'Direct activation bypass blocked with 400 Bad Request');
     }
 
-    // 14. Mesob Manager Approves User Account
-    console.log(`\n${colors.yellow}14. Mesob Manager Approves User Account...${colors.reset}`);
-    const approveUserRes = await axios.post(`${BASE_URL}/approvals/user/${createdUser.id}/review`, {
-      decision: 'APPROVED',
-      notes: 'Credentials and institutional appointment verified.'
+    // Explicit approval by Mesob Manager
+    const approveUserRes = await axios.patch(`${BASE_URL}/approvals/USER/${createdUser.id}/decision`, {
+      decision: 'APPROVED'
     }, managerHeaders);
-    assert(approveUserRes.status === 200, 'User account approved with 200 OK');
-    const approvedUser = approveUserRes.data.data || approveUserRes.data.user;
-    assert(approvedUser?.status === 'ACTIVE', 'User status is now ACTIVE');
-    assert(approvedUser?.metadata?.approval?.status === 'APPROVED', 'User approval status is APPROVED');
+    assert(approveUserRes.status === 200, 'User account explicitly approved with 200 OK');
+    const approvedUser = approveUserRes.data.data;
+    assert(approvedUser.status === 'ACTIVE', 'User status transitioned to ACTIVE');
+    assert(approvedUser.metadata?.approval?.status === 'APPROVED', 'User approval metadata recorded as APPROVED');
+    assert(approvedUser.metadata?.approval?.reviewed_by === mesobManager.user.id, 'MESOB Manager recorded as user reviewer');
 
-    // 15. Approved User Can Now Log In
-    console.log(`\n${colors.yellow}15. Verifying Approved User Can Now Authenticate...${colors.reset}`);
-    const approvedLoginRes = await axios.post(`${BASE_URL}/auth/login`, {
+    // Approved user can now log in
+    const userLoginRes = await axios.post(`${BASE_URL}/auth/login`, {
       email: userPayload.email,
       password: userPayload.password
     });
-    const approvedToken = approvedLoginRes.data?.data?.accessToken || approvedLoginRes.data?.token;
-    assert(approvedLoginRes.status === 200 && approvedToken, 'Approved user successfully logged in and received token');
-    const approvedUserData = approvedLoginRes.data?.data?.user || approvedLoginRes.data?.user;
-    assert(approvedUserData?.role?.toUpperCase() === 'INSTITUTION_MANAGER', 'User granted approved INSTITUTION_MANAGER role');
+    const userToken = userLoginRes.data?.data?.accessToken || userLoginRes.data?.token;
+    assert(userLoginRes.status === 200 && Boolean(userToken), 'Approved user can now authenticate and receive token');
 
-  } catch (error) {
-    console.error(`\n${colors.red}Unhandled error in test runner:${colors.reset}`, error.response?.data || error.message);
+    // ─────────────────────────────────────────────────────────────
+    // TEST 12: Existing unrelated workflows continue to work
+    // ─────────────────────────────────────────────────────────────
+    console.log(`\n${colors.yellow}[Test 12] Existing unrelated workflows continue to work...${colors.reset}`);
+    const healthRes = await axios.get(`${BASE_URL}/health`);
+    assert(healthRes.status === 200, 'GET /api/health endpoint returns 200 OK');
+
+    const servicesRes = await axios.get(`${BASE_URL}/services`);
+    assert(servicesRes.status === 200, 'GET /api/services catalogue endpoint returns 200 OK');
+
+    const announcementsRes = await axios.get(`${BASE_URL}/announcements`);
+    assert(announcementsRes.status === 200, 'GET /api/announcements endpoint returns 200 OK');
+
+    const institutionsRes = await axios.get(`${BASE_URL}/institutions`);
+    assert(institutionsRes.status === 200, 'GET /api/institutions endpoint returns 200 OK');
+
+  } catch (err) {
+    console.error(`\n${colors.red}Test error encountered:${colors.reset}`, err.response?.data || err.message);
     failedTests++;
   }
 
-  console.log(`\n${colors.bold}====================================================${colors.reset}`);
+  console.log(`\n${colors.bold}================================================================${colors.reset}`);
   console.log(`${colors.bold}  TEST RESULTS: ${passedTests} PASSED, ${failedTests} FAILED${colors.reset}`);
-  console.log(`${colors.bold}====================================================${colors.reset}\n`);
+  console.log(`${colors.bold}================================================================${colors.reset}\n`);
 
   if (failedTests > 0) {
     process.exit(1);

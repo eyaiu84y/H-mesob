@@ -2,6 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========== Form Controls & Search Bar Defaults ========== */
+input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+textarea,
+select {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+input:not([class*="dark:bg-"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+textarea:not([class*="dark:bg-"]),
+select:not([class*="dark:bg-"]) {
+  color-scheme: light;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+/* Explicit dark controls retain their dark styles */
+html.dark input.dark\:bg-gray-700,
+html.dark input.dark\:bg-gray-800,
+html.dark input.dark\:bg-slate-700,
+html.dark input.dark\:bg-slate-800,
+html.dark textarea.dark\:bg-gray-700,
+html.dark textarea.dark\:bg-gray-800,
+html.dark select.dark\:bg-gray-700,
+html.dark select.dark\:bg-gray-800 {
+  background-color: inherit;
+  color: inherit;
+  color-scheme: dark;
+}
+
 /* ========== Dark mode base ========== */
 html.dark {
   color-scheme: dark;
@@ -1117,7 +1151,67 @@ html.dark .popular-services {
   transition: all 0.3s ease;
 }
 
-/* ===== Dashboard shared styles ===== */
+/* ===== Dashboard shared styles (Harmonized with Homepage) ===== */
+.dashboard-bg {
+  background-color: #f1f6fe;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.09) 0px, transparent 45%),
+    radial-gradient(at 100% 0%, rgba(30, 58, 138, 0.08) 0px, transparent 40%),
+    radial-gradient(at 50% 100%, rgba(59, 130, 246, 0.07) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(244, 181, 26, 0.05) 0px, transparent 35%),
+    linear-gradient(135deg, #f0f8ff 0%, #f8fafc 40%, #eaf2fd 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Subtle decorative mesh overlay reminiscent of the homepage .about-section */
+.dashboard-bg::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(rgba(37, 99, 235, 0.04) 1px, transparent 1px),
+    linear-gradient(to right, rgba(30, 58, 138, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(30, 58, 138, 0.015) 1px, transparent 1px);
+  background-size: 24px 24px, 72px 72px, 72px 72px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+html.dark .dashboard-bg {
+  background-color: #0b1329;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.16) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(30, 58, 138, 0.20) 0px, transparent 45%),
+    radial-gradient(at 50% 100%, rgba(30, 64, 175, 0.15) 0px, transparent 50%),
+    linear-gradient(135deg, #090e1f 0%, #0f172a 45%, #172554 100%);
+  background-attachment: fixed;
+}
+
+html.dark .dashboard-bg::before {
+  background-image: 
+    radial-gradient(rgba(96, 165, 250, 0.06) 1px, transparent 1px),
+    linear-gradient(to right, rgba(96, 165, 250, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(96, 165, 250, 0.02) 1px, transparent 1px);
+}
+
+.db-sidebar {
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right: 1px solid rgba(219, 234, 254, 0.85) !important;
+  box-shadow: 4px 0 24px -4px rgba(30, 58, 138, 0.04);
+}
+
+html.dark .db-sidebar {
+  background: rgba(15, 23, 42, 0.94) !important;
+  border-right-color: rgba(30, 41, 59, 0.85) !important;
+  box-shadow: 4px 0 24px -4px rgba(0, 0, 0, 0.35);
+}
+
 .sidebar-link {
   display: flex;
   align-items: center;
@@ -1127,35 +1221,72 @@ html.dark .popular-services {
   font-size: 0.875rem;
   font-weight: 500;
   color: #4b5563;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border-left: 3px solid transparent;
 }
 .sidebar-link:hover {
-  background-color: #f8fafc;
+  background-color: rgba(239, 246, 255, 0.85);
   color: #1e3a8a;
+  transform: translateX(2px);
 }
 .sidebar-link.active {
-  background-color: #eff6ff;
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.12) 0%, rgba(59, 130, 246, 0.04) 100%);
   color: #1e3a8a;
   font-weight: 600;
-  border-left-color: #314ea1;
+  border-left-color: #2563eb;
+  box-shadow: 0 1px 4px rgba(30, 58, 138, 0.06);
 }
+
+/* Dashboard card styling (homepage frosted glass effect) */
+.dashboard-card,
+.dashboard-bg .bg-white.rounded-2xl {
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: rgba(219, 234, 254, 0.85) !important;
+  box-shadow: 0 4px 20px -2px rgba(30, 58, 138, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-card:hover,
+.dashboard-bg .bg-white.rounded-2xl:hover {
+  border-color: rgba(147, 197, 253, 0.9) !important;
+  box-shadow: 0 10px 25px -4px rgba(30, 58, 138, 0.09), 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+html.dark .dashboard-card,
+html.dark .dashboard-bg .bg-white.rounded-2xl {
+  background: rgba(30, 41, 59, 0.9) !important;
+  border-color: rgba(51, 65, 85, 0.8) !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .dashboard-card:hover,
+html.dark .dashboard-bg .bg-white.rounded-2xl:hover {
+  border-color: rgba(96, 165, 250, 0.4) !important;
+  box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.45);
+}
+
 .stat-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
   border-radius: 1rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(219, 234, 254, 0.9);
   padding: 1.25rem 1.5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 4px 16px -2px rgba(30, 58, 138, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
 }
 .stat-card:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  border-color: #93c5fd;
+  box-shadow: 0 8px 24px -4px rgba(30, 58, 138, 0.1);
+  transform: translateY(-2px);
 }
 .table-container {
   overflow-x: auto;
   border-radius: 1rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(219, 234, 254, 0.85);
   background: white;
 }
 table.data-table {
@@ -1166,10 +1297,10 @@ table.data-table {
 table.data-table th {
   text-align: left;
   padding: 0.875rem 1.25rem;
-  background: #f8fafc;
-  color: #475569;
+  background: rgba(240, 246, 255, 0.65);
+  color: #1e3a8a;
   font-weight: 600;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid rgba(219, 234, 254, 0.85);
 }
 table.data-table td {
   padding: 0.875rem 1.25rem;
@@ -1178,6 +1309,9 @@ table.data-table td {
 }
 table.data-table tr:last-child td {
   border-bottom: none;
+}
+table.data-table tbody tr:hover {
+  background-color: rgba(239, 246, 255, 0.4);
 }
 .badge {
   display: inline-flex;
@@ -1192,3 +1326,61 @@ table.data-table tr:last-child td {
   .db-sidebar { transform: translateX(-100%); }
   .db-sidebar.open { transform: translateX(0); }
 }
+
+/* ===== Smooth Scroll & Scroll Experience Enhancements ===== */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 4.5rem;
+}
+
+/* Modern, minimalist scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+html.dark ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Scroll reveal smooth entrances */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.scroll-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger delay helpers */
+.scroll-delay-1 { transition-delay: 0.1s; }
+.scroll-delay-2 { transition-delay: 0.2s; }
+.scroll-delay-3 { transition-delay: 0.3s; }
+.scroll-delay-4 { transition-delay: 0.4s; }
+

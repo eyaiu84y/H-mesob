@@ -332,8 +332,8 @@ function SectionQueueMonitoring() {
               <tbody>
                 {myTickets.slice(0, 20).map(ticket => (
                   <tr key={ticket.id}>
-                    <td className="font-semibold text-slate-800">{ticket.ticketNumber || `#${ticket.id}`}</td>
-                    <td>{ticket.citizenName || 'N/A'}</td>
+                    <td className="font-semibold text-slate-800">{ticket.ticketNumber || ticket.token || ticket.queueNumber || `#${ticket.id}`}</td>
+                    <td>{ticket.citizenName || ticket.customerName || 'N/A'}</td>
                     <td>{ticket.serviceName || ticket.service || 'N/A'}</td>
                     <td><PriorityBadge priority={ticket.priority || 'Normal'} /></td>
                     <td><StatusBadge status={ticket.status} /></td>
@@ -558,7 +558,7 @@ function SectionReports() {
                       const inst = institutions.find(i => i.id === ticket.institutionId);
                       return (
                         <tr key={ticket.id}>
-                          <td className="font-semibold text-slate-800">{ticket.ticketNumber || `#${ticket.id}`}</td>
+                          <td className="font-semibold text-slate-800">{ticket.ticketNumber || ticket.token || ticket.queueNumber || `#${ticket.id}`}</td>
                           <td>{inst?.name_en || 'N/A'}</td>
                           <td>{ticket.serviceName || ticket.service || 'N/A'}</td>
                           <td><PriorityBadge priority={ticket.priority || 'Normal'} /></td>
@@ -1082,19 +1082,19 @@ function SectionAnalytics() {
                         <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
                           {detailView.type === 'queue' && (
                             <>
-                              <td className="px-4 py-3 font-semibold text-slate-800">{item.queueNumber || item.queue_number || 'N/A'}</td>
-                              <td className="px-4 py-3">{item.citizenName || 'Customer'}</td>
-                              <td className="px-4 py-3">{item.serviceName || 'Service'}</td>
+                              <td className="px-4 py-3 font-semibold text-slate-800">{item.queueNumber || item.queue_number || item.token || item.ticketNumber || 'N/A'}</td>
+                              <td className="px-4 py-3">{item.citizenName || item.customerName || item.customer?.full_name || item.users?.full_name || 'Customer'}</td>
+                              <td className="px-4 py-3">{item.serviceName || item.service || 'Service'}</td>
                               <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
                               <td className="px-4 py-3 text-sm text-slate-500">
-                                {item.createdAt ? new Date(item.createdAt).toLocaleString('en-US', {
+                                {item.createdAt || item.created_at ? new Date(item.createdAt || item.created_at).toLocaleString('en-US', {
                                   year: 'numeric', month: 'short', day: 'numeric',
                                   hour: '2-digit', minute: '2-digit', second: '2-digit',
                                   hour12: true, timeZone: 'Africa/Addis_Ababa'
                                 }) : '-'}
                               </td>
                               <td className="px-4 py-3 text-sm text-slate-500">
-                                {item.started_at || item.startedAt ? new Date(item.started_at || item.startedAt).toLocaleString('en-US', {
+                                {item.started_at || item.startedAt || item.calledAt || item.called_at ? new Date(item.started_at || item.startedAt || item.calledAt || item.called_at).toLocaleString('en-US', {
                                   year: 'numeric', month: 'short', day: 'numeric',
                                   hour: '2-digit', minute: '2-digit', second: '2-digit',
                                   hour12: true, timeZone: 'Africa/Addis_Ababa'
@@ -1111,12 +1111,12 @@ function SectionAnalytics() {
                           )}
                           {detailView.type === 'app' && (
                             <>
-                              <td className="px-4 py-3 font-semibold text-slate-800">{item.applicationNumber || 'N/A'}</td>
-                              <td className="px-4 py-3">{item.citizenName || 'Customer'}</td>
-                              <td className="px-4 py-3">{item.service || 'Service'}</td>
+                              <td className="px-4 py-3 font-semibold text-slate-800">{item.applicationNumber || item.application_number || 'N/A'}</td>
+                              <td className="px-4 py-3">{item.citizenName || item.customerName || 'Customer'}</td>
+                              <td className="px-4 py-3">{item.service || item.serviceName || 'Service'}</td>
                               <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
                               <td className="px-4 py-3 text-sm text-slate-500">
-                                {item.submitted_at ? new Date(item.submitted_at).toLocaleString('en-US', {
+                                {item.submitted_at || item.submittedAt || item.created_at || item.createdAt ? new Date(item.submitted_at || item.submittedAt || item.created_at || item.createdAt).toLocaleString('en-US', {
                                   year: 'numeric', month: 'short', day: 'numeric',
                                   hour: '2-digit', minute: '2-digit', second: '2-digit',
                                   hour12: true, timeZone: 'Africa/Addis_Ababa'
@@ -1133,12 +1133,12 @@ function SectionAnalytics() {
                           )}
                           {detailView.type === 'maint' && (
                             <>
-                              <td className="px-4 py-3 font-semibold text-slate-800">{item.reportNumber || 'N/A'}</td>
-                              <td className="px-4 py-3">{item.title || item.problemDescription || 'No title'}</td>
+                              <td className="px-4 py-3 font-semibold text-slate-800">{item.reportNumber || item.report_number || 'N/A'}</td>
+                              <td className="px-4 py-3">{item.title || item.problemType || item.description || 'No title'}</td>
                               <td className="px-4 py-3"><PriorityBadge priority={item.priority || 'NORMAL'} /></td>
                               <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
                               <td className="px-4 py-3 text-sm text-slate-500">
-                                {item.reportedAtTimestamp ? new Date(item.reportedAtTimestamp).toLocaleString('en-US', {
+                                {item.reportedAtTimestamp || item.created_at || item.createdAt ? new Date(item.reportedAtTimestamp || item.created_at || item.createdAt).toLocaleString('en-US', {
                                   year: 'numeric', month: 'short', day: 'numeric',
                                   hour: '2-digit', minute: '2-digit', second: '2-digit',
                                   hour12: true, timeZone: 'Africa/Addis_Ababa'
@@ -1500,18 +1500,29 @@ export default function MesobManagerDashboard() {
   const { t } = useApp();
   const [activeSection, setActiveSection] = useState(t.dashboard);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedApprovalEntityId, setSelectedApprovalEntityId] = useState(null);
 
-  function navigate(section) {
+  function navigate(section, notification = null) {
     setActiveSection(section);
     setSidebarOpen(false);
+    if (notification && (notification.related_entity_id || notification.relatedEntityId)) {
+      setSelectedApprovalEntityId(notification.related_entity_id || notification.relatedEntityId);
+    }
   }
 
   function renderSection() {
     switch (activeSection) {
       case t.dashboard:                                return <SectionDashboard setActiveSection={navigate} />;
-      case t.central_approvals || 'Central Approvals': return <ApprovalsManagement isManagerView={true} />;
-      case 'Central Approvals':                        return <ApprovalsManagement isManagerView={true} />;
-      case 'Approvals':                                return <ApprovalsManagement isManagerView={true} />;
+      case t.central_approvals || 'Central Approvals':
+      case 'Central Approvals':
+      case 'Approvals':
+        return (
+          <ApprovalsManagement
+            isManagerView={true}
+            initialRequestId={selectedApprovalEntityId}
+            onClearInitialRequest={() => setSelectedApprovalEntityId(null)}
+          />
+        );
       case t.institution_monitoring:                   return <SectionInstitutionMonitoring />;
       case t.queue_monitoring:       return <SectionQueueMonitoring />;
       case t.application_monitoring: return <SectionApplicationMonitoring />;
@@ -1526,14 +1537,14 @@ export default function MesobManagerDashboard() {
   }
 
   return (
-    <div className="bg-gradient-to-br from-[#f8fafc] via-[#f1f5f9] to-[#edf4fc] min-h-screen text-slate-900">
-      <div className="flex min-h-screen">
+    <div className="dashboard-bg min-h-screen text-slate-900 relative">
+      <div className="flex min-h-screen relative z-10">
 
         {/* ── Sidebar ── */}
-        <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white/95 backdrop-blur-md border-r border-slate-200/90 flex flex-col transition-transform duration-200${sidebarOpen ? ' open' : ''}`}>
-          <div className="p-5 border-b border-slate-100">
+        <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 flex flex-col transition-transform duration-200${sidebarOpen ? ' open' : ''}`}>
+          <div className="p-5 border-b border-blue-100/70">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-md">M</div>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-md border border-blue-400/20">M</div>
               <div>
                 <p className="font-bold text-slate-900 text-sm">MESOB Center</p>
                 <p className="text-xs text-slate-500">MESOB Manager</p>
@@ -1550,7 +1561,7 @@ export default function MesobManagerDashboard() {
             ))}
           </nav>
 
-          <div className="p-4 border-t border-slate-100">
+          <div className="p-4 border-t border-blue-100/70">
             <button onClick={logout}
               className="sidebar-link w-full text-left text-rose-600 hover:bg-rose-50/80 font-medium">
               {t.logout}
@@ -1560,7 +1571,7 @@ export default function MesobManagerDashboard() {
 
         {/* ── Main content ── */}
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/90 px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+          <header className="bg-white/85 backdrop-blur-xl border-b border-blue-100/80 shadow-[0_4px_20px_-4px_rgba(30,58,138,0.04)] px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
             <div className="flex items-center gap-3">
               <button className="lg:hidden p-2 rounded-xl hover:bg-slate-100 text-slate-700" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle sidebar">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -1573,7 +1584,7 @@ export default function MesobManagerDashboard() {
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
-              <NotificationBell onNavigate={(section) => navigate(section)} />
+              <NotificationBell onNavigate={(section, notification) => navigate(section, notification)} />
               <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold">MESOB Manager</span>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-semibold text-slate-900">{user?.name}</p>

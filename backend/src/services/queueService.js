@@ -51,7 +51,7 @@ export const joinQueue = async (queueData, currentUser) => {
       .eq('institution_id', institutionId)
       .eq('service_id', serviceId)
       .gte('created_at', today)
-      .in('status', ['PENDING', 'IN_PROGRESS'])
+      .in('status', ['PENDING', 'WAITING', 'IN_PROGRESS'])
       .limit(1)
       .maybeSingle();
 
@@ -770,26 +770,28 @@ export const callNext = async (queueId, currentUser) => {
       
       queue = data;
     } else {
-      // Get next pending queue entry for this institution
-      console.log('Auto-selecting next pending queue for institution:', currentUser.institution_id);
-      const { data, error } = await supabase
+      // Get next pending or waiting queue entry for this institution
+      const targetInstitutionId = currentUser?.institution_id;
+      console.log('Auto-selecting next waiting/pending queue for institution:', targetInstitutionId);
+      
+      let query = supabase
         .from('queue_entries')
         .select('*')
-        .eq('institution_id', currentUser.institution_id)
-        .eq('status', 'PENDING')
+        .in('status', ['PENDING', 'WAITING']);
+
+      if (targetInstitutionId) {
+        query = query.eq('institution_id', targetInstitutionId);
+      }
+
+      const { data, error } = await query
         .order('priority', { ascending: false }) // URGENT first
         .order('queue_number', { ascending: true })
+        .order('created_at', { ascending: true })
         .limit(1)
-        .single();
+        .maybeSingle();
       
       if (error) {
-        console.error('Error fetching next pending queue:', error);
-        if (error.code === 'PGRST116') {
-          return {
-            success: false,
-            message: 'No pending queue entries found.'
-          };
-        }
+        console.error('Error fetching next pending/waiting queue:', error);
         return {
           success: false,
           message: 'Failed to fetch next queue entry.'
@@ -942,7 +944,7 @@ export const callNext = async (queueId, currentUser) => {
  */
 export const updateQueueStatus = async (queueId, status, currentUser) => {
   try {
-    const validStatuses = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+    const validStatuses = ['PENDING', 'WAITING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
     
     if (!validStatuses.includes(status)) {
       return {
@@ -982,6 +984,11 @@ export const updateQueueStatus = async (queueId, status, currentUser) => {
 
     if (status === 'COMPLETED') {
       updateData.completed_at = new Date().toISOString();
+      if (!queue.started_at) {
+        updateData.started_at = updateData.completed_at;
+      }
+    } else if (status === 'IN_PROGRESS' && !queue.started_at) {
+      updateData.started_at = new Date().toISOString();
     }
 
     const { data: updatedQueue, error } = await supabase
@@ -1069,14 +1076,14 @@ export const getQueueStatus = async (queueId) => {
       .from('queue_entries')
       .select('id', { count: 'exact', head: true })
       .eq('institution_id', queue.institutions.id)
-      .eq('status', 'PENDING')
+      .in('status', ['PENDING', 'WAITING'])
       .lt('queue_number', queue.queue_number);
 
     return {
       success: true,
       data: {
         ...queue,
-        position: queue.status === 'PENDING' ? (count || 0) + 1 : null
+        position: (queue.status === 'PENDING' || queue.status === 'WAITING') ? (count || 0) + 1 : null
       }
     };
 

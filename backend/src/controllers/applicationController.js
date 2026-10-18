@@ -1,4 +1,4 @@
-import { createApplication, getApplications, getApplicationById, updateApplicationStatus, assignApplication } from '../services/applicationService.js';
+import { createApplication, getApplications, getApplicationById, updateApplicationStatus, assignApplication, resubmitApplication } from '../services/applicationService.js';
 
 /**
  * POST /api/applications
@@ -16,6 +16,9 @@ export const postApplication = async (req, res) => {
     const result = await createApplication(applicationData, req.user);
 
     if (!result.success) {
+      if (result.isDuplicate) {
+        return res.status(409).json(result);
+      }
       return res.status(400).json(result);
     }
 
@@ -29,6 +32,33 @@ export const postApplication = async (req, res) => {
     });
   }
 };
+
+/**
+ * POST /api/applications/:id/resubmit
+ * Resubmit application with updated documents
+ */
+export const postResubmitApplication = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { documents, notes } = req.body;
+
+    const result = await resubmitApplication(id, documents, notes, req.user);
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    res.status(200).json(result);
+
+  } catch (error) {
+    console.error('Resubmit application controller error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to resubmit application.'
+    });
+  }
+};
+
 
 /**
  * GET /api/applications

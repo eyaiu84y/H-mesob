@@ -9,12 +9,19 @@ const MaintenanceContext = createContext(null);
 function mapBackendStatusToFrontend(backendStatus) {
   const mapping = {
     'REPORTED': 'Submitted',
+    'APPROVED': 'Approved',
+    'ACKNOWLEDGED': 'Approved',
     'ASSIGNED': 'Assigned',
     'IN_PROGRESS': 'In Progress',
-    'RESOLVED': 'Completed',
+    'WAITING_PARTS': 'Waiting Parts',
+    'ON_HOLD': 'On Hold',
+    'RESOLVED': 'Resolved',
+    'COMPLETED': 'Completed',
+    'CLOSED': 'Closed',
+    'REJECTED': 'Rejected',
     'CANCELLED': 'Cancelled',
   };
-  return mapping[backendStatus] || 'Submitted';
+  return mapping[backendStatus] || backendStatus || 'Submitted';
 }
 
 // ─── Transform backend report to frontend format ───────────────────
@@ -22,7 +29,9 @@ function transformReport(backendReport) {
   return {
     id: backendReport.id,
     reportNumber: backendReport.report_number,
+    report_number: backendReport.report_number,
     problemType: backendReport.title,
+    title: backendReport.title,
     description: backendReport.description,
     location: backendReport.location,
     officeNumber: backendReport.equipment_info ? backendReport.equipment_info.replace(/^Office:\s*/i, "") : "",
@@ -31,22 +40,30 @@ function transformReport(backendReport) {
     status: mapBackendStatusToFrontend(backendReport.status),
     backendStatus: backendReport.status, // Keep original for API calls
     institution: backendReport.institutions?.name_en || 'Unknown Institution',
+    institutionName: backendReport.institutions?.name_en || 'Unknown Institution',
     institutionName_am: backendReport.institutions?.name_am,
     reportedBy: backendReport.reporter?.full_name || 'Unknown',
     reportedByPhone: backendReport.reporter?.phone,
     assignedTo: backendReport.assigned_user?.full_name,
     reportedAtTimestamp: backendReport.created_at,
+    created_at: backendReport.created_at,
+    createdAt: backendReport.created_at,
     reportedAt: backendReport.created_at ? new Date(backendReport.created_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Africa/Nairobi", timeZoneName: "short" }) : "N/A",
     date: backendReport.created_at ? new Date(backendReport.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
     resolvedAt: backendReport.resolved_at,
+    resolved_at: backendReport.resolved_at,
     resolutionNotes: backendReport.resolution_notes,
+    metadata: backendReport.metadata || {},
+    approval: backendReport.metadata?.approval,
+    closure: backendReport.metadata?.closure,
+    reopened: backendReport.metadata?.reopened,
     attachments: backendReport.maintenance_attachments || [],
     photo: (backendReport.maintenance_attachments || []).find(a => a.file_type?.startsWith("image/"))?.file_url || "",
     photoPreview: (backendReport.maintenance_attachments || []).find(a => a.file_type?.startsWith("image/"))?.file_url || "",
     // Keep backend IDs for API calls
-    institutionId: backendReport.institutions?.id,
-    reportedById: backendReport.reporter?.id,
-    assignedToId: backendReport.assigned_user?.id,
+    institutionId: backendReport.institutions?.id || backendReport.institution_id,
+    reportedById: backendReport.reporter?.id || backendReport.reported_by,
+    assignedToId: backendReport.assigned_to || backendReport.assigned_user?.id,
   };
 }
 
@@ -89,7 +106,7 @@ export function MaintenanceProvider({ children }) {
   }, []);
 
   // ── Automatically load maintenance reports ────────────────────
-  // Skip loading for Citizens - they don't have access to maintenance reports
+  // Skip loading for Customers - they don't have access to maintenance reports
   useEffect(() => {
     // Check if user has permission to view maintenance reports
     const userRole = user?.role?.toUpperCase();
@@ -196,29 +213,26 @@ export function MaintenanceProvider({ children }) {
     }
   }, []);
 
-  // ── Assign report to ICT staff ─────────────────────────────────
-  const assignReport = useCallback(async (reportId, ictStaffId) => {
+  // ── Assign report to Technician ────────────────────────────────
+  const assignReport = useCallback(async (reportId, technicianId) => {
     try {
       setLoading(true);
       setError(null);
 
       const response = await api.post(`/maintenance/reports/${reportId}/assign`, {
-        ictStaffId,
+        technicianId,
+        ictStaffId: technicianId // backwards-compatibility
       });
 
       if (response.success) {
-        // Update local state
         setReports(prev =>
           prev.map(report =>
             report.id === reportId
-              ? { ...report, status: 'Assigned' }
+              ? { ...report, status: 'Assigned', backendStatus: 'ASSIGNED', assignedToId: technicianId }
               : report
           )
         );
-
-        // Refresh from backend
         await fetchReports();
-
         return { success: true };
       } else {
         throw new Error(response.message || 'Failed to assign maintenance report');
@@ -233,10 +247,207 @@ export function MaintenanceProvider({ children }) {
     }
   }, [fetchReports]);
 
+  // ── Approve report (Institution Manager) ───────────────────────
+  const approveReport = useCallback(async (reportId, notes = '') => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.patch(`/maintenance/reports/${reportId}/approve`, { notes });
+
+      if (response.success) {
+        setReports(prev =>
+          prev.map(report =>
+            report.id === reportId
+              ? { ...report, status: 'Approved', backendStatus: 'APPROVED' }
+              : report
+          )
+        );
+        await fetchReports();
+        return { success: true };
+      } else {
+        throw new Error(response.message || 'Failed to approve maintenance report');
+      }
+    } catch (err) {
+      console.error('Failed to approve maintenance report:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to approve report';
+      setError(errorMessage);
+      return { success: false, message: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchReports]);
+
+  // ── Reject report with mandatory reason (Institution Manager) ──
+  const rejectReport = useCallback(async (reportId, reason) => {
+    try {
+      if (!reason || !reason.trim()) {
+        throw new Error('A mandatory rejection reason is required.');
+      }
+      setLoading(true);
+      setError(null);
+
+      const response = await api.patch(`/maintenance/reports/${reportId}/reject`, { reason: reason.trim() });
+
+      if (response.success) {
+        setReports(prev =>
+          prev.map(report =>
+            report.id === reportId
+              ? { ...report, status: 'Rejected', backendStatus: 'REJECTED' }
+              : report
+          )
+        );
+        await fetchReports();
+        return { success: true };
+      } else {
+        throw new Error(response.message || 'Failed to reject maintenance report');
+      }
+    } catch (err) {
+      console.error('Failed to reject maintenance report:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to reject report';
+      setError(errorMessage);
+      return { success: false, message: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchReports]);
+
+  // ── Close report / Verify completion (Institution Manager) ─────
+  const closeReport = useCallback(async (reportId, notes = '') => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.patch(`/maintenance/reports/${reportId}/close`, { notes });
+
+      if (response.success) {
+        setReports(prev =>
+          prev.map(report =>
+            report.id === reportId
+              ? { ...report, status: 'Closed', backendStatus: 'CLOSED' }
+              : report
+          )
+        );
+        await fetchReports();
+        return { success: true };
+      } else {
+        throw new Error(response.message || 'Failed to close maintenance report');
+      }
+    } catch (err) {
+      console.error('Failed to close maintenance report:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to close report';
+      setError(errorMessage);
+      return { success: false, message: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchReports]);
+
+  // ── Reopen / Return report to technician (Institution Manager) ──
+  const reopenReport = useCallback(async (reportId, reason) => {
+    try {
+      if (!reason || !reason.trim()) {
+        throw new Error('A return/reopen reason is required.');
+      }
+      setLoading(true);
+      setError(null);
+
+      const response = await api.patch(`/maintenance/reports/${reportId}/reopen`, { reason: reason.trim() });
+
+      if (response.success) {
+        setReports(prev =>
+          prev.map(report =>
+            report.id === reportId
+              ? { ...report, status: 'In Progress', backendStatus: 'IN_PROGRESS' }
+              : report
+          )
+        );
+        await fetchReports();
+        return { success: true };
+      } else {
+        throw new Error(response.message || 'Failed to return maintenance report');
+      }
+    } catch (err) {
+      console.error('Failed to return maintenance report:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to return report';
+      setError(errorMessage);
+      return { success: false, message: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchReports]);
+
+  // ── Resolve report directly (Technician) ───────────────────────
+  const resolveReportDirect = useCallback(async (reportId, resolutionNotes) => {
+    try {
+      if (!resolutionNotes || !resolutionNotes.trim()) {
+        throw new Error('Resolution notes are required.');
+      }
+      setLoading(true);
+      setError(null);
+
+      const response = await api.patch(`/maintenance/reports/${reportId}/resolve`, {
+        resolutionNotes: resolutionNotes.trim()
+      });
+
+      if (response.success) {
+        setReports(prev =>
+          prev.map(report =>
+            report.id === reportId
+              ? { ...report, status: 'Resolved', backendStatus: 'RESOLVED', resolutionNotes }
+              : report
+          )
+        );
+        await fetchReports();
+        return { success: true };
+      } else {
+        throw new Error(response.message || 'Failed to resolve maintenance report');
+      }
+    } catch (err) {
+      console.error('Failed to resolve maintenance report:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to resolve report';
+      setError(errorMessage);
+      return { success: false, message: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchReports]);
+
+  // ── Update report status directly (Technician) ─────────────────
+  const updateReportStatusDirect = useCallback(async (reportId, status) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.patch(`/maintenance/reports/${reportId}/status`, { status });
+
+      if (response.success) {
+        setReports(prev =>
+          prev.map(report =>
+            report.id === reportId
+              ? { ...report, status: mapBackendStatusToFrontend(status), backendStatus: status }
+              : report
+          )
+        );
+        await fetchReports();
+        return { success: true };
+      } else {
+        throw new Error(response.message || 'Failed to update report status');
+      }
+    } catch (err) {
+      console.error('Failed to update report status:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to update report status';
+      setError(errorMessage);
+      return { success: false, message: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchReports]);
+
   // ── Filter reports by status ───────────────────────────────────
   const getReportsByStatus = useCallback((status) => {
     if (!status) return reports;
-    return reports.filter(report => report.status === status);
+    return reports.filter(report => report.status === status || report.backendStatus === status);
   }, [reports]);
 
   // ── Get my reports (for employees) ─────────────────────────────
@@ -253,6 +464,12 @@ export function MaintenanceProvider({ children }) {
         createReport,
         getReport,
         assignReport,
+        approveReport,
+        rejectReport,
+        closeReport,
+        reopenReport,
+        resolveReportDirect,
+        updateReportStatusDirect,
         getReportsByStatus,
         getMyReports,
         refreshReports: fetchReports,

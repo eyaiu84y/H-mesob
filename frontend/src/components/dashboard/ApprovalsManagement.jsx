@@ -3,7 +3,11 @@ import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 
-export default function ApprovalsManagement({ isManagerView = false }) {
+export default function ApprovalsManagement({
+  isManagerView = false,
+  initialRequestId = null,
+  onClearInitialRequest = null
+}) {
   const { user } = useAuth();
   const { refreshNotifications } = useNotifications();
 
@@ -21,7 +25,12 @@ export default function ApprovalsManagement({ isManagerView = false }) {
   const [decisionModalOpen, setDecisionModalOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [decisionAction, setDecisionAction] = useState(null); // 'APPROVE' | 'REJECT'
+  const [confirmStep, setConfirmStep] = useState(null); // null | 'APPROVE' | 'REJECT_INPUT' | 'REJECT_CONFIRM'
   const [submittingDecision, setSubmittingDecision] = useState(false);
+
+  // Logo inspection state
+  const [logoStatus, setLogoStatus] = useState('loading'); // 'loading' | 'valid' | 'missing' | 'error'
+  const [enlargeLogoOpen, setEnlargeLogoOpen] = useState(false);
 
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
@@ -58,6 +67,41 @@ export default function ApprovalsManagement({ isManagerView = false }) {
     fetchApprovals();
   }, [fetchApprovals]);
 
+  // Open review inspection modal (without executing any decision)
+  const openReviewModal = useCallback((item) => {
+    setSelectedRequest(item);
+    setDecisionAction(null);
+    setRejectionReason('');
+    setConfirmStep(null);
+    const logoUrl = item.logoUrl || item.details?.logoUrl;
+    if (item.entityType === 'INSTITUTION') {
+      if (!logoUrl || !String(logoUrl).trim() || logoUrl === 'null') {
+        setLogoStatus('missing');
+      } else {
+        setLogoStatus('loading');
+      }
+    }
+    setDecisionModalOpen(true);
+  }, []);
+
+  // Handle initialRequestId (e.g. from notification click)
+  useEffect(() => {
+    if (initialRequestId && approvals.length > 0) {
+      const match = approvals.find(
+        (a) => a.id === initialRequestId || a.entityId === initialRequestId
+      );
+      if (match) {
+        if (statusFilter !== 'ALL' && match.status !== statusFilter) {
+          setStatusFilter(match.status);
+        }
+        openReviewModal(match);
+        if (onClearInitialRequest) {
+          onClearInitialRequest();
+        }
+      }
+    }
+  }, [initialRequestId, approvals, onClearInitialRequest, openReviewModal, statusFilter]);
+
   // Counts
   const counts = useMemo(() => {
     return {
@@ -89,10 +133,11 @@ export default function ApprovalsManagement({ isManagerView = false }) {
   }, [approvals, statusFilter, typeFilter, searchQuery]);
 
   // Handle Review Decision (Mesob Manager)
-  const handleDecisionSubmit = async () => {
-    if (!selectedRequest || !decisionAction) return;
+  const handleDecisionSubmit = async (overrideAction) => {
+    const action = overrideAction || decisionAction;
+    if (!selectedRequest || !action) return;
 
-    if (decisionAction === 'REJECT' && !rejectionReason.trim()) {
+    if (action === 'REJECT' && !rejectionReason.trim()) {
       alert('Please enter a mandatory rejection reason explaining what needs correction.');
       return;
     }
@@ -102,7 +147,7 @@ export default function ApprovalsManagement({ isManagerView = false }) {
       const res = await api.patch(
         `/approvals/${selectedRequest.entityType}/${selectedRequest.entityId}/decision`,
         {
-          decision: decisionAction === 'APPROVE' ? 'APPROVED' : 'REJECTED',
+          decision: action === 'APPROVE' ? 'APPROVED' : 'REJECTED',
           reason: rejectionReason.trim() || undefined
         }
       );
@@ -113,6 +158,7 @@ export default function ApprovalsManagement({ isManagerView = false }) {
         setSelectedRequest(null);
         setRejectionReason('');
         setDecisionAction(null);
+        setConfirmStep(null);
         await fetchApprovals();
         await refreshNotifications();
       } else {
@@ -276,7 +322,7 @@ export default function ApprovalsManagement({ isManagerView = false }) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search name, code, email..."
+              placeholder="Search by name, code, or email..."
               className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 bg-white text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#314ea1]/20"
             />
             <svg
@@ -414,17 +460,19 @@ export default function ApprovalsManagement({ isManagerView = false }) {
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           {/* MESOB_MANAGER Decision button */}
-                          {isManagerView && isPending && (
+                          {isManagerView && isPending ? (
                             <button
-                              onClick={() => {
-                                setSelectedRequest(item);
-                                setDecisionAction('APPROVE');
-                                setRejectionReason('');
-                                setDecisionModalOpen(true);
-                              }}
+                              onClick={() => openReviewModal(item)}
                               className="px-3 py-1.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] text-white font-semibold text-xs rounded-lg hover:from-[#253d82] hover:to-[#172554] transition shadow-xs"
                             >
-                              Review & Decide
+                              Inspect & Review
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => openReviewModal(item)}
+                              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition"
+                            >
+                              View Details
                             </button>
                           )}
 
@@ -450,20 +498,6 @@ export default function ApprovalsManagement({ isManagerView = false }) {
                               Resubmit
                             </button>
                           )}
-
-                          {/* Details & History button */}
-                          <button
-                            onClick={() => {
-                              setSelectedRequest(item);
-                              setHistoryModalOpen(true);
-                            }}
-                            className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
-                            title="View Details & History"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -476,136 +510,544 @@ export default function ApprovalsManagement({ isManagerView = false }) {
       </div>
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* DECISION MODAL (Mesob Manager Fulfillment Review) */}
+      {/* COMPLETE REVIEW & DECISION MODAL (MESOB Manager / Admin) */}
       {/* ───────────────────────────────────────────────────────────── */}
       {decisionModalOpen && selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-[#314ea1]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl my-8 overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={`px-2.5 py-0.5 rounded-md text-xs font-bold ${
+                    selectedRequest.entityType === 'INSTITUTION'
+                      ? 'bg-blue-100 text-[#314ea1]'
+                      : 'bg-purple-100 text-purple-800'
+                  }`}
+                >
                   {selectedRequest.entityType}
                 </span>
-                <h3 className="font-bold text-slate-900 text-lg">Central Approval Review</h3>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base leading-snug">
+                    {selectedRequest.entityName}
+                    {selectedRequest.nameAm && (
+                      <span className="font-normal text-slate-500 text-sm ml-2">({selectedRequest.nameAm})</span>
+                    )}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">Request ID: {selectedRequest.id}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {selectedRequest.status === 'PENDING_APPROVAL' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    Pending Review
+                  </span>
+                )}
+                {selectedRequest.status === 'APPROVED' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Approved & Active
+                  </span>
+                )}
+                {selectedRequest.status === 'REJECTED' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    Rejected
+                  </span>
+                )}
+                <button
+                  onClick={() => setDecisionModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition"
+                  title="Close inspection"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body (Scrollable) */}
+            <div className="p-6 overflow-y-auto space-y-5 text-xs flex-1">
+              {/* Prior Rejection Alert if rejected */}
+              {selectedRequest.status === 'REJECTED' && (
+                <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 space-y-1.5">
+                  <p className="font-bold text-rose-800 text-xs flex items-center gap-1.5">
+                    <span>✕</span> Rejection Reason:
+                  </p>
+                  <p className="text-rose-900 leading-relaxed font-medium">
+                    {selectedRequest.rejectionReason || 'No detailed reason provided.'}
+                  </p>
+                  {selectedRequest.reviewedBy && (
+                    <p className="text-[10px] text-rose-600 pt-1 border-t border-rose-200/60">
+                      Reviewed by {selectedRequest.reviewedBy.name} on {formatDateTime(selectedRequest.reviewedAt)}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Approval Info Alert if approved */}
+              {selectedRequest.status === 'APPROVED' && selectedRequest.reviewedBy && (
+                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 space-y-0.5">
+                  <p className="font-bold flex items-center gap-1.5">
+                    <span>✓</span> Approved & Activated
+                  </p>
+                  <p className="text-[11px] text-emerald-700">
+                    Approved by {selectedRequest.reviewedBy.name} on {formatDateTime(selectedRequest.reviewedAt)}
+                  </p>
+                </div>
+              )}
+
+              {/* ───────────────────────────────────────────────────────────── */}
+              {/* INSTITUTION DETAILS & LOGO VERIFICATION */}
+              {/* ───────────────────────────────────────────────────────────── */}
+              {selectedRequest.entityType === 'INSTITUTION' && (
+                <>
+                  {/* Logo Inspection Card (Mandatory verification) */}
+                  <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Institution Logo Inspection</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">Mandatory</span>
+                      </div>
+                      {logoStatus === 'valid' && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                          ✓ Logo Verified & Accessible
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 pt-1">
+                      {/* Logo Preview Container */}
+                      <div className="relative shrink-0">
+                        {selectedRequest.logoUrl || selectedRequest.details?.logoUrl ? (
+                          <div className="relative group">
+                            <img
+                              src={selectedRequest.logoUrl || selectedRequest.details?.logoUrl}
+                              alt={`${selectedRequest.entityName} logo`}
+                              onLoad={() => setLogoStatus('valid')}
+                              onError={() => setLogoStatus('error')}
+                              className="w-24 h-24 object-contain rounded-xl border border-slate-200 bg-white p-2 shadow-xs cursor-pointer hover:border-[#314ea1] transition-all"
+                              onClick={() => setEnlargeLogoOpen(true)}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setEnlargeLogoOpen(true)}
+                              className="absolute bottom-1 right-1 p-1 bg-black/60 hover:bg-black/80 text-white rounded-md text-[10px] shadow-xs"
+                              title="Enlarge logo for inspection"
+                            >
+                              🔍
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="w-24 h-24 rounded-xl border-2 border-dashed border-rose-300 bg-rose-50/50 flex flex-col items-center justify-center text-rose-500 text-center p-2">
+                            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <span className="text-[10px] font-bold">No Logo</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Status Warning / Info */}
+                      <div className="flex-1 text-xs space-y-2 w-full">
+                        {logoStatus === 'missing' && (
+                          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 space-y-1">
+                            <p className="font-bold flex items-center gap-1.5 text-amber-800">
+                              ⚠️ Mandatory Logo Missing
+                            </p>
+                            <p className="text-[11px] leading-relaxed text-amber-700">
+                              No institution logo was provided with this submission. Hawassa MESOB policy requires a verified logo. Approval is blocked until a valid logo is supplied. You may reject this request to request corrections.
+                            </p>
+                          </div>
+                        )}
+
+                        {logoStatus === 'error' && (
+                          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 space-y-1">
+                            <p className="font-bold flex items-center gap-1.5 text-rose-800">
+                              ⚠️ Broken / Inaccessible Logo File
+                            </p>
+                            <p className="text-[11px] leading-relaxed text-rose-700">
+                              The logo at the provided URL failed to load or is invalid. Approval cannot proceed with an unverified or broken logo. Please inspect the source or reject to request a proper upload.
+                            </p>
+                          </div>
+                        )}
+
+                        {logoStatus === 'valid' && (
+                          <div className="space-y-1.5">
+                            <p className="text-slate-600">
+                              The logo is loaded and verified for <span className="font-semibold text-slate-800">{selectedRequest.entityName}</span>.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setEnlargeLogoOpen(true)}
+                              className="text-xs text-[#314ea1] hover:underline font-semibold inline-flex items-center gap-1"
+                            >
+                              🔍 Inspect full size & storage reference →
+                            </button>
+                          </div>
+                        )}
+
+                        {(selectedRequest.logoUrl || selectedRequest.details?.logoUrl) && (
+                          <p className="text-[10px] text-slate-400 font-mono truncate max-w-md">
+                            Reference: {selectedRequest.logoUrl || selectedRequest.details?.logoUrl}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Core Fields Grid */}
+                  <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-700">Institution Information</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                      <div>
+                        <span className="text-slate-400 font-medium">Institution Name (EN):</span>
+                        <p className="font-bold text-slate-900 text-sm mt-0.5">{selectedRequest.entityName}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-medium">Institution Name (AM):</span>
+                        <p className="font-bold text-slate-900 text-sm mt-0.5">{selectedRequest.nameAm || selectedRequest.details?.nameAm || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-medium">Institution Code:</span>
+                        <p className="font-mono font-bold text-slate-800 mt-0.5 bg-slate-100 inline-block px-2 py-0.5 rounded">{selectedRequest.code}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-medium">Type / Category:</span>
+                        <p className="font-semibold text-slate-800 mt-0.5">Government Public Service Center</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-medium">Contact Email:</span>
+                        <p className="font-medium text-slate-800 mt-0.5">{selectedRequest.details?.email || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-medium">Contact Phone:</span>
+                        <p className="font-medium text-slate-800 mt-0.5">{selectedRequest.details?.phone || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-medium">Physical Address:</span>
+                        <p className="font-medium text-slate-800 mt-0.5">{selectedRequest.details?.address || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-medium">Official Website:</span>
+                        <p className="font-medium text-slate-800 mt-0.5">
+                          {selectedRequest.details?.websiteUrl || selectedRequest.websiteUrl ? (
+                            <a
+                              href={selectedRequest.details?.websiteUrl || selectedRequest.websiteUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#314ea1] hover:underline font-semibold inline-flex items-center gap-1"
+                            >
+                              {selectedRequest.details?.websiteUrl || selectedRequest.websiteUrl} ↗
+                            </a>
+                          ) : (
+                            'N/A'
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div className="pt-2 border-t border-slate-100">
+                      <span className="text-slate-400 font-medium">Description & Purpose:</span>
+                      <p className="font-normal text-slate-700 mt-1 leading-relaxed whitespace-pre-wrap bg-slate-50 p-3 rounded-lg border border-slate-200/60">
+                        {selectedRequest.details?.description || 'No description submitted.'}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ───────────────────────────────────────────────────────────── */}
+              {/* USER ACCOUNT DETAILS */}
+              {/* ───────────────────────────────────────────────────────────── */}
+              {selectedRequest.entityType === 'USER' && (
+                <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-700">User Account Information</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    <div>
+                      <span className="text-slate-400 font-medium">Full Name:</span>
+                      <p className="font-bold text-slate-900 text-sm mt-0.5">{selectedRequest.entityName}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-medium">Requested Role:</span>
+                      <p className="mt-0.5">
+                        <span className="px-2 py-0.5 rounded font-bold bg-purple-100 text-purple-800 text-xs">
+                          {selectedRequest.requestedRole}
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-medium">Email Address:</span>
+                      <p className="font-medium text-slate-800 mt-0.5">{selectedRequest.details?.email}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-medium">Phone Number:</span>
+                      <p className="font-medium text-slate-800 mt-0.5">{selectedRequest.details?.phone || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-medium">Assigned Institution:</span>
+                      <p className="font-semibold text-slate-800 mt-0.5">{selectedRequest.institutionName || 'None'}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-medium">Employee / Staff ID:</span>
+                      <p className="font-mono font-medium text-slate-800 mt-0.5">{selectedRequest.details?.employeeId || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-medium">National ID:</span>
+                      <p className="font-mono font-medium text-slate-800 mt-0.5">{selectedRequest.details?.nationalId || 'N/A'}</p>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-[11px] text-slate-600 flex items-center gap-2">
+                    <span>🔒</span>
+                    <span><strong>Security Notice:</strong> Passwords, password hashes, and authentication secrets are strictly protected and never displayed on this review screen.</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Submission Metadata */}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-slate-600">
+                <div>
+                  <span className="font-semibold text-slate-700">Submitting Administrator:</span>{' '}
+                  <span className="text-slate-900">{selectedRequest.submittingAdmin?.name}</span> ({selectedRequest.submittingAdmin?.email})
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-700">Submitted At:</span>{' '}
+                  <span className="text-slate-900">{formatDateTime(selectedRequest.submittedAt)}</span>
+                </div>
+              </div>
+
+              {/* Audit History Timeline */}
+              {selectedRequest.history?.length > 0 && (
+                <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3">
+                  <p className="font-bold text-slate-800 text-xs">Decision & Audit History</p>
+                  <div className="space-y-3 relative border-l-2 border-slate-200 ml-2 pl-4">
+                    {selectedRequest.history.map((h, i) => (
+                      <div key={i} className="relative">
+                        <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#314ea1] ring-4 ring-white" />
+                        <p className="text-xs font-bold text-slate-800">
+                          {h.action} <span className="font-normal text-slate-500 text-[11px]">by {h.by_name || 'Admin'}</span>
+                        </p>
+                        <p className="text-[10px] text-slate-400">{formatDateTime(h.timestamp)}</p>
+                        {h.reason && <p className="text-xs text-rose-700 mt-0.5">Reason: {h.reason}</p>}
+                        {h.notes && <p className="text-xs text-slate-600 mt-0.5">{h.notes}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ───────────────────────────────────────────────────────────── */}
+              {/* EXPLICIT DECISION ACTIONS (MESOB Manager & Pending Approval) */}
+              {/* ───────────────────────────────────────────────────────────── */}
+              {isManagerView && selectedRequest.status === 'PENDING_APPROVAL' && (
+                <div className="pt-2 space-y-3 border-t border-slate-200">
+                  {/* Step 1: Decision Choice Buttons */}
+                  {confirmStep === null && (
+                    <div className="space-y-3">
+                      <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Manager Decision Action:</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          disabled={selectedRequest.entityType === 'INSTITUTION' && (logoStatus === 'missing' || logoStatus === 'error')}
+                          onClick={() => setConfirmStep('APPROVE')}
+                          className="p-3 rounded-xl border border-emerald-500 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs text-center transition disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
+                        >
+                          ✓ Approve & Activate
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDecisionAction('REJECT');
+                            setConfirmStep('REJECT_INPUT');
+                          }}
+                          className="p-3 rounded-xl border border-rose-500 bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs text-center transition shadow-xs"
+                        >
+                          ✕ Reject with Reason
+                        </button>
+                      </div>
+
+                      {selectedRequest.entityType === 'INSTITUTION' && (logoStatus === 'missing' || logoStatus === 'error') && (
+                        <p className="text-[11px] text-rose-600 font-medium text-center">
+                          * Cannot approve: A verified, accessible logo is mandatory before approving an institution.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Step 2: Approval Confirmation */}
+                  {confirmStep === 'APPROVE' && (
+                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-3 animate-in fade-in duration-150">
+                      <p className="font-bold text-emerald-900 text-xs flex items-center gap-1.5">
+                        <span>⚠️</span> Explicit Approval Confirmation:
+                      </p>
+                      <p className="text-emerald-800 leading-relaxed text-xs">
+                        Are you sure you want to approve and activate <strong className="text-emerald-950 font-bold">{selectedRequest.entityName}</strong>? This action will activate the {selectedRequest.entityType.toLowerCase()} across Hawassa MESOB and send an official notification to the submitting Super Admin.
+                      </p>
+                      <div className="flex justify-end gap-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setConfirmStep(null)}
+                          className="px-4 py-2 border border-slate-300 bg-white text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-50 transition"
+                        >
+                          Cancel / Back to Review
+                        </button>
+                        <button
+                          type="button"
+                          disabled={submittingDecision}
+                          onClick={() => handleDecisionSubmit('APPROVE')}
+                          className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition disabled:opacity-50"
+                        >
+                          {submittingDecision ? 'Activating...' : 'Yes, Confirm Approval & Activate'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 3: Rejection Reason Input */}
+                  {confirmStep === 'REJECT_INPUT' && (
+                    <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 space-y-3 animate-in fade-in duration-150">
+                      <label className="block text-xs font-bold text-rose-800">
+                        Mandatory Rejection Reason <span className="text-rose-600">*</span>:
+                      </label>
+                      <textarea
+                        rows="3"
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        placeholder="Clearly explain the missing requirements, policy non-compliance, logo update, or corrections needed for the Super Admin..."
+                        className="w-full p-3 text-xs rounded-xl border border-rose-300 focus:outline-hidden focus:ring-2 focus:ring-rose-500/30 text-slate-800 bg-white"
+                      />
+                      <div className="flex justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConfirmStep(null);
+                            setDecisionAction(null);
+                          }}
+                          className="px-4 py-2 border border-slate-300 bg-white text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-50 transition"
+                        >
+                          Cancel / Back to Review
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!rejectionReason.trim()}
+                          onClick={() => setConfirmStep('REJECT_CONFIRM')}
+                          className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl shadow-xs transition disabled:opacity-40"
+                        >
+                          Proceed to Confirmation →
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 4: Rejection Confirmation */}
+                  {confirmStep === 'REJECT_CONFIRM' && (
+                    <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 space-y-3 animate-in fade-in duration-150">
+                      <p className="font-bold text-rose-900 text-xs flex items-center gap-1.5">
+                        <span>⚠️</span> Explicit Rejection Confirmation:
+                      </p>
+                      <p className="text-rose-800 leading-relaxed text-xs">
+                        Are you sure you want to reject <strong className="text-rose-950 font-bold">{selectedRequest.entityName}</strong>? The entity will remain unapproved, and the submitting Super Admin will receive your rejection reason:
+                      </p>
+                      <p className="p-2.5 rounded-lg bg-white border border-rose-200 text-rose-900 italic text-xs">
+                        &quot;{rejectionReason}&quot;
+                      </p>
+                      <div className="flex justify-end gap-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setConfirmStep('REJECT_INPUT')}
+                          className="px-4 py-2 border border-slate-300 bg-white text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-50 transition"
+                        >
+                          Back to Edit Reason
+                        </button>
+                        <button
+                          type="button"
+                          disabled={submittingDecision}
+                          onClick={() => handleDecisionSubmit('REJECT')}
+                          className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl shadow-xs transition disabled:opacity-50"
+                        >
+                          {submittingDecision ? 'Rejecting...' : 'Yes, Confirm Rejection'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Bottom Bar */}
+            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between shrink-0">
+              <span className="text-[11px] text-slate-400">
+                Hawassa MESOB Central Governance & Approval Verification
+              </span>
+              <div className="flex items-center gap-2">
+                {!isManagerView && selectedRequest.status === 'REJECTED' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDecisionModalOpen(false);
+                      openResubmitModal(selectedRequest);
+                    }}
+                    className="px-4 py-2 bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 font-semibold text-xs rounded-xl transition"
+                  >
+                    Resubmit Request
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setDecisionModalOpen(false)}
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl transition"
+                >
+                  Close Inspection
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* ENLARGED LOGO LIGHTBOX MODAL */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {enlargeLogoOpen && selectedRequest && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h4 className="font-bold text-slate-900 text-sm">{selectedRequest.entityName}</h4>
+                <p className="text-xs text-slate-500">Official Institution Logo Inspection</p>
               </div>
               <button
-                onClick={() => setDecisionModalOpen(false)}
+                onClick={() => setEnlargeLogoOpen(false)}
                 className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
               >
                 ✕
               </button>
             </div>
 
-            {/* Request Summary */}
-            <div className="my-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-500 font-semibold">Entity Name:</span>
-                <span className="font-bold text-slate-900">{selectedRequest.entityName}</span>
-              </div>
-              {selectedRequest.entityType === 'INSTITUTION' ? (
-                <>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 font-semibold">Code:</span>
-                    <span className="font-mono text-slate-800">{selectedRequest.code}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 font-semibold">Contact Email:</span>
-                    <span className="text-slate-800">{selectedRequest.details?.email || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 font-semibold">Phone:</span>
-                    <span className="text-slate-800">{selectedRequest.details?.phone || 'N/A'}</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 font-semibold">Requested Role:</span>
-                    <span className="font-bold text-slate-900">{selectedRequest.requestedRole}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 font-semibold">Email:</span>
-                    <span className="text-slate-800">{selectedRequest.details?.email}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 font-semibold">Assigned Institution:</span>
-                    <span className="text-slate-800">{selectedRequest.institutionName}</span>
-                  </div>
-                </>
-              )}
-              <div className="flex justify-between border-t border-slate-200/80 pt-2">
-                <span className="text-slate-500 font-semibold">Submitting Admin:</span>
-                <span className="text-slate-800 font-medium">
-                  {selectedRequest.submittingAdmin?.name} ({selectedRequest.submittingAdmin?.email})
-                </span>
-              </div>
+            <div className="flex items-center justify-center p-6 bg-slate-50 rounded-xl border border-slate-200">
+              <img
+                src={selectedRequest.logoUrl || selectedRequest.details?.logoUrl}
+                alt={`${selectedRequest.entityName} logo enlarged`}
+                className="max-h-72 max-w-full object-contain drop-shadow-md"
+              />
             </div>
 
-            {/* Decision Toggle */}
-            <div className="space-y-4">
-              <label className="block text-xs font-bold text-slate-700">Decision Outcome:</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setDecisionAction('APPROVE')}
-                  className={`p-3 rounded-xl border text-center transition-all ${
-                    decisionAction === 'APPROVE'
-                      ? 'border-emerald-500 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-500/20 font-bold'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-700 font-medium'
-                  }`}
-                >
-                  ✓ Approve & Activate
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDecisionAction('REJECT')}
-                  className={`p-3 rounded-xl border text-center transition-all ${
-                    decisionAction === 'REJECT'
-                      ? 'border-rose-500 bg-rose-50 text-rose-800 ring-2 ring-rose-500/20 font-bold'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-700 font-medium'
-                  }`}
-                >
-                  ✕ Reject with Reason
-                </button>
-              </div>
-
-              {/* Rejection Reason (Mandatory if Reject) */}
-              {decisionAction === 'REJECT' && (
-                <div className="space-y-1.5 animate-in fade-in duration-150">
-                  <label className="block text-xs font-bold text-rose-700">
-                    Mandatory Rejection Reason <span className="text-rose-600">*</span>:
-                  </label>
-                  <textarea
-                    rows="3"
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    placeholder="Clearly explain the missing requirements, policy non-compliance, or needed corrections for the submitting Super Admin..."
-                    className="w-full p-3 text-xs rounded-xl border border-rose-300 focus:outline-hidden focus:ring-2 focus:ring-rose-500/30 text-slate-800"
-                  />
-                </div>
-              )}
+            <div className="space-y-1 text-xs">
+              <span className="font-semibold text-slate-700">Storage Reference / URL:</span>
+              <p className="font-mono text-[11px] text-slate-600 p-2 bg-slate-100 rounded-lg break-all select-all">
+                {selectedRequest.logoUrl || selectedRequest.details?.logoUrl}
+              </p>
             </div>
 
-            {/* Modal Actions */}
-            <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <div className="flex justify-end pt-2">
               <button
                 type="button"
-                onClick={() => setDecisionModalOpen(false)}
-                className="px-4 py-2 border border-slate-300 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-50 transition"
+                onClick={() => setEnlargeLogoOpen(false)}
+                className="px-4 py-2 bg-[#314ea1] hover:bg-[#1e3a8a] text-white font-semibold text-xs rounded-xl transition"
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDecisionSubmit}
-                disabled={submittingDecision || (decisionAction === 'REJECT' && !rejectionReason.trim())}
-                className={`px-5 py-2 text-white font-semibold text-xs rounded-xl shadow-xs transition disabled:opacity-50 ${
-                  decisionAction === 'APPROVE'
-                    ? 'bg-emerald-600 hover:bg-emerald-700'
-                    : 'bg-rose-600 hover:bg-rose-700'
-                }`}
-              >
-                {submittingDecision ? 'Recording...' : `Confirm ${decisionAction === 'APPROVE' ? 'Approval' : 'Rejection'}`}
+                Done Inspecting
               </button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
+import { useAuth } from './AuthContext';
 
 const ApplicationContext = createContext(null);
 
@@ -61,11 +62,17 @@ function transformApplication(backendApp) {
     }) : 'N/A',
     // Raw date fields for filtering
     submitted_at: backendApp.submitted_at,
+    submittedAt: backendApp.submitted_at,
     updated_at: backendApp.updated_at,
     created_at: backendApp.submitted_at, // Alias for compatibility
+    createdAt: backendApp.submitted_at,
+    completed_at: backendApp.completed_at,
+    application_number: backendApp.application_number,
     service: backendApp.services?.title_en || backendApp.services?.name || backendApp.application_data?.serviceName || 'Unknown Service',
-serviceName_am: backendApp.services?.title_am || backendApp.services?.name_am,
-institution: backendApp.institutions?.name_en || backendApp.application_data?.institutionName || 'Unknown Institution',
+    serviceName: backendApp.services?.title_en || backendApp.services?.name || backendApp.application_data?.serviceName || 'Unknown Service',
+    serviceName_am: backendApp.services?.title_am || backendApp.services?.name_am,
+    institution: backendApp.institutions?.name_en || backendApp.application_data?.institutionName || 'Unknown Institution',
+    institutionName: backendApp.institutions?.name_en || backendApp.application_data?.institutionName || 'Unknown Institution',
 
     institutionName_am: backendApp.institutions?.name_am,
     customerName: backendApp.users?.full_name,
@@ -91,12 +98,19 @@ institution: backendApp.institutions?.name_en || backendApp.application_data?.in
 
 // ─── Provider ──────────────────────────────────────────────────────
 export function ApplicationProvider({ children }) {
+  const { user } = useAuth();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // ── Fetch applications from backend ────────────────────────────
   const fetchApplications = useCallback(async (filters = {}) => {
+    const token = localStorage.getItem('mesob_token');
+    if (!token) {
+      setApplications([]);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -133,12 +147,14 @@ export function ApplicationProvider({ children }) {
     }
   }, []);
 
-  // ── Auto-fetch applications on mount ───────────────────────────
+  // ── Auto-fetch applications on mount and user auth change ───────
   useEffect(() => {
-    // Auto-fetch applications on mount
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchApplications();
-  }, [fetchApplications]);
+    if (user && localStorage.getItem('mesob_token')) {
+      fetchApplications();
+    } else {
+      setApplications([]);
+    }
+  }, [user, fetchApplications]);
 
   // ── Create application ─────────────────────────────────────────
   const createApplication = useCallback(async (serviceId, institutionId, applicationData, documents) => {
@@ -152,6 +168,17 @@ export function ApplicationProvider({ children }) {
         applicationData,
         documents,
       });
+
+      if (!response || response.success === false) {
+        const errorMsg = response?.message || 'Failed to create application';
+        setError(errorMsg);
+        return {
+          success: false,
+          isDuplicate: response?.isDuplicate || false,
+          message: errorMsg,
+          existingApplication: response?.existingApplication || null
+        };
+      }
 
       // Handle both response formats
       const appData = response?.data?.data || response?.data || response;
@@ -190,11 +217,46 @@ export function ApplicationProvider({ children }) {
       console.error('Failed to create application:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Failed to create application';
       setError(errorMessage);
+      return {
+        success: false,
+        isDuplicate: err.response?.data?.isDuplicate || err.response?.status === 409 || false,
+        message: errorMessage,
+        existingApplication: err.response?.data?.existingApplication || null
+      };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchApplications]);
+
+  // ── Resubmit application with updated documents ────────────────
+  const resubmitApplication = useCallback(async (applicationId, documents, notes = '') => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.post(`/applications/${applicationId}/resubmit`, {
+        documents,
+        notes,
+      });
+
+      if (!response || response.success === false) {
+        const errorMsg = response?.message || 'Failed to resubmit application';
+        setError(errorMsg);
+        return { success: false, message: errorMsg };
+      }
+
+      await fetchApplications();
+      return { success: true, application: response.data };
+    } catch (err) {
+      console.error('Failed to resubmit application:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to resubmit application';
+      setError(errorMessage);
       return { success: false, message: errorMessage };
     } finally {
       setLoading(false);
     }
   }, [fetchApplications]);
+
 
   // ── Get application by ID ──────────────────────────────────────
   const getApplication = useCallback(async (applicationId) => {
@@ -299,6 +361,7 @@ export function ApplicationProvider({ children }) {
         loading,
         error,
         createApplication,
+        resubmitApplication,
         getApplication,
         updateApplicationStatus,
         getApplicationsByStatus,

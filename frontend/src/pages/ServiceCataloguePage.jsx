@@ -139,7 +139,7 @@ export default function ServiceCataloguePage() {
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder={t.cat_search_ph || 'Search services or institutions...'}
-                className="w-full px-6 py-4 pl-12 rounded-full text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 text-base shadow-lg"
+                className="w-full px-6 py-4 pl-12 rounded-full text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-300 text-base shadow-lg"
               />
               <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
                 fill="none" stroke="currentColor" viewBox="0 0 24 24">

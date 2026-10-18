@@ -1,4 +1,5 @@
 import { supabase } from '../config/supabase.js';
+import { toDbRole } from './notificationService.js';
 
 /**
  * Get announcements (filtered by user role)
@@ -471,19 +472,18 @@ const notifyTargetUsers = async (announcement) => {
       // All active users
     } else if (announcement.scope === 'INTERNAL') {
       // Only staff (all roles except CUSTOMER / CITIZEN)
-      query = query.in('role', ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF']);
+      query = query.in('role', ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'ICT_STAFF']);
     } else if (announcement.scope === 'SYSTEM') {
       // Only admins and managers
       query = query.in('role', ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER']);
     } else if (announcement.scope === 'ROLE' && announcement.target_roles.length > 0) {
-      const expandedRoles = [...announcement.target_roles];
-      if (announcement.target_roles.includes('TECHNICIAN') && !announcement.target_roles.includes('ICT_STAFF')) {
-        expandedRoles.push('ICT_STAFF');
+      const rawRoles = Array.isArray(announcement.target_roles) ? announcement.target_roles : [announcement.target_roles];
+      const dbRoles = [...new Set(rawRoles.map(toDbRole).filter(Boolean))];
+      if (dbRoles.length > 0) {
+        query = query.in('role', dbRoles);
+      } else {
+        query = query.eq('id', '00000000-0000-0000-0000-000000000000');
       }
-      if (announcement.target_roles.includes('CUSTOMER') && !announcement.target_roles.includes('CITIZEN')) {
-        expandedRoles.push('CITIZEN');
-      }
-      query = query.in('role', expandedRoles);
     } else if (announcement.scope === 'INSTITUTION' && announcement.institution_id) {
       query = query.eq('institution_id', announcement.institution_id);
     }

@@ -8,7 +8,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 
 export default function OnlineServicesPage() {
-  const { lang: language } = useApp();
+  const { lang: language, getStatusLabel } = useApp();
   const { user } = useAuth();
   const { services, loading: servicesLoading } = useServices();
   const { createApplication, applications } = useApplications();
@@ -116,6 +116,7 @@ export default function OnlineServicesPage() {
 
   const handleSubmitApplication = async (e) => {
     e.preventDefault();
+    if (submitting) return;
 
     if (!applicationData.fullName || !applicationData.email || !applicationData.phone) {
       setSubmitError('Please fill in all required fields');
@@ -159,6 +160,17 @@ export default function OnlineServicesPage() {
         setTimeout(() => {
           document.getElementById('application-tracking')?.scrollIntoView({ behavior: 'smooth' });
         }, 500);
+      } else if (result.isDuplicate && result.existingApplication) {
+        const refNum = result.existingApplication.applicationNumber || result.existingApplication.referenceNumber;
+        const status = result.existingApplication.status;
+        setSubmitError(
+          language === 'am'
+            ? `ለዚህ አገልግሎት ንቁ ወይም የተጠናቀቀ ማመልከቻ ቀድሞውኑ አለዎት (መለያ: ${refNum}፣ ሁኔታ: ${status})። ተደጋጋሚ ምዝገባ አይፈቀድም።`
+            : `An active or completed registration already exists for this service (Reference: ${refNum}, Status: ${status}). Duplicate registrations are not permitted.`
+        );
+        setTimeout(() => {
+          document.getElementById('application-tracking')?.scrollIntoView({ behavior: 'smooth' });
+        }, 1000);
       } else {
         setSubmitError(result.message || 'Failed to submit application');
       }
@@ -169,6 +181,7 @@ export default function OnlineServicesPage() {
       setSubmitting(false);
     }
   };
+
 
   return (
     <>
@@ -201,7 +214,7 @@ export default function OnlineServicesPage() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder={language === 'am' ? 'አገልግሎት ፈልግ (ለምሳሌ ብሔራዊ መታወቂያ, ፓስፖርት...)' : 'Search services (e.g. National ID, Passport...)'}
-                  className="w-full px-6 py-4 pl-14 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
+                  className="w-full px-6 py-4 pl-14 border border-gray-300 bg-white text-gray-900 placeholder-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
                 />
                 <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 text-xl"></i>
               </div>
@@ -373,7 +386,7 @@ export default function OnlineServicesPage() {
                                 ? 'bg-yellow-100 text-yellow-800'
                                 : 'bg-blue-100 text-blue-800'
                             }`}>
-                              {app.status}
+                              {getStatusLabel ? getStatusLabel(app.status) : app.status}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">

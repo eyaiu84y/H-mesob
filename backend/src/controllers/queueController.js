@@ -100,8 +100,13 @@ export const getQueue = async (req, res) => {
 export const postCallNext = async (req, res) => {
   try {
     const { id } = req.params;
+    const institutionId = req.body?.institutionId || req.query?.institutionId;
+    const user = {
+      ...req.user,
+      institution_id: req.user?.institution_id || institutionId
+    };
 
-    const result = await callNext(id || null, req.user);
+    const result = await callNext(id || null, user);
 
     if (!result.success) {
       return res.status(400).json(result);

@@ -46,7 +46,7 @@ export const patchMarkAsRead = async (req, res) => {
 
     const result = await markAsRead(req.params.id, req.user);
     if (!result.success) {
-      const status = result.message?.includes('not found') ? 404 : 400;
+      const status = (result.message?.includes('not found') || result.message?.includes('access denied')) ? 404 : 400;
       return res.status(status).json(result);
     }
     res.status(200).json(result);

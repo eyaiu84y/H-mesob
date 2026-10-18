@@ -1,6 +1,9 @@
 import { supabase } from '../config/supabase.js';
 import { createNotification } from './notificationService.js';
 
+// Recent submission cache to protect against rapid double-clicks
+const recentSubmissions = new Map();
+
 /**
  * Create new application
  * @param {Object} applicationData - Application data
@@ -35,17 +38,152 @@ export const createApplication = async (applicationData, currentUser) => {
       finalInstitutionId = institution?.id || null;
     }
 
+    // Protection Against Rapid or Simultaneous Submissions (Double-clicks)
+    const lockKey = `${currentUser.id}_${finalServiceId || 'generic'}`;
+    const now = Date.now();
+    const lastSubTime = recentSubmissions.get(lockKey);
+    if (lastSubTime && (now - lastSubTime) < 3000) {
+      // Check if an application was already created for this user and service in the last 5 seconds
+      const fiveSecondsAgo = new Date(now - 5000).toISOString();
+      let recentQuery = supabase
+        .from('applications')
+        .select(`
+          id,
+          application_number,
+          status,
+          submitted_at,
+          updated_at,
+          services ( id, title_en, title_am ),
+          institutions ( id, name_en, name_am )
+        `)
+        .eq('citizen_id', currentUser.id)
+        .gte('created_at', fiveSecondsAgo)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (finalServiceId) {
+        recentQuery = recentQuery.eq('service_id', finalServiceId);
+      }
+      const { data: recentCreated } = await recentQuery;
+      if (recentCreated && recentCreated.length > 0) {
+        return {
+          success: true,
+          message: 'Application submitted successfully',
+          data: recentCreated[0]
+        };
+      }
+    }
+    recentSubmissions.set(lockKey, now);
+
+    // Fetch service info to check duplicate registration policy & required docs
+    let serviceObj = null;
+    if (finalServiceId) {
+      const { data: svc } = await supabase
+        .from('services')
+        .select('id, code, title_en, title_am, metadata')
+        .eq('id', finalServiceId)
+        .single();
+      serviceObj = svc;
+    }
+
+    // ── 1. DUPLICATE REGISTRATION PREVENTION ──────────────────────────
+    // For services configured as one-time registrations:
+    // Prevent customer from creating another active or completed registration.
+    const isOneTimeService = () => {
+      if (!serviceObj) return false;
+      const meta = serviceObj.metadata || {};
+      if (
+        meta.is_one_time === true ||
+        meta.one_time === true ||
+        meta.allow_multiple === false ||
+        meta.registration_policy === 'ONE_TIME' ||
+        appData?.isOneTime === true ||
+        appData?.is_one_time === true ||
+        appData?.allow_multiple === false
+      ) {
+        return true;
+      }
+      // Standard one-time registration service codes
+      const oneTimeCodes = [
+        'FAYDA_NEW',
+        'REV_TIN',
+        'sim-registration',
+        'business-registration',
+        'trade-name-reservation',
+        'CBE_ACCOUNT',
+        'account-opening',
+        'investment-license',
+        'work-permit-new'
+      ];
+      if (serviceObj.code && oneTimeCodes.includes(serviceObj.code)) {
+        return true;
+      }
+      const titleLower = (serviceObj.title_en || '').toLowerCase();
+      if (
+        titleLower.includes('new national id') ||
+        titleLower.includes('tin registration') ||
+        titleLower.includes('new business registration') ||
+        titleLower.includes('new sim card') ||
+        titleLower.includes('new bank account')
+      ) {
+        return true;
+      }
+      return false;
+    };
+
+    if (finalServiceId && isOneTimeService()) {
+      // Check for active or completed applications for this service & citizen
+      // REJECTED and CANCELLED do not block the customer
+      const { data: activeExisting } = await supabase
+        .from('applications')
+        .select('id, application_number, status, submitted_at')
+        .eq('citizen_id', currentUser.id)
+        .eq('service_id', finalServiceId)
+        .in('status', ['SUBMITTED', 'UNDER_REVIEW', 'PENDING_DOCUMENTS', 'APPROVED', 'COMPLETED'])
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (activeExisting && activeExisting.length > 0) {
+        const existingApp = activeExisting[0];
+        return {
+          success: false,
+          isDuplicate: true,
+          message: `An active or completed registration already exists for this service (Reference: ${existingApp.application_number}, Status: ${existingApp.status}). Duplicate registrations are not permitted.`,
+          existingApplication: {
+            id: existingApp.id,
+            applicationNumber: existingApp.application_number,
+            referenceNumber: existingApp.application_number,
+            status: existingApp.status,
+            submittedAt: existingApp.submitted_at
+          }
+        };
+      }
+    }
+
+    // ── 2. ALLOW SUBMISSION WHEN DOCUMENTS ARE MISSING ───────────────
+    // Preserve uploaded docs and submitted applicant information.
+    // Identify any missing required documents for employee review.
+    const uploadedList = documents || [];
+    const uploadedNames = uploadedList.map(d => (typeof d === 'string' ? d : d.name || d.title || d.fileName || '')).filter(Boolean);
+    const requiredDocs = serviceObj?.metadata?.required_documents || appData?.serviceDetails?.requiredDocs || appData?.requiredDocs || [];
+    const missingDocs = requiredDocs.filter(req => !uploadedNames.some(u => u.toLowerCase().includes(req.toLowerCase()) || req.toLowerCase().includes(u.toLowerCase())));
+
+    const enrichedAppData = {
+      ...(appData || {}),
+      requiredDocuments: requiredDocs,
+      missingDocuments: missingDocs,
+      hasMissingDocuments: missingDocs.length > 0
+    };
+
     // If still no IDs found, create a generic entry (for demo/mock data)
-    // In production, you should require real IDs
     if (!finalServiceId || !finalInstitutionId) {
-      // For demo purposes, allow application with mock data
       console.warn('Creating application with mock data (no real service/institution IDs)');
     }
 
     // Generate application number
     const applicationNumber = generateApplicationNumber();
 
-    // Create application
+    // Create application - status is SUBMITTED
     const { data: newApplication, error } = await supabase
       .from('applications')
       .insert({
@@ -54,8 +192,14 @@ export const createApplication = async (applicationData, currentUser) => {
         institution_id: finalInstitutionId,
         application_number: applicationNumber,
         status: 'SUBMITTED',
-        application_data: appData || {},
-        documents: documents || [],
+        application_data: enrichedAppData,
+        documents: uploadedList,
+        metadata: {
+          ...(applicationData.metadata || {}),
+          requiredDocuments: requiredDocs,
+          missingDocuments: missingDocs,
+          hasMissingDocuments: missingDocs.length > 0
+        },
         submitted_at: new Date().toISOString(),
         created_at: new Date().toISOString()
       })
@@ -91,7 +235,7 @@ export const createApplication = async (applicationData, currentUser) => {
       recipientId: currentUser.id,
       type: 'APPLICATION_UPDATE',
       title: 'Application Submitted',
-      message: `Your application #${applicationNumber} has been submitted successfully.`,
+      message: `Your application #${applicationNumber} has been submitted successfully.${missingDocs.length > 0 ? ' Some required documents are pending employee review.' : ''}`,
       relatedEntityId: newApplication.id,
       relatedEntityType: 'application'
     });
@@ -103,7 +247,7 @@ export const createApplication = async (applicationData, currentUser) => {
         roles: ['INSTITUTION_MANAGER', 'EMPLOYEE'],
         type: 'APPLICATION_UPDATE',
         title: 'New Application Submitted',
-        message: `New application #${applicationNumber} has been submitted for review.`,
+        message: `New application #${applicationNumber} has been submitted for review.${missingDocs.length > 0 ? ` (${missingDocs.length} missing document(s))` : ''}`,
         relatedEntityId: newApplication.id,
         relatedEntityType: 'application'
       });
@@ -126,6 +270,7 @@ export const createApplication = async (applicationData, currentUser) => {
     };
   }
 };
+
 
 /**
  * Get applications (filtered by user role)
@@ -205,6 +350,8 @@ export const getApplications = async (filters, currentUser) => {
         success: false,
         message: 'Failed to fetch applications.'
       };
+    }
+
     const enrichedData = (data || []).map(item => ({
       ...item,
       customer_id: item.citizen_id,
@@ -309,7 +456,7 @@ export const getApplicationById = async (applicationId, currentUser) => {
  * Update application status
  * @param {string} applicationId - Application ID
  * @param {string} status - New status
- * @param {string} notes - Status change notes
+ * @param {string} notes - Status change notes / rejection reason
  * @param {Object} currentUser - Current authenticated user
  * @returns {Promise<Object>} Updated application
  */
@@ -322,6 +469,14 @@ export const updateApplicationStatus = async (applicationId, status, notes, curr
       return {
         success: false,
         message: 'Invalid status.'
+      };
+    }
+
+    // Mandatory rejection reason check
+    if (status === 'REJECTED' && (!notes || !notes.trim())) {
+      return {
+        success: false,
+        message: 'A rejection reason is mandatory.'
       };
     }
 
@@ -340,14 +495,15 @@ export const updateApplicationStatus = async (applicationId, status, notes, curr
     }
 
     // Authorization: Only employees and managers can change status
-    if (!['EMPLOYEE', 'INSTITUTION_MANAGER', 'SUPER_ADMIN', 'MESOB_MANAGER'].includes(currentUser.role)) {
+    const roleUpper = (currentUser.role || '').toUpperCase();
+    if (!['EMPLOYEE', 'INSTITUTION_MANAGER', 'SUPER_ADMIN', 'MESOB_MANAGER'].includes(roleUpper)) {
       return {
         success: false,
         message: 'You do not have permission to update application status.'
       };
     }
 
-    if ((currentUser.role === 'EMPLOYEE' || currentUser.role === 'INSTITUTION_MANAGER') 
+    if ((roleUpper === 'EMPLOYEE' || roleUpper === 'INSTITUTION_MANAGER') 
         && application.institution_id !== currentUser.institution_id) {
       return {
         success: false,
@@ -355,16 +511,16 @@ export const updateApplicationStatus = async (applicationId, status, notes, curr
       };
     }
 
-    // Update status
+    // Update status and record decision metadata
     const updateData = {
       status,
-      review_notes: notes,
+      review_notes: notes?.trim() || null,
+      reviewed_by: currentUser.id,
+      reviewed_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
 
-    if (status === 'UNDER_REVIEW') {
-      updateData.reviewed_at = new Date().toISOString();
-    } else if (status === 'COMPLETED' || status === 'APPROVED') {
+    if (status === 'COMPLETED' || status === 'APPROVED') {
       updateData.completed_at = new Date().toISOString();
     }
 
@@ -386,9 +542,9 @@ export const updateApplicationStatus = async (applicationId, status, notes, curr
     // Notify customer with appropriate title and status context
     let statusTitle = 'Application Status Updated';
     let statusMsg = `Your application #${application.application_number} status is now ${status}.`;
-    if (status === 'REQUIRES_DOCUMENTS') {
+    if (status === 'PENDING_DOCUMENTS' || status === 'REQUIRES_DOCUMENTS') {
       statusTitle = 'Additional Documents Required';
-      statusMsg = `Please provide required additional documents for application #${application.application_number}.`;
+      statusMsg = `Please provide required additional documents for application #${application.application_number}.${notes ? ` Instructions: ${notes.trim()}` : ''}`;
     } else if (status === 'APPROVED') {
       statusTitle = 'Application Approved';
       statusMsg = `Congratulations! Your application #${application.application_number} has been approved.`;
@@ -397,7 +553,7 @@ export const updateApplicationStatus = async (applicationId, status, notes, curr
       statusMsg = `Your application #${application.application_number} has been completed.`;
     } else if (status === 'REJECTED') {
       statusTitle = 'Application Decision';
-      statusMsg = `Your application #${application.application_number} has been reviewed and rejected.${reviewNotes ? ` Reason: ${reviewNotes}` : ''}`;
+      statusMsg = `Your application #${application.application_number} has been reviewed and rejected.${notes ? ` Reason: ${notes.trim()}` : ''}`;
     }
 
     await createNotification({
@@ -426,6 +582,136 @@ export const updateApplicationStatus = async (applicationId, status, notes, curr
     };
   }
 };
+
+/**
+ * Resubmit application with corrected or additional documents
+ * @param {string} applicationId - Application ID
+ * @param {Array} newDocuments - Updated documents array
+ * @param {string} notes - Optional resubmission notes
+ * @param {Object} currentUser - Current authenticated user
+ * @returns {Promise<Object>} Updated application
+ */
+export const resubmitApplication = async (applicationId, newDocuments = [], notes = '', currentUser) => {
+  try {
+    const { data: application, error: fetchErr } = await supabase
+      .from('applications')
+      .select('id, citizen_id, institution_id, application_number, status, documents, application_data')
+      .eq('id', applicationId)
+      .single();
+
+    if (fetchErr || !application) {
+      return {
+        success: false,
+        message: 'Application not found.'
+      };
+    }
+
+    // Check ownership
+    const userRole = (currentUser.role || '').toUpperCase();
+    if ((userRole === 'CITIZEN' || userRole === 'CUSTOMER') && application.citizen_id !== currentUser.id) {
+      return {
+        success: false,
+        message: 'You can only resubmit your own applications.'
+      };
+    }
+
+    // Only applications with REJECTED or PENDING_DOCUMENTS can be resubmitted
+    if (!['REJECTED', 'PENDING_DOCUMENTS'].includes(application.status)) {
+      return {
+        success: false,
+        message: `Cannot resubmit application with status: ${application.status}. Only Rejected or Pending Documents applications can be resubmitted.`
+      };
+    }
+
+    // Merge documents
+    const existingDocs = Array.isArray(application.documents) ? application.documents : [];
+    const incomingDocs = Array.isArray(newDocuments) ? newDocuments : (newDocuments ? [newDocuments] : []);
+    const mergedDocs = [...existingDocs, ...incomingDocs];
+
+    const currentAppData = application.application_data || {};
+    const updatedAppData = {
+      ...currentAppData,
+      resubmittedAt: new Date().toISOString(),
+      resubmissionNotes: notes?.trim() || 'Updated documents provided by applicant.'
+    };
+
+    const { data: updatedApp, error: updateErr } = await supabase
+      .from('applications')
+      .update({
+        status: 'SUBMITTED',
+        documents: mergedDocs,
+        application_data: updatedAppData,
+        review_notes: notes ? `Resubmitted: ${notes.trim()}` : 'Resubmitted with updated documents',
+        submitted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', applicationId)
+      .select(`
+        id,
+        application_number,
+        status,
+        submitted_at,
+        updated_at,
+        services (
+          id,
+          title_en,
+          title_am
+        ),
+        institutions (
+          id,
+          name_en,
+          name_am
+        )
+      `)
+      .single();
+
+    if (updateErr) {
+      console.error('Resubmit application error:', updateErr);
+      return {
+        success: false,
+        message: 'Failed to resubmit application.'
+      };
+    }
+
+    // Notify customer
+    await createNotification({
+      recipientId: application.citizen_id,
+      type: 'APPLICATION_UPDATE',
+      title: 'Application Resubmitted',
+      message: `Your application #${application.application_number} has been resubmitted successfully with updated documents.`,
+      relatedEntityId: applicationId,
+      relatedEntityType: 'application'
+    });
+
+    // Notify institution staff
+    if (application.institution_id) {
+      await createNotification({
+        institutionId: application.institution_id,
+        roles: ['INSTITUTION_MANAGER', 'EMPLOYEE'],
+        type: 'APPLICATION_UPDATE',
+        title: 'Application Resubmitted',
+        message: `Application #${application.application_number} has been resubmitted with updated documents for review.`,
+        relatedEntityId: applicationId,
+        relatedEntityType: 'application'
+      });
+    }
+
+    await logAudit(currentUser.id, 'APPLICATION_RESUBMIT', `Resubmitted application ${application.application_number}`);
+
+    return {
+      success: true,
+      message: 'Application resubmitted successfully',
+      data: updatedApp
+    };
+  } catch (error) {
+    console.error('Resubmit application error:', error);
+    return {
+      success: false,
+      message: 'An error occurred while resubmitting application.'
+    };
+  }
+};
+
 
 /**
  * Assign application to employee

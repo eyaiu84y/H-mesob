@@ -88,7 +88,7 @@ export default function Videos() {
 
       </div>
       
-      <style jsx>{`
+      <style>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
         }

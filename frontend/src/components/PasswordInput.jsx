@@ -4,7 +4,7 @@ import { useState } from 'react';
  * Reusable password input with show/hide toggle eye icon.
  * Props mirror a standard <input> — id, value, onChange, placeholder, autoComplete, required.
  */
-export default function PasswordInput({ id, value, onChange, placeholder = '••••••••', autoComplete, required }) {
+export default function PasswordInput({ id, value, onChange, placeholder = '••••••••', autoComplete, required, className = '' }) {
   const [show, setShow] = useState(false);
 
   return (
@@ -17,7 +17,7 @@ export default function PasswordInput({ id, value, onChange, placeholder = '•�
         required={required}
         autoComplete={autoComplete}
         placeholder={placeholder}
-        className="w-full px-4 py-2.5 pr-11 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition"
+        className={`w-full px-4 py-2.5 pr-11 rounded-xl bg-slate-50/70 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder:text-slate-400 border border-slate-300 focus:border-[#314ea1] focus:ring-3 focus:ring-[#314ea1]/15 shadow-2xs outline-none transition-all duration-200 text-sm ${className}`}
       />
       <button
         type="button"

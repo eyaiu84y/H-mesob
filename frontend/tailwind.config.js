@@ -7,6 +7,9 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'Noto Sans Ethiopic', 'sans-serif'],
+      },
       colors: {
         mesob: {
           primary: '#1e3a8a',

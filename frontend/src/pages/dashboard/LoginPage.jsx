@@ -5,30 +5,15 @@ import { useApp } from '../../context/AppContext';
 import PasswordInput from '../../components/PasswordInput';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 
-const DEMO_ACCOUNTS = [
-  { label: 'Super Admin',         email: 'superadmin@mesobcenter.et',        password: 'SuperAdmin@2026' },
-  { label: 'MESOB Manager',       email: 'manager@mesobcenter.et',           password: 'MesobManager@2026' },
-  { label: 'Institution Manager', email: 'inst.manager@mesobcenter.et',      password: 'InstManager@2026' },
-  { label: 'Employee',            email: 'employee@mesobcenter.et',          password: 'Employee@2026' },
-  { label: 'Technician',          email: 'tech@mesobcenter.et',              password: 'tech@2026' },
-  { label: 'Customer',            email: 'customer@mesobcenter.et',          password: 'customer@2026' },
-];
-
 export default function LoginPage() {
   const { login, logout, user, isLoggedIn } = useAuth();
-  const { t } = useApp();
+  const { t, lang } = useApp();
   const navigate = useNavigate();
 
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  function fillDemo(demoEmail, demoPassword) {
-    setEmail(demoEmail);
-    setPassword(demoPassword);
-    setError('');
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -74,7 +59,7 @@ export default function LoginPage() {
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-20 h-20 mb-3 bg-white rounded-2xl shadow-sm border border-gray-100 p-2">
             <img
-              src="https://mesobcenter.et/Companies/Logo.png"
+              src="/image/icon.png"
               alt="MESOB Logo"
               className="w-16 h-16 object-contain"
               onError={(e) => { e.target.src = '/image/logo.jpg'; }}
@@ -98,9 +83,9 @@ export default function LoginPage() {
               <div className="mb-5 p-3.5 rounded-xl bg-blue-50 border border-blue-200">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs text-blue-700 font-medium">Currently signed in as:</p>
+                    <p className="text-xs text-blue-700 font-medium">{lang === 'am' ? 'በአሁኑ ሰዓት የገቡት በ:' : 'Currently signed in as:'}</p>
                     <p className="text-sm font-bold text-blue-950">
-                      {user.name} <span className="font-normal text-blue-800">({ROLE_LABELS[user.role] || user.role})</span>
+                      {user.name} <span className="font-normal text-blue-800">({t[user.role] || ROLE_LABELS[user.role] || user.role})</span>
                     </p>
                     <p className="text-xs text-blue-600 font-mono mt-0.5">{user.email}</p>
                   </div>
@@ -109,14 +94,14 @@ export default function LoginPage() {
                       to={ROLE_ROUTES[user.role] || '/'}
                       className="text-xs bg-[#314ea1] hover:bg-[#1e3a8a] text-white font-semibold px-3 py-1.5 rounded-lg transition"
                     >
-                      Dashboard →
+                      {t.my_dashboard || 'Dashboard'} →
                     </Link>
                     <button
                       type="button"
                       onClick={logout}
-                      className="text-xs bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 font-semibold px-3 py-1.5 rounded-lg transition"
+                      className="text-xs bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer"
                     >
-                      Sign Out
+                      {t.sign_out || 'Sign Out'}
                     </button>
                   </div>
                 </div>
@@ -136,7 +121,7 @@ export default function LoginPage() {
                   required
                   autoComplete="email"
                   placeholder="you@example.com"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50/70 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder:text-slate-400 border border-slate-300 focus:border-[#314ea1] focus:ring-3 focus:ring-[#314ea1]/15 shadow-2xs outline-none transition-all duration-200 text-sm"
                 />
               </div>
 
@@ -163,41 +148,18 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-[#314ea1] hover:bg-[#1e3a8a] text-white font-semibold py-2.5 rounded-xl transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                className="w-full bg-[#314ea1] hover:bg-[#1e3a8a] text-white font-semibold py-2.5 rounded-xl transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed text-sm cursor-pointer"
               >
-                {isSubmitting ? (t.signing_in || 'Signing in...') : (t.sign_in || 'Sign In')}
+                {isSubmitting ? (t.submitting || 'Signing in...') : (t.sign_in || 'Sign In')}
               </button>
             </form>
 
-            {/* Demo accounts */}
-            <div className="mt-6 pt-5 border-t border-gray-100">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2.5">
-                {t.demo_accounts || 'Quick Demo Login'}
-              </p>
-              <div className="space-y-1.5 text-sm">
-                {DEMO_ACCOUNTS.map((acc) => (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    onClick={() => fillDemo(acc.email, acc.password)}
-                    className="w-full text-left px-3 py-2 rounded-lg bg-slate-50 hover:bg-blue-50/80 border border-gray-200/60 hover:border-blue-200 transition-colors flex justify-between items-center gap-2 group"
-                  >
-                    <span className="font-medium text-gray-900 group-hover:text-[#1e3a8a] text-xs sm:text-sm">
-                      {acc.label}
-                    </span>
-                    <span className="text-xs text-gray-500 font-mono truncate">
-                      {acc.email}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {/* Sign up link */}
             <p className="text-center text-sm text-gray-500 mt-5 pt-4 border-t border-gray-100">
-              Don&apos;t have an account?{' '}
+              {t.dont_have_account || "Don't have an account?"}{' '}
               <Link to="/signup" className="text-[#314ea1] hover:underline font-semibold">
-                Sign up
+                {t.sign_up || 'Sign up'}
               </Link>
             </p>
           </div>
@@ -205,7 +167,7 @@ export default function LoginPage() {
       </div>
 
       <div className="text-center text-xs text-gray-400 py-2">
-        FDRE Hawassa MESOB Center &bull; Public Service Portal
+        {lang === 'am' ? 'የኢፌዴሪ የሃዋሳ መሶብ ማዕከል • የህዝብ አገልግሎት ፖርታል' : 'FDRE Hawassa MESOB Center • Public Service Portal'}
       </div>
     </div>
   );

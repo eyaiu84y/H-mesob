@@ -46,12 +46,18 @@ function StatusBadge({ status }) {
     Assigned: 'badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold',
     'In Progress': 'badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold',
     Processing: 'badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold',
-    Completed: 'badge bg-emerald-50 text-emerald-800 border border-emerald-200',
-    Submitted: 'badge bg-blue-50 text-[#1e3a8a] border border-blue-200',
+    Completed: 'badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold',
+    Submitted: 'badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold',
     Active: 'badge bg-emerald-50 text-emerald-800 border border-emerald-200',
-    Approved: 'badge bg-emerald-50 text-emerald-800 border border-emerald-200',
-    Rejected: 'badge bg-rose-50 text-rose-800 border border-rose-200',
-    Cancelled: 'badge bg-rose-50 text-rose-800 border border-rose-200',
+    Approved: 'badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold',
+    ACKNOWLEDGED: 'badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold',
+    Acknowledged: 'badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold',
+    Rejected: 'badge bg-rose-50 text-rose-800 border border-rose-200 font-semibold',
+    Cancelled: 'badge bg-rose-50 text-rose-800 border border-rose-200 font-semibold',
+    Resolved: 'badge bg-indigo-50 text-indigo-800 border border-indigo-200 font-semibold',
+    Closed: 'badge bg-slate-100 text-slate-800 border border-slate-300 font-semibold',
+    'Waiting Parts': 'badge bg-amber-50 text-amber-800 border border-amber-200 font-semibold',
+    'On Hold': 'badge bg-purple-50 text-purple-800 border border-purple-200 font-semibold',
   }[status] || 'badge bg-slate-100 text-slate-700 border border-slate-200';
   return <span className={cls}>{status}</span>;
 }
@@ -481,7 +487,7 @@ function SectionApplications({ userInstitution }) {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search applications..."
-            className="w-full px-4 py-2.5 pl-10 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
+            className="w-full px-4 py-2.5 pl-10 rounded-xl border border-slate-300 bg-white text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm"
           />
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
             fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -553,37 +559,53 @@ function SectionApplications({ userInstitution }) {
 // ─── SECTION: Maintenance ─────────────────────────────────────────
 function SectionMaintenance({ userInstitution }) {
   const { createNotification } = useNotifications();
-  const { reports: allReports, assignReport } = useMaintenance();
+  const {
+    reports: allReports,
+    assignReport,
+    approveReport,
+    rejectReport,
+    closeReport,
+    reopenReport
+  } = useMaintenance();
   const { user } = useAuth();
   
   // Backend already filters reports by institution_id for INSTITUTION_MANAGER role
-  // So we can use all reports directly from the context
   const reports = useMemo(() => {
-    console.log('=== INSTITUTION MANAGER MAINTENANCE DEBUG ===');
-    console.log('User institution ID:', user?.institution_id);
-    console.log('User institution name:', userInstitution);
-    console.log('All reports count:', (allReports || []).length);
-    console.log('Sample report:', allReports?.[0]);
-    console.log('=============================================');
-    
-    // Backend already filtered by institution, just sort by date
     return (allReports || []).sort((a, b) => 
       new Date(b.reportedAtTimestamp) - new Date(a.reportedAtTimestamp)
     );
-  }, [allReports, user, userInstitution]);
+  }, [allReports]);
 
   const tasks = useMemo(() => {
     return reports.filter(r => r.assignedTo);
   }, [reports]);
+
   const [selected, setSelected] = useState(null);
   const [selectedType, setSelectedType] = useState(null); // 'task' | 'report'
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Assignment modal
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignForm, setAssignForm] = useState({ technician: '' });
   const [assignError, setAssignError] = useState('');
 
+  // Rejection modal
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectError, setRejectError] = useState('');
 
-  // Load authorized ICT staff from the backend.
-  // GET /api/users automatically scopes Institution Managers to their institution.
+  // Closure modal
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [closeNotes, setCloseNotes] = useState('');
+  const [closeError, setCloseError] = useState('');
+
+  // Return/reopen modal
+  const [showReopenModal, setShowReopenModal] = useState(false);
+  const [reopenReason, setReopenReason] = useState('');
+  const [reopenError, setReopenError] = useState('');
+
+  // Load authorized Technicians for this institution from backend
   const [technicianList, setTechnicianList] = useState([]);
 
   useEffect(() => {
@@ -597,11 +619,12 @@ function SectionMaintenance({ userInstitution }) {
           const users = Array.isArray(response.data) ? response.data : [];
           setTechnicianList(
             users
-              .filter(user => ['TECHNICIAN', 'ICT_STAFF'].includes(String(user.role).toUpperCase()))
-              .map(user => ({
-                ...user,
-                name: user.full_name || user.name || "Unnamed Technician",
-                institutionId: user.institution_id || user.institutionId || null
+              .filter(u => ['TECHNICIAN', 'ICT_STAFF'].includes(String(u.role).toUpperCase()))
+              .filter(u => !u.institution_id || !user?.institution_id || String(u.institution_id) === String(user?.institution_id))
+              .map(u => ({
+                ...u,
+                name: u.full_name || u.name || "Unnamed Technician",
+                institutionId: u.institution_id || u.institutionId || null
               }))
           );
         }
@@ -616,8 +639,56 @@ function SectionMaintenance({ userInstitution }) {
     return () => {
       cancelled = true;
     };
-  }, [userInstitution]);
+  }, [userInstitution, user?.institution_id]);
 
+  // Handle Approve Request
+  async function handleApprove(reportId) {
+    if (!window.confirm('Are you sure you want to approve this maintenance request? It will become ready for technician assignment.')) return;
+    try {
+      setActionLoading(true);
+      const res = await approveReport(reportId);
+      if (res.success) {
+        alert('Maintenance request approved successfully! It is now available for technician assignment.');
+      } else {
+        alert(res.message || 'Failed to approve maintenance request.');
+      }
+    } catch (err) {
+      alert(err.message || 'Error approving maintenance request.');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  // Handle Reject Request (Mandatory reason required)
+  async function handleRejectSubmit(e) {
+    e.preventDefault();
+    if (!rejectReason.trim()) {
+      setRejectError('A clear, mandatory rejection reason is required.');
+      return;
+    }
+
+    const report = reports.find(r => r.id === selected);
+    if (!report) return;
+
+    try {
+      setActionLoading(true);
+      setRejectError('');
+      const res = await rejectReport(report.id, rejectReason.trim());
+      if (res.success) {
+        setShowRejectModal(false);
+        setRejectReason('');
+        alert(`Maintenance request #${report.reportNumber} has been rejected. The requester has been notified.`);
+      } else {
+        setRejectError(res.message || 'Failed to reject maintenance request.');
+      }
+    } catch (err) {
+      setRejectError(err.message || 'Error rejecting maintenance request.');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  // Handle Technician Assignment
   async function handleAssignTechnician(e) {
     e.preventDefault();
 
@@ -632,13 +703,18 @@ function SectionMaintenance({ userInstitution }) {
       return;
     }
 
+    if (report.status === 'Rejected') {
+      setAssignError('Cannot assign a rejected maintenance report.');
+      return;
+    }
+
     try {
+      setActionLoading(true);
+      setAssignError('');
       const result = await assignReport(report.id, assignForm.technician);
 
       if (result.success) {
-        const technician = technicianList.find(
-          technician => technician.id === assignForm.technician
-        );
+        const technician = technicianList.find(t => t.id === assignForm.technician);
 
         if (technician) {
           const notificationData = createTaskAssignmentNotification(
@@ -651,7 +727,6 @@ function SectionMaintenance({ userInstitution }) {
             },
             technician.email
           );
-
           createNotification(notificationData);
         }
 
@@ -662,7 +737,7 @@ function SectionMaintenance({ userInstitution }) {
         alert(
           `Maintenance report ${report.reportNumber} assigned to ${
             technician?.name || 'technician'
-          } successfully!\n\nThe technician has been notified.`
+          } successfully!\n\nThe technician and requester have been notified.`
         );
       } else {
         setAssignError(result.message || 'Failed to assign technician.');
@@ -670,79 +745,313 @@ function SectionMaintenance({ userInstitution }) {
     } catch (error) {
       console.error('Failed to assign technician:', error);
       setAssignError(error.message || 'Failed to assign technician.');
+    } finally {
+      setActionLoading(false);
     }
   }
 
-  // Assignment modal
+  // Handle Verify & Close
+  async function handleCloseSubmit(e) {
+    e.preventDefault();
+    const report = reports.find(r => r.id === selected);
+    if (!report) return;
+
+    try {
+      setActionLoading(true);
+      setCloseError('');
+      const res = await closeReport(report.id, closeNotes.trim());
+      if (res.success) {
+        setShowCloseModal(false);
+        setCloseNotes('');
+        alert(`Maintenance request #${report.reportNumber} has been verified and closed successfully.`);
+      } else {
+        setCloseError(res.message || 'Failed to close maintenance request.');
+      }
+    } catch (err) {
+      setCloseError(err.message || 'Error closing maintenance request.');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  // Handle Return / Reopen to technician
+  async function handleReopenSubmit(e) {
+    e.preventDefault();
+    if (!reopenReason.trim()) {
+      setReopenError('A return/reopen reason is mandatory to guide the technician.');
+      return;
+    }
+
+    const report = reports.find(r => r.id === selected);
+    if (!report) return;
+
+    try {
+      setActionLoading(true);
+      setReopenError('');
+      const res = await reopenReport(report.id, reopenReason.trim());
+      if (res.success) {
+        setShowReopenModal(false);
+        setReopenReason('');
+        alert(`Maintenance request #${report.reportNumber} returned to technician for further work. Technician notified.`);
+      } else {
+        setReopenError(res.message || 'Failed to return maintenance request.');
+      }
+    } catch (err) {
+      setReopenError(err.message || 'Error returning maintenance request.');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  // Filtered reports for table
+  const filteredReports = useMemo(() => {
+    if (statusFilter === 'ALL') return reports;
+    if (statusFilter === 'AWAITING_REVIEW') return reports.filter(r => r.status === 'Submitted');
+    if (statusFilter === 'APPROVED') return reports.filter(r => ['Approved', 'Acknowledged', 'ACKNOWLEDGED'].includes(r.status));
+    if (statusFilter === 'IN_PROGRESS') return reports.filter(r => ['Assigned', 'In Progress', 'Waiting Parts'].includes(r.status));
+    if (statusFilter === 'RESOLVED') return reports.filter(r => r.status === 'Resolved' || r.status === 'Completed');
+    if (statusFilter === 'CLOSED') return reports.filter(r => r.status === 'Closed');
+    if (statusFilter === 'REJECTED') return reports.filter(r => r.status === 'Rejected');
+    return reports;
+  }, [reports, statusFilter]);
+
+  // Modal: Assign Technician
   if (showAssignModal && selected) {
     const report = reports.find(r => r.id === selected);
     return (
-      <>
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
-            <h3 className="font-semibold text-gray-900 mb-5">Assign Technician</h3>
-            
-            <div className="mb-5 p-4 bg-gray-50 rounded-xl text-sm">
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-500">Report ID:</span>
-                <span className="font-medium">{report.reportNumber}</span>
-              </div>
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-500">Problem Type:</span>
-                <span className="font-medium">{report.problemType}</span>
-              </div>
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-500">Location:</span>
-                <span className="font-medium">{report.location}, Office {report.officeNumber}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Reported By:</span>
-                <span className="font-medium">{report.reportedBy}</span>
-              </div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+          <h3 className="font-semibold text-gray-900 mb-5">Assign Technician</h3>
+          
+          <div className="mb-5 p-4 bg-gray-50 rounded-xl text-sm">
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-500">Report ID:</span>
+              <span className="font-medium">{report?.reportNumber}</span>
             </div>
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-500">Problem Type:</span>
+              <span className="font-medium">{report?.problemType}</span>
+            </div>
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-500">Location:</span>
+              <span className="font-medium">{report?.location}, Office {report?.officeNumber}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Reported By:</span>
+              <span className="font-medium">{report?.reportedBy}</span>
+            </div>
+          </div>
 
-            <form onSubmit={handleAssignTechnician} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Select Technician <span className="text-red-500">*</span>
-                </label>
+          <form onSubmit={handleAssignTechnician} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Select Technician <span className="text-red-500">*</span>
+              </label>
+              {technicianList.length === 0 ? (
+                <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl">
+                  No active technicians available in {userInstitution || 'this institution'}.
+                </div>
+              ) : (
                 <select
                   value={assignForm.technician}
                   onChange={e => setAssignForm({ technician: e.target.value })}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
+                  required
                 >
                   <option value="">Select technician...</option>
                   {technicianList.map(t => (
                     <option key={t.id} value={t.id}>{t.name} ({t.email})</option>
                   ))}
                 </select>
-              </div>
-
-              {assignError && (
-                <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">
-                  {assignError}
-                </div>
               )}
+            </div>
 
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white text-sm font-semibold rounded-xl shadow-xs transition"
-                >
-                  Assign Task
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowAssignModal(false); setAssignError(''); setAssignForm({ technician: '' }); }}
-                  className="px-5 py-2.5 border border-slate-300 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition"
-                >
-                  Cancel
-                </button>
+            {assignError && (
+              <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">
+                {assignError}
               </div>
-            </form>
-          </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={actionLoading || technicianList.length === 0}
+                className="px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white text-sm font-semibold rounded-xl shadow-xs transition disabled:opacity-50"
+              >
+                {actionLoading ? 'Assigning...' : 'Confirm Assignment'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowAssignModal(false); setAssignError(''); setAssignForm({ technician: '' }); }}
+                className="px-5 py-2.5 border border-slate-300 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
-      </>
+      </div>
+    );
+  }
+
+  // Modal: Reject Request (Mandatory Reason)
+  if (showRejectModal && selected) {
+    const report = reports.find(r => r.id === selected);
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+          <h3 className="font-bold text-rose-900 text-lg mb-2">Reject Maintenance Request</h3>
+          <p className="text-xs text-slate-500 mb-4">
+            Rejecting request <span className="font-semibold text-slate-700">#{report?.reportNumber}</span>. Please provide a mandatory reason explaining why this maintenance request cannot be fulfilled.
+          </p>
+
+          <form onSubmit={handleRejectSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Rejection Reason <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                placeholder="e.g., Duplicate request, equipment under manufacturer warranty, not an authorized maintenance issue..."
+                rows={4}
+                className="w-full px-4 py-2.5 rounded-xl border border-rose-200 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition text-sm bg-rose-50/20"
+                required
+              />
+            </div>
+
+            {rejectError && (
+              <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">
+                {rejectError}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={actionLoading}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold rounded-xl shadow-xs transition disabled:opacity-50"
+              >
+                {actionLoading ? 'Rejecting...' : 'Confirm Rejection'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowRejectModal(false); setRejectReason(''); setRejectError(''); }}
+                className="px-5 py-2.5 border border-slate-300 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Modal: Verify & Close
+  if (showCloseModal && selected) {
+    const report = reports.find(r => r.id === selected);
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+          <h3 className="font-bold text-slate-900 text-lg mb-2">Verify & Close Request</h3>
+          <p className="text-xs text-slate-500 mb-4">
+            Confirm that the maintenance work for <span className="font-semibold text-slate-700">#{report?.reportNumber}</span> has been verified and successfully completed.
+          </p>
+
+          <form onSubmit={handleCloseSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Verification / Closure Notes (Optional)
+              </label>
+              <textarea
+                value={closeNotes}
+                onChange={e => setCloseNotes(e.target.value)}
+                placeholder="e.g., Inspected and confirmed working normally. Issue fully resolved."
+                rows={3}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition text-sm"
+              />
+            </div>
+
+            {closeError && (
+              <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">
+                {closeError}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={actionLoading}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-xs transition disabled:opacity-50"
+              >
+                {actionLoading ? 'Closing...' : 'Confirm Closure'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowCloseModal(false); setCloseNotes(''); setCloseError(''); }}
+                className="px-5 py-2.5 border border-slate-300 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Modal: Return / Reopen to technician
+  if (showReopenModal && selected) {
+    const report = reports.find(r => r.id === selected);
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+          <h3 className="font-bold text-amber-900 text-lg mb-2">Return Request to Technician</h3>
+          <p className="text-xs text-slate-500 mb-4">
+            The maintenance work for <span className="font-semibold text-slate-700">#{report?.reportNumber}</span> requires further attention. Please state what remains to be completed.
+          </p>
+
+          <form onSubmit={handleReopenSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Reason for Return <span className="text-amber-600">*</span>
+              </label>
+              <textarea
+                value={reopenReason}
+                onChange={e => setReopenReason(e.target.value)}
+                placeholder="e.g., Problem persists when powered on, cables need tidy routing, testing incomplete..."
+                rows={4}
+                className="w-full px-4 py-2.5 rounded-xl border border-amber-300 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition text-sm bg-amber-50/20"
+                required
+              />
+            </div>
+
+            {reopenError && (
+              <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">
+                {reopenError}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={actionLoading}
+                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-xl shadow-xs transition disabled:opacity-50"
+              >
+                {actionLoading ? 'Returning...' : 'Return to Technician'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowReopenModal(false); setReopenReason(''); setReopenError(''); }}
+                className="px-5 py-2.5 border border-slate-300 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     );
   }
 
@@ -781,10 +1090,10 @@ function SectionMaintenance({ userInstitution }) {
               <p className="text-sm text-slate-700">{task.description}</p>
             </div>
           )}
-          {task.report && (
+          {task.resolutionNotes && (
             <div className="border-t border-slate-100 pt-5">
-              <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-3">Technician Report</p>
-              <p className="text-sm text-slate-700">{task.report}</p>
+              <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-3">Technician Resolution</p>
+              <p className="text-sm text-slate-700">{task.resolutionNotes}</p>
             </div>
           )}
         </div>
@@ -792,13 +1101,14 @@ function SectionMaintenance({ userInstitution }) {
     );
   }
 
-  // View employee report detail with comprehensive fields
+  // View employee report detail
   if (selected && selectedType === 'report') {
     const report = reports.find(r => r.id === selected);
     if (!report) {
       setSelected(null);
       return null;
     }
+
     return (
       <>
         <div className="mb-6">
@@ -812,17 +1122,120 @@ function SectionMaintenance({ userInstitution }) {
             <div>
               <p className="text-xs text-slate-400 mb-1">{report.reportNumber}</p>
               <h2 className="text-lg font-bold text-slate-900 mb-2">Maintenance Report Details</h2>
-              <div className="flex gap-2"><StatusBadge status={report.status} /></div>
+              <div className="flex gap-2 items-center">
+                <StatusBadge status={report.status} />
+                <PriorityBadge priority={report.priority} />
+              </div>
             </div>
-            {report.status === 'Submitted' && (
-              <button
-                onClick={() => setShowAssignModal(true)}
-                className="px-4 py-2 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white text-sm font-semibold rounded-xl shadow-xs transition"
-              >
-                Assign Technician
-              </button>
-            )}
+
+            {/* Stage Actions */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Stage 1: Review (Submitted) -> Approve or Reject */}
+              {report.status === 'Submitted' && (
+                <>
+                  <button
+                    onClick={() => handleApprove(report.id)}
+                    disabled={actionLoading}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                    Approve Request
+                  </button>
+                  <button
+                    onClick={() => { setShowRejectModal(true); setRejectReason(''); setRejectError(''); }}
+                    disabled={actionLoading}
+                    className="px-4 py-2 border border-rose-300 text-rose-700 hover:bg-rose-50 text-sm font-semibold rounded-xl transition flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    Reject Request
+                  </button>
+                </>
+              )}
+
+              {/* Stage 2: Approved -> Assign Technician */}
+              {(['Approved', 'Acknowledged', 'ACKNOWLEDGED'].includes(report.status) || (report.status === 'Submitted' && !report.assignedTo)) && (
+                <button
+                  onClick={() => { setShowAssignModal(true); setAssignError(''); }}
+                  disabled={actionLoading}
+                  className="px-4 py-2 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white text-sm font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+                  Assign Technician
+                </button>
+              )}
+
+              {/* Stage 3: Resolved -> Verify & Close OR Return to Technician */}
+              {(report.status === 'Resolved' || report.status === 'Completed') && (
+                <>
+                  <button
+                    onClick={() => { setShowCloseModal(true); setCloseNotes(''); setCloseError(''); }}
+                    disabled={actionLoading}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Verify & Close
+                  </button>
+                  <button
+                    onClick={() => { setShowReopenModal(true); setReopenReason(''); setReopenError(''); }}
+                    disabled={actionLoading}
+                    className="px-4 py-2 border border-amber-300 text-amber-800 hover:bg-amber-50 text-sm font-semibold rounded-xl transition flex items-center gap-1.5"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    Return to Technician
+                  </button>
+                </>
+              )}
+            </div>
           </div>
+
+          {/* Audit / Decision Banners */}
+          {report.approval?.status === 'REJECTED' && (
+            <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm">
+              <div className="font-bold flex items-center gap-2 mb-1 text-rose-900">
+                <svg className="w-4 h-4 text-rose-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+                Request Rejected by {report.approval?.reviewed_by_name || 'Institution Manager'}
+              </div>
+              <p className="text-xs text-rose-700"><strong>Reason:</strong> {report.approval?.rejection_reason || 'No reason provided.'}</p>
+              {report.approval?.reviewed_at && (
+                <p className="text-[11px] text-rose-500 mt-1">Reviewed on: {new Date(report.approval.reviewed_at).toLocaleString()}</p>
+              )}
+            </div>
+          )}
+
+          {report.approval?.status === 'APPROVED' && (
+            <div className="mb-6 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center justify-between">
+              <div>
+                <strong>Approved:</strong> Request was approved by {report.approval?.reviewed_by_name || 'Institution Manager'} on {report.approval?.reviewed_at ? new Date(report.approval.reviewed_at).toLocaleString() : 'N/A'}.
+              </div>
+              <span className="font-semibold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded-md">Ready for Assignment</span>
+            </div>
+          )}
+
+          {report.resolutionNotes && (
+            <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-xl text-sm">
+              <p className="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Technician Resolution Details
+              </p>
+              <p className="text-slate-800 text-sm leading-relaxed mb-2 bg-white/70 p-3 rounded-lg border border-indigo-100">{report.resolutionNotes}</p>
+              {report.resolvedAt && (
+                <p className="text-xs text-indigo-700 font-medium">Completed on: {new Date(report.resolvedAt).toLocaleString()}</p>
+              )}
+            </div>
+          )}
+
+          {report.status === 'Closed' && (
+            <div className="mb-6 p-4 bg-slate-100 border border-slate-200 rounded-xl text-slate-800 text-xs">
+              <div className="font-bold text-slate-900 mb-1 flex items-center gap-1.5">
+                <svg className="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                Work Verified and Request Closed
+              </div>
+              <p className="text-slate-600">Verified by {report.closure?.closed_by_name || 'Institution Manager'} on {report.closure?.closed_at ? new Date(report.closure.closed_at).toLocaleString() : 'N/A'}.</p>
+              {report.closure?.closure_notes && (
+                <p className="mt-1 text-slate-700 font-medium">Notes: {report.closure.closure_notes}</p>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 text-sm">
             <div className="space-y-4">
@@ -865,7 +1278,7 @@ function SectionMaintenance({ userInstitution }) {
 
             <div className="space-y-4">
               <div>
-                <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-2">Status Information</p>
+                <p className="text-xs font-semibold text-[#1e3a8a] uppercase tracking-wider mb-2">Status & Assignment</p>
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-slate-500">Submitted:</span>
@@ -876,13 +1289,13 @@ function SectionMaintenance({ userInstitution }) {
                     <StatusBadge status={report.status} />
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Assigned To:</span>
+                    <span className="text-slate-500">Assigned Technician:</span>
                     <span className="font-medium text-slate-900">{report.assignedTo || <span className="text-slate-400">Not assigned yet</span>}</span>
                   </div>
-                  {report.taskId && (
+                  {report.category && (
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Task ID:</span>
-                      <span className="font-medium text-slate-900">{report.taskId}</span>
+                      <span className="text-slate-500">Category:</span>
+                      <span className="font-medium text-slate-900">{report.category}</span>
                     </div>
                   )}
                 </div>
@@ -908,7 +1321,7 @@ function SectionMaintenance({ userInstitution }) {
         </div>
 
         <div className="p-4 bg-[#314ea1]/5 border border-[#314ea1]/20 rounded-xl text-xs font-medium text-[#1e3a8a] max-w-4xl">
-          <strong>Manager Actions:</strong> Review the complete employee report including the problem photo, then click "Assign Technician" to create a task and assign it to a technician.
+          <strong>Manager Workflow:</strong> Step 1: Review request and Approve or Reject. Step 2: Assign an authorized Technician. Step 3: Verify resolution and Close or Return request.
         </div>
       </>
     );
@@ -917,15 +1330,53 @@ function SectionMaintenance({ userInstitution }) {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">Maintenance</h2>
-        <p className="text-sm text-slate-500 font-normal">Monitor employee-reported problems and assigned maintenance tasks for {userInstitution || 'your institution'}.</p>
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">Maintenance Management</h2>
+        <p className="text-sm text-slate-500 font-normal">Review employee problem reports, approve/reject requests, assign technicians, and verify completed work for {userInstitution || 'your institution'}.</p>
       </div>
 
-      {/* Employee Reports */}
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {[
+          { key: 'ALL', label: 'All', count: reports.length },
+          { key: 'AWAITING_REVIEW', label: 'Awaiting Review', count: reports.filter(r => r.status === 'Submitted').length, highlight: true },
+          { key: 'APPROVED', label: 'Approved (Pending Assign)', count: reports.filter(r => ['Approved', 'Acknowledged', 'ACKNOWLEDGED'].includes(r.status)).length },
+          { key: 'IN_PROGRESS', label: 'In Progress', count: reports.filter(r => ['Assigned', 'In Progress', 'Waiting Parts'].includes(r.status)).length },
+          { key: 'RESOLVED', label: 'Awaiting Closure', count: reports.filter(r => r.status === 'Resolved' || r.status === 'Completed').length, alert: true },
+          { key: 'CLOSED', label: 'Closed', count: reports.filter(r => r.status === 'Closed').length },
+          { key: 'REJECTED', label: 'Rejected', count: reports.filter(r => r.status === 'Rejected').length },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setStatusFilter(tab.key)}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+              statusFilter === tab.key
+                ? 'bg-[#1e3a8a] text-white shadow-xs'
+                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            {tab.label}
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+              statusFilter === tab.key
+                ? 'bg-white/20 text-white'
+                : tab.highlight && tab.count > 0
+                ? 'bg-amber-100 text-amber-800 font-bold'
+                : tab.alert && tab.count > 0
+                ? 'bg-emerald-100 text-emerald-800 font-bold'
+                : 'bg-slate-100 text-slate-600'
+            }`}>
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Employee Problem Reports Table */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="font-bold text-slate-900">Employee Problem Reports</h3>
-          <span className="text-xs font-semibold px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full">{reports.filter(r => r.status === 'Submitted').length} pending</span>
+          <h3 className="font-bold text-slate-900">Maintenance Reports</h3>
+          <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 text-[#1e3a8a] border border-blue-200 rounded-full">
+            {filteredReports.length} {statusFilter === 'ALL' ? 'Total' : 'Filtered'}
+          </span>
         </div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
@@ -933,10 +1384,10 @@ function SectionMaintenance({ userInstitution }) {
               <tr>
                 <th>Report ID</th>
                 <th>Employee</th>
-                <th>Employee ID</th>
                 <th>Problem Type</th>
                 <th>Location</th>
                 <th>Office</th>
+                <th>Priority</th>
                 <th>Reported Time</th>
                 <th>Status</th>
                 <th>Assigned To</th>
@@ -944,20 +1395,27 @@ function SectionMaintenance({ userInstitution }) {
               </tr>
             </thead>
             <tbody>
-              {reports.length === 0 ? (
-                <tr><td colSpan={10} className="text-center text-slate-400 py-6">No maintenance reports.</td></tr>
-              ) : reports.map(r => (
+              {filteredReports.length === 0 ? (
+                <tr><td colSpan={10} className="text-center text-slate-400 py-6">No maintenance reports in this category.</td></tr>
+              ) : filteredReports.map(r => (
                 <tr key={r.id}>
                   <td className="font-semibold text-slate-800">{r.reportNumber}</td>
                   <td>{r.reportedBy}</td>
-                  <td>{r.reportedById}</td>
-                  <td>{r.problemType}</td>
+                  <td className="font-medium text-slate-900">{r.problemType}</td>
                   <td>{r.location}</td>
                   <td>{r.officeNumber}</td>
+                  <td><PriorityBadge priority={r.priority} /></td>
                   <td className="whitespace-nowrap">{r.reportedAt}</td>
                   <td><StatusBadge status={r.status} /></td>
                   <td>{r.assignedTo || <span className="text-slate-400">—</span>}</td>
-                  <td><button onClick={() => { setSelected(r.id); setSelectedType('report'); }} className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold transition">View</button></td>
+                  <td>
+                    <button
+                      onClick={() => { setSelected(r.id); setSelectedType('report'); }}
+                      className="px-2.5 py-1 text-xs font-bold rounded-lg transition bg-blue-50 text-[#1e3a8a] hover:bg-blue-100"
+                    >
+                      {r.status === 'Submitted' ? 'Review' : ['Approved', 'Acknowledged', 'ACKNOWLEDGED'].includes(r.status) ? 'Assign' : (r.status === 'Resolved' || r.status === 'Completed') ? 'Verify' : 'View'}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -968,35 +1426,45 @@ function SectionMaintenance({ userInstitution }) {
       {/* Maintenance Tasks */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="font-bold text-slate-900">Maintenance Tasks</h3>
-          <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 text-[#1e3a8a] border border-blue-200 rounded-full">{tasks.filter(t => t.status !== 'Completed').length} open</span>
+          <h3 className="font-bold text-slate-900">Active Technician Assignments</h3>
+          <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 text-[#1e3a8a] border border-blue-200 rounded-full">
+            {tasks.filter(t => t.status !== 'Completed' && t.status !== 'Closed').length} active
+          </span>
         </div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
             <thead>
-              <tr><th>Task ID</th><th>Task</th><th>Priority</th><th>Assigned To</th><th>Reported Time</th><th>Status</th><th>Report</th><th>Action</th></tr>
+              <tr><th>Report ID</th><th>Task</th><th>Priority</th><th>Assigned Technician</th><th>Reported Time</th><th>Status</th><th>Resolution</th><th>Action</th></tr>
             </thead>
             <tbody>
               {tasks.length === 0 ? (
-                <tr><td colSpan={8} className="text-center text-slate-400 py-6">No maintenance tasks.</td></tr>
+                <tr><td colSpan={8} className="text-center text-slate-400 py-6">No active technician tasks.</td></tr>
               ) : tasks.map(t => (
                 <tr key={t.id}>
-                  <td className="font-semibold text-slate-800">{t.id}</td>
-                  <td>{t.title}</td>
+                  <td className="font-semibold text-slate-800">{t.reportNumber || t.id}</td>
+                  <td>{t.problemType || t.title}</td>
                   <td><PriorityBadge priority={t.priority} /></td>
-                  <td>{t.assignedTo}</td>
-                  <td>{t.assignedDate}</td>
+                  <td className="font-medium text-slate-800">{t.assignedTo}</td>
+                  <td>{t.reportedAt}</td>
                   <td><StatusBadge status={t.status} /></td>
-                  <td>{t.report ? <span className="text-emerald-700 text-sm font-semibold">Submitted</span> : <span className="text-slate-400 text-sm">—</span>}</td>
-                  <td><button onClick={() => { setSelected(t.id); setSelectedType('task'); }} className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold transition">View</button></td>
+                  <td>{t.resolutionNotes ? <span className="text-emerald-700 text-xs font-semibold">Submitted</span> : <span className="text-slate-400 text-xs">—</span>}</td>
+                  <td>
+                    <button
+                      onClick={() => { setSelected(t.id); setSelectedType('report'); }}
+                      className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold transition"
+                    >
+                      Inspect
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
       <div className="p-4 bg-[#314ea1]/5 border border-[#314ea1]/20 rounded-xl text-xs font-medium text-[#1e3a8a]">
-        <strong>Maintenance:</strong> Review employee problem reports with all details including photos. Click "View" then "Assign Technician" to create a task. Monitor task progress and technician reports.
+        <strong>Role Security & Workflow:</strong> As Institution Manager, only you can approve or reject requests for {userInstitution || 'your institution'}, assign eligible Technicians belonging to your institution, and verify & close completed maintenance work.
       </div>
     </>
   );
@@ -1012,7 +1480,7 @@ function SectionTaskAssignment({ userInstitution }) {
 
   const assignedTasks = institutionReports.filter(r => r.assignedTo);
   const availableReports = institutionReports.filter(
-    r => !r.assignedTo && r.status === 'Submitted'
+    r => !r.assignedTo && (r.status === 'Submitted' || r.status === 'Approved')
   );
 
   const [view, setView] = useState('list');
@@ -1025,7 +1493,7 @@ function SectionTaskAssignment({ userInstitution }) {
   });
   const [formError, setFormError] = useState('');
 
-  // Load authorized ICT Staff directly from the backend.
+  // Load authorized Technicians directly from the backend.
   const [technicianList, setTechnicianList] = useState([]);
 
   useEffect(() => {
@@ -1630,8 +2098,8 @@ function SectionStaffManagement({ userInstitution }) {
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Name, email, or ID..."
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
+              placeholder="Search by name, email, or ID..."
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm"
             />
           </div>
           <div>
@@ -1730,7 +2198,7 @@ function SectionStaffManagement({ userInstitution }) {
 
       {/* Help Text */}
       <div className="mt-6 p-4 bg-[#314ea1]/5 border border-[#314ea1]/20 rounded-xl text-xs font-medium text-[#1e3a8a]">
-        <strong>Institution Scoped:</strong> You can only view staff (Employees and ICT Staff) belonging to {userInstitution || 'your institution'}. This list is automatically filtered by the backend.
+        <strong>Institution Scoped:</strong> You can only view staff (Employees and Technicians) belonging to {userInstitution || 'your institution'}. This list is automatically filtered by the backend.
       </div>
     </>
   );
@@ -2052,14 +2520,14 @@ export default function InstitutionManagerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8fafc] via-[#f1f5f9] to-[#edf4fc] text-slate-900">
-      <div className="flex min-h-screen">
+    <div className="dashboard-bg min-h-screen text-slate-900 relative">
+      <div className="flex min-h-screen relative z-10">
 
         {/* ── Sidebar ── */}
-        <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white/95 backdrop-blur-xs border-r border-slate-200/80 flex flex-col transition-transform duration-200 shadow-xs${sidebarOpen ? ' open' : ''}`}>
-          <div className="p-5 border-b border-slate-100">
+        <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 flex flex-col transition-transform duration-200 shadow-xs${sidebarOpen ? ' open' : ''}`}>
+          <div className="p-5 border-b border-blue-100/70">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-xs">I</div>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-xs border border-blue-400/20">I</div>
               <div>
                 <p className="font-bold text-slate-900 text-sm">MESOB Center</p>
                 <p className="text-xs text-slate-500">Institution Manager</p>
@@ -2076,7 +2544,7 @@ export default function InstitutionManagerDashboard() {
             ))}
           </nav>
 
-          <div className="p-4 border-t border-slate-100">
+          <div className="p-4 border-t border-blue-100/70">
             <button onClick={logout}
               className="sidebar-link w-full text-left text-rose-600 hover:bg-rose-50 font-medium">
               Logout
@@ -2086,7 +2554,7 @@ export default function InstitutionManagerDashboard() {
 
         {/* ── Main content ── */}
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+          <header className="bg-white/85 backdrop-blur-xl border-b border-blue-100/80 shadow-[0_4px_20px_-4px_rgba(30,58,138,0.04)] px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
             <div className="flex items-center gap-3">
               <button className="lg:hidden p-2 rounded-lg hover:bg-slate-100" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle sidebar">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

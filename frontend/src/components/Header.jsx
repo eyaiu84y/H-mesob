@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useAuth, ROLE_ROUTES, ROLE_LABELS } from '../context/AuthContext';
-
+import LanguageSwitcher from './LanguageSwitcher';
 const LANGUAGES = [
   { code: 'en', label: 'English' },
   { code: 'am', label: 'አማርኛ' },
@@ -41,9 +41,8 @@ export default function Header() {
   const navLinks = [
     { href: '/', type: 'link', label: t.nav_home || 'Home', id: 'home' },
     { href: '/#organizations', type: 'scroll', label: t.nav_organizations || 'Organizations', id: 'organizations' },
-    { href: '/#popular-services', type: 'scroll', label: lang === 'am' ? 'አገልግሎቶች' : 'Services', id: 'services' },
+    { href: '/#news', type: 'scroll', label: t.nav_news || (lang === 'am' ? 'ዜና' : 'News'), id: 'news' },
     { href: '/#contact', type: 'scroll', label: t.nav_contact || 'Contact', id: 'contact' },
-    { href: '/service-catalogue', type: 'link', label: lang === 'am' ? 'የአገልግሎት ዝርዝር' : 'Service Catalogue', id: 'catalogue' },
     { href: '/about-us', type: 'link', label: t.nav_about || 'About Us', id: 'about' },
   ];
 
@@ -52,7 +51,6 @@ export default function Header() {
   // Check if a link is active based on current path
   const isLinkActive = (link) => {
     if (link.id === 'home') return location.pathname === '/' && !location.hash;
-    if (link.id === 'catalogue') return location.pathname === '/service-catalogue';
     if (link.id === 'about') return location.pathname === '/about-us';
     if (link.type === 'scroll' && location.pathname === '/') {
       return location.hash === link.href.replace('/', '');
@@ -161,46 +159,8 @@ export default function Header() {
               )}
             </button>
 
-            {/* ── Language Selector ── */}
-            <div className="relative" ref={langRef}>
-              <button
-                onClick={() => setLangOpen((o) => !o)}
-                className="flex items-center space-x-1 px-3 py-1.5 rounded-full bg-white/20 text-white hover:bg-white/30 hover:text-[#f4b51a] font-medium text-sm transition-all duration-200 shadow-sm"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none"
-                  viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"
-                  strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
-                  <path d="M2 12h20"/>
-                </svg>
-                <span>{currentLang.label}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 ml-1 opacity-80 transition-transform duration-200 ${langOpen ? 'rotate-180' : ''}`}
-                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"
-                  strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m6 9 6 6 6-6"/>
-                </svg>
-              </button>
-
-              {/* Dropdown */}
-              {langOpen && (
-                <div className="absolute right-0 top-full mt-2 w-36 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden z-50">
-                  {LANGUAGES.map((l) => (
-                    <button
-                      key={l.code}
-                      onClick={() => { switchLang(l.code); setLangOpen(false); }}
-                      className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${
-                        lang === l.code
-                          ? 'bg-[#314ea1] text-[#f4b51a] font-semibold'
-                          : 'text-gray-800 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      {l.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* ── Language Switcher ── */}
+            <LanguageSwitcher className="bg-white/20 border-white/30 text-white" />
           </nav>
 
           {/* Mobile menu button */}
@@ -294,20 +254,8 @@ export default function Header() {
             </button>
 
             {/* Mobile language picker */}
-            <div className="flex gap-2 px-3 pt-1">
-              {LANGUAGES.map((l) => (
-                <button
-                  key={l.code}
-                  onClick={() => { switchLang(l.code); setMobileOpen(false); }}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                    lang === l.code
-                      ? 'bg-[#314ea1] text-[#f4b51a] font-bold border border-[#f4b51a]'
-                      : 'bg-white/20 text-white hover:bg-white/30'
-                  }`}
-                >
-                  {l.label}
-                </button>
-              ))}
+            <div className="px-3 pt-1">
+              <LanguageSwitcher className="bg-white/20 border-white/30 text-white" />
             </div>
           </div>
         )}

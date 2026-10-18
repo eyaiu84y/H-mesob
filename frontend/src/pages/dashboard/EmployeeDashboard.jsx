@@ -28,7 +28,10 @@ function StatusBadge({ status }) {
     Submitted:     'badge bg-blue-50 text-[#1e3a8a] border border-blue-200',
     Assigned:      'badge bg-blue-50 text-[#1e3a8a] border border-blue-200',
     'In Progress': 'badge bg-blue-50 text-[#1e3a8a] border border-blue-200',
+    'Waiting Parts': 'badge bg-amber-50 text-amber-800 border border-amber-200 font-semibold',
     Completed:     'badge bg-emerald-50 text-emerald-800 border border-emerald-200',
+    Resolved:      'badge bg-indigo-50 text-indigo-800 border border-indigo-200 font-semibold',
+    Closed:        'badge bg-slate-100 text-slate-800 border border-slate-300 font-semibold',
     Pending:       'badge bg-amber-50 text-amber-800 border border-amber-200',
     'In Review':   'badge bg-blue-50 text-[#1e3a8a] border border-blue-200',
     Waiting:       'badge bg-amber-50 text-amber-800 border border-amber-200',
@@ -118,15 +121,31 @@ function SectionSearchApplications() {
   });
 
   // Status update handler
-  const handleStatusUpdate = async (newStatus) => {
+  const handleStatusUpdate = async (newStatus, customNotes = '') => {
     if (!selectedApp || updating) return;
     
+    let notes = customNotes;
+
+    // Mandatory rejection reason check
+    if (newStatus === 'Rejected') {
+      const reason = window.prompt('Enter mandatory rejection reason:');
+      if (!reason || !reason.trim()) {
+        alert('A rejection reason is mandatory to reject this application.');
+        return;
+      }
+      notes = reason.trim();
+    } else if (newStatus === 'Pending Documents') {
+      const docNotes = window.prompt('Enter missing documents required or instructions for applicant:', notes || 'Missing required documents requested.');
+      if (docNotes === null) return; // User cancelled prompt
+      notes = (docNotes && docNotes.trim()) ? docNotes.trim() : 'Missing required documents requested.';
+    }
+
     setUpdating(true);
     try {
-      const result = await updateApplicationStatus(selectedApp.id, newStatus);
+      const result = await updateApplicationStatus(selectedApp.id, newStatus, notes);
       if (result.success) {
         // Update local state
-        setSelectedApp({ ...selectedApp, status: newStatus });
+        setSelectedApp({ ...selectedApp, status: newStatus, reviewNotes: notes, notes });
         alert(`Application status updated to: ${newStatus}`);
       } else {
         alert(result.message || 'Failed to update status');
@@ -138,6 +157,7 @@ function SectionSearchApplications() {
       setUpdating(false);
     }
   };
+
 
   // Application detail view
   if (selectedApp) {
@@ -238,19 +258,104 @@ function SectionSearchApplications() {
             </div>
           )}
 
+          {/* Document Inspection & Missing Documents Indicator */}
+          <div className="border-t border-slate-100 pt-6 mb-6">
+            <h3 className="text-base font-bold text-slate-900 mb-3 flex items-center justify-between">
+              <span>Required & Uploaded Documents</span>
+              {selectedApp.documents?.length > 0 && (
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-[#1e3a8a] border border-blue-200">
+                  {selectedApp.documents.length} uploaded
+                </span>
+              )}
+            </h3>
+
+            {/* Missing Documents Warning Banner */}
+            {((selectedApp.applicationData?.missingDocuments && selectedApp.applicationData.missingDocuments.length > 0) ||
+              (selectedApp.metadata?.missingDocuments && selectedApp.metadata.missingDocuments.length > 0) ||
+              (!selectedApp.documents || selectedApp.documents.length === 0)) && (
+              <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900">
+                <div className="flex items-start gap-2.5">
+                  <span className="text-lg">⚠️</span>
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-amber-900">Missing Required Documents</h4>
+                    <p className="text-xs text-amber-800 mt-0.5">
+                      {selectedApp.applicationData?.missingDocuments?.length > 0
+                        ? `The following required documents were not provided: ${selectedApp.applicationData.missingDocuments.join(', ')}`
+                        : selectedApp.metadata?.missingDocuments?.length > 0
+                        ? `The following required documents were not provided: ${selectedApp.metadata.missingDocuments.join(', ')}`
+                        : 'No required documents have been uploaded for this application.'}
+                    </p>
+                    <p className="text-xs text-amber-700 mt-1 font-medium">
+                      You can request missing documents from the customer or reject the application with a mandatory reason.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* List of uploaded documents */}
+            {selectedApp.documents && selectedApp.documents.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {selectedApp.documents.map((doc, idx) => {
+                  const docName = typeof doc === 'string' ? doc : doc.name || doc.title || doc.fileName || `Document #${idx + 1}`;
+                  return (
+                    <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-xs">
+                        DOC
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-slate-900 truncate">{docName}</p>
+                        <p className="text-[11px] text-slate-500">Provided by applicant</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500 italic">No document files attached.</p>
+            )}
+          </div>
+
+          {/* Review Notes (if any) */}
+          {(selectedApp.reviewNotes || selectedApp.notes) && (
+            <div className="border-t border-slate-100 pt-6 mb-6">
+              <h3 className="text-base font-bold text-slate-900 mb-2">Review Notes</h3>
+              <p className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm text-slate-800">
+                {selectedApp.reviewNotes || selectedApp.notes}
+              </p>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="border-t border-slate-100 pt-6 mt-6">
             <h3 className="text-base font-bold text-slate-900 mb-4">Actions</h3>
             <div className="flex gap-3 flex-wrap">
               {selectedApp.status === 'Submitted' && (
-                <button
-                  onClick={() => handleStatusUpdate('Under Review')}
-                  disabled={updating}
-                  className="px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] text-white rounded-xl hover:from-[#253d82] hover:to-[#172554] disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition shadow-xs"
-                >
-                  {updating ? 'Updating...' : 'Start Review'}
-                </button>
+                <>
+                  <button
+                    onClick={() => handleStatusUpdate('Under Review')}
+                    disabled={updating}
+                    className="px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] text-white rounded-xl hover:from-[#253d82] hover:to-[#172554] disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition shadow-xs"
+                  >
+                    {updating ? 'Updating...' : 'Start Review'}
+                  </button>
+                  <button
+                    onClick={() => handleStatusUpdate('Rejected')}
+                    disabled={updating}
+                    className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition shadow-xs"
+                  >
+                    {updating ? 'Updating...' : 'Reject'}
+                  </button>
+                  <button
+                    onClick={() => handleStatusUpdate('Pending Documents')}
+                    disabled={updating}
+                    className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition shadow-xs"
+                  >
+                    {updating ? 'Updating...' : 'Request Documents'}
+                  </button>
+                </>
               )}
+
               
               {selectedApp.status === 'Under Review' && (
                 <>
@@ -312,7 +417,7 @@ function SectionSearchApplications() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search applications..."
-            className="w-full px-4 py-2.5 pl-10 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
+            className="w-full px-4 py-2.5 pl-10 rounded-xl border border-slate-300 bg-white text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm"
           />
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
             fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -409,7 +514,7 @@ function SectionServiceRequirements() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search services or documents..."
-              className="w-full px-4 py-2.5 pl-10 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
+              className="w-full px-4 py-2.5 pl-10 rounded-xl border border-slate-300 bg-white text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm"
             />
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
               fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1644,19 +1749,20 @@ export default function EmployeeDashboard() {
   if (!user) return null;
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-[#f8fafc] via-[#f1f5f9] to-[#edf4fc] text-slate-900">
-      <aside className="w-64 bg-white border-r border-slate-200/90 p-4 hidden lg:flex flex-col shadow-xs">
-        <div className="p-2 mb-6 border-b border-slate-100 pb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-base shadow-xs border border-[#314ea1]/20">
-              E
-            </div>
-            <div>
-              <p className="font-bold text-slate-900 text-sm">MESOB Center</p>
-              <p className="text-xs text-slate-500">Employee Portal</p>
+    <div className="dashboard-bg min-h-screen text-slate-900 relative">
+      <div className="flex min-h-screen relative z-10">
+        <aside className="w-64 db-sidebar p-4 hidden lg:flex flex-col shadow-xs">
+          <div className="p-2 mb-6 border-b border-blue-100/70 pb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-base shadow-xs border border-[#314ea1]/20">
+                E
+              </div>
+              <div>
+                <p className="font-bold text-slate-900 text-sm">MESOB Center</p>
+                <p className="text-xs text-slate-500">Employee Portal</p>
+              </div>
             </div>
           </div>
-        </div>
         
         <nav className="space-y-1 flex-1">
           {SECTIONS.map(section => (
@@ -1717,6 +1823,7 @@ export default function EmployeeDashboard() {
           {activeSection === 'My Profile' && <SectionMyProfile />}
         </div>
       </main>
+      </div>
     </div>
   );
 }

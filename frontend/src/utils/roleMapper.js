@@ -15,8 +15,8 @@
 export function toBackendRole(frontendRole) {
   if (!frontendRole) return null;
   const role = frontendRole.toLowerCase();
-  if (role === 'citizen' || role === 'customer') return 'CUSTOMER';
-  if (role === 'ict_staff' || role === 'technician') return 'TECHNICIAN';
+  if (role === 'citizen' || role === 'customer') return 'CITIZEN';
+  if (role === 'ict_staff' || role === 'technician') return 'ICT_STAFF';
   return frontendRole.toUpperCase();
 }
 
@@ -64,6 +64,7 @@ export function transformUserFromBackend(backendUser) {
     institution_id: backendUser.institution_id || backendUser.institution || null,
     phone: backendUser.phone || null,
     status: status,
+    metadata: backendUser.metadata || null,
   };
 }
 

@@ -87,19 +87,8 @@ export const loginUser = async (email, password) => {
       };
     }
 
-    // Step 4: Verify password
-    let passwordMatch = await bcrypt.compare(password, user.password_hash);
-    if (!passwordMatch) {
-      const lowerEmail = (user.email || '').toLowerCase();
-      const lowerPass = (password || '').toLowerCase();
-      if ((lowerEmail === 'customer@mesobcenter.et' || lowerEmail.includes('customer')) && 
-          (lowerPass === 'customer@2026' || lowerPass === 'citizen@2026')) {
-        passwordMatch = true;
-      } else if ((lowerEmail === 'tech@mesobcenter.et' || lowerEmail.includes('tech')) && 
-          (lowerPass === 'tech@2026' || lowerPass === 'technician@2026' || lowerPass === 'ictstaff@2026')) {
-        passwordMatch = true;
-      }
-    }
+    // Step 4: Verify password strictly with bcrypt
+    const passwordMatch = await bcrypt.compare(password, user.password_hash);
     console.log('[AUTH] Password match:', passwordMatch);
 
     if (!passwordMatch) {
@@ -170,13 +159,15 @@ export const loginUser = async (email, password) => {
  */
 export const registerUser = async (userData) => {
   try {
+    const { email, password, firstName, lastName, phone, institutionId } = userData;
+
     // SECURITY: Public registration ALWAYS creates CUSTOMER accounts
     // Ignore any role parameter sent in request body to prevent privilege escalation
     const role = 'CUSTOMER';
 
     // Step 1: Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!email || !emailRegex.test(email)) {
       return {
         success: false,
         message: 'Invalid email format.'
@@ -197,11 +188,11 @@ export const registerUser = async (userData) => {
       };
     }
 
-    // Step 3: Validate password strength
-    if (password.length < 8) {
+    // Step 3: Validate password strength (aligned with frontend minimum 6 characters)
+    if (!password || password.length < 6) {
       return {
         success: false,
-        message: 'Password must be at least 8 characters long.'
+        message: 'Password must be at least 6 characters long.'
       };
     }
 
@@ -210,14 +201,14 @@ export const registerUser = async (userData) => {
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
     // Step 5: Create user
-    const fullName = `${firstName} ${lastName}`;
-    const { data: newUser, error: createError } = await supabase
+    const fullName = `${firstName || ''} ${lastName || ''}`.trim();
+    let { data: newUser, error: createError } = await supabase
       .from('users')
       .insert({
         email: email.toLowerCase(),
         password_hash: passwordHash,
         full_name: fullName,
-        phone,
+        phone: phone || null,
         role,
         institution_id: institutionId || null,
         status: 'ACTIVE',
@@ -241,7 +232,7 @@ export const registerUser = async (userData) => {
         .insert({
           email: email.toLowerCase().trim(),
           password_hash: passwordHash,
-          full_name: `${firstName} ${lastName}`.trim(),
+          full_name: fullName,
           phone: phone || null,
           role: 'CITIZEN',
           institution_id: institutionId || null,

@@ -26,8 +26,8 @@ const SuperAdminDashboard = lazy(() => import('./pages/dashboard/SuperAdminDashb
 const MesobManagerDashboard = lazy(() => import('./pages/dashboard/MesobManagerDashboard'));
 const InstitutionManagerDashboard = lazy(() => import('./pages/dashboard/InstitutionManagerDashboard'));
 const EmployeeDashboard = lazy(() => import('./pages/dashboard/EmployeeDashboard'));
-const ICTStaffDashboard = lazy(() => import('./pages/dashboard/ICTStaffDashboard'));
-const CitizenDashboard = lazy(() => import('./pages/dashboard/CitizenDashboard'));
+const TechnicianDashboard = lazy(() => import('./pages/dashboard/TechnicianDashboard'));
+const CustomerDashboard = lazy(() => import('./pages/dashboard/CustomerDashboard'));
 
 // Route guard
 import RequireAuth from './components/dashboard/RequireAuth';
@@ -124,7 +124,7 @@ export default function App() {
                     path="/dashboard/technician"
                     element={
                       <RequireAuth allowedRoles={['technician', 'ict_staff']}>
-                        <ICTStaffDashboard />
+                        <TechnicianDashboard />
                       </RequireAuth>
                     }
                   />
@@ -132,7 +132,7 @@ export default function App() {
                     path="/dashboard/customer"
                     element={
                       <RequireAuth allowedRoles={['customer', 'citizen']}>
-                        <CitizenDashboard />
+                        <CustomerDashboard />
                       </RequireAuth>
                     }
                   />

@@ -178,7 +178,7 @@ export default function PopularServices() {
               placeholder={t.pop_search}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-6 py-4 pl-12 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 rounded-full focus:outline-none focus:border-blue-600 text-lg"
+              className="w-full px-6 py-4 pl-12 border border-gray-300 bg-white text-gray-900 placeholder-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 rounded-full focus:outline-none focus:border-blue-600 text-lg shadow-sm"
             />
             <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"></i>
           </div>

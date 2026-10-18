@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
+import { useAuth } from './AuthContext';
 
 const QueueContext = createContext(null);
 
@@ -41,34 +42,58 @@ function transformQueueEntry(backendQueue, allQueues = []) {
     ).length;
   }
   
+  const token = backendQueue.queue_number || backendQueue.token || backendQueue.queueNumber || 'N/A';
+  const customerName = backendQueue.users?.full_name || backendQueue.customer?.full_name || backendQueue.citizenName || backendQueue.customerName || 'Customer';
+  const startedAt = backendQueue.started_at || backendQueue.startedAt || backendQueue.called_at || backendQueue.calledAt || null;
+  const completedAt = backendQueue.completed_at || backendQueue.completedAt || null;
+  const createdAt = backendQueue.created_at || backendQueue.createdAt || null;
+
   return {
     id: backendQueue.id,
-    institutionId: backendQueue.institution_id,
-    serviceId: backendQueue.service_id, // FIXED: Added serviceId for feedback
-    institutionName: backendQueue.institutions?.name_en || 'Unknown Institution',
-    serviceName: backendQueue.services?.title_en || backendQueue.services?.name || 'Unknown Service',
-    token: backendQueue.queue_number,
+    institutionId: backendQueue.institution_id || backendQueue.institutionId,
+    serviceId: backendQueue.service_id || backendQueue.serviceId, // FIXED: Added serviceId for feedback
+    institutionName: backendQueue.institutions?.name_en || backendQueue.institutionName || 'Unknown Institution',
+    serviceName: backendQueue.services?.title_en || backendQueue.services?.name || backendQueue.serviceName || 'Unknown Service',
+    token,
+    ticketNumber: token,
+    queueNumber: token,
+    queue_number: token,
     status,
+    rawStatus: backendQueue.status,
     currentServing,
     peopleAhead,
-    createdAt: backendQueue.created_at,
-    calledAt: backendQueue.started_at,
-    completedAt: backendQueue.completed_at,
+    createdAt,
+    created_at: createdAt,
+    calledAt: startedAt,
+    called_at: startedAt,
+    startedAt,
+    started_at: startedAt,
+    completedAt,
+    completed_at: completedAt,
     priority: backendQueue.priority,
-    assignedTo: backendQueue.assigned_to,
-    customerId: backendQueue.customer_id || backendQueue.citizen_id,
-    customerName: backendQueue.users?.full_name,
+    assignedTo: backendQueue.assigned_to || backendQueue.assignedTo,
+    customerId: backendQueue.customer_id || backendQueue.citizen_id || backendQueue.customerId,
+    citizenId: backendQueue.citizen_id || backendQueue.customer_id,
+    customerName,
+    citizenName: customerName,
   };
 }
 
 // ─── Provider ─────────────────────────────────────────────────────
 export function QueueProvider({ children }) {
+  const { user } = useAuth();
   const [myTickets, setMyTickets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // ── Fetch queues from backend ──────────────────────────────────
   const fetchQueues = useCallback(async (filters = {}) => {
+    const token = localStorage.getItem('mesob_token');
+    if (!token) {
+      setMyTickets([]);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -111,12 +136,14 @@ export function QueueProvider({ children }) {
     }
   }, []);
 
-  // ── Auto-fetch queues on mount ─────────────────────────────────
+  // ── Auto-fetch queues on mount and user auth change ─────────────
   useEffect(() => {
-    // Fetch queues on mount
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchQueues();
-  }, [fetchQueues]);
+    if (user && localStorage.getItem('mesob_token')) {
+      fetchQueues();
+    } else {
+      setMyTickets([]);
+    }
+  }, [user, fetchQueues]);
 
   // ── Register for a queue ───────────────────────────────────────
   const registerForQueue = useCallback(async (institutionUUID, serviceUUID, priority = 'NORMAL') => {
@@ -251,13 +278,13 @@ export function QueueProvider({ children }) {
     );
   }, [myTickets]);
 
-  const callNextToken = useCallback(async () => {
+  const callNextToken = useCallback(async (institutionId) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Backend automatically selects next pending queue entry
-      const response = await api.post('/queues/call-next');
+      // Backend automatically selects next pending/waiting queue entry
+      const response = await api.post('/queues/call-next', institutionId ? { institutionId } : {});
 
       if (response.success) {
         // Refresh queues from backend
