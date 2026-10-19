@@ -103,7 +103,6 @@ export default function MesobFeedbackOverview() {
 
   useEffect(() => {
     // Fetch data when filters change - this is the correct pattern for data fetching
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchFeedback();
      
     fetchStats();

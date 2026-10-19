@@ -106,7 +106,6 @@ export function AuthProvider({ children }) {
   // Load users on mount (for Super Admin)
   useEffect(() => {
     if (user && user.role === 'super_admin') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchUsers();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

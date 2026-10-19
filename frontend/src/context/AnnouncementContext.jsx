@@ -36,7 +36,6 @@ export function AnnouncementProvider({ children }) {
 
   // Auto-fetch announcements on mount
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAnnouncements();
   }, [fetchAnnouncements]);
 

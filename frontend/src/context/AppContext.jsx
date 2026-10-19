@@ -75,8 +75,9 @@ export function formatStaffNotes(notes, lang = 'en') {
     try {
       const parsed = JSON.parse(notes);
       if (parsed[lang]) return { text: parsed[lang], isUntranslated: false, label: '' };
-      if (parsed.en) return { text: parsed.en, isUntranslated: lang === 'am', label: lang === 'am' ? 'የሰራተኛ አስተያየት (በእንግሊዝኛ)' : 'Staff Notes' };
-    } catch {}
+    } catch {
+      // Ignore parse error and fallback to raw string
+    }
   }
   const lower = String(notes).toLowerCase();
   if (lower.includes('incomplete') || lower.includes('missing') || lower.includes('provide')) {

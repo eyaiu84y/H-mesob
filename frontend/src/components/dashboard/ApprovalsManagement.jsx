@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../../utils/api';
-import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 
 export default function ApprovalsManagement({
@@ -8,7 +7,6 @@ export default function ApprovalsManagement({
   initialRequestId = null,
   onClearInitialRequest = null
 }) {
-  const { user } = useAuth();
   const { refreshNotifications } = useNotifications();
 
   const [approvals, setApprovals] = useState([]);

@@ -22,7 +22,9 @@ export function NotificationProvider({ children }) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const activeUserIdRef = useRef(user?.id || null);
-  activeUserIdRef.current = user?.id || null;
+  useEffect(() => {
+    activeUserIdRef.current = user?.id || null;
+  }, [user?.id]);
 
   // Fetch notifications from backend
   const fetchNotifications = useCallback(async (filters = {}) => {

@@ -231,7 +231,6 @@ function SectionUserManagement() {
     if (!usersLoading) {
       const users = getUsers();
       const cleanedUsers = users.map(stripPassword);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRawUsers(cleanedUsers);
     }
     // Disable exhaustive-deps as we only want this to run when loading state changes

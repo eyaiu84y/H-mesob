@@ -13,7 +13,7 @@ import { useApp } from '../../context/AppContext';
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
-  const { t, lang, getStatusLabel, getStaffNotes } = useApp();
+  const { t, lang, getStatusLabel } = useApp();
   const { getActiveTickets } = useQueue();
   const { applications, getActiveApplications, getCompletedApplications } = useApplications();
   const [activeSection, setActiveSection] = useState('dashboard');

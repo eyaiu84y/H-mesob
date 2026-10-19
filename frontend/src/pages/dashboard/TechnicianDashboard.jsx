@@ -131,7 +131,6 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
     if (selectedTask) {
       const updatedTask = tasks.find(t => t.id === selectedTask.id);
       if (updatedTask) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedTask(updatedTask);
       }
     }
@@ -848,7 +847,6 @@ export default function TechnicianDashboard() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Load tasks only on mount - setState inside loadTasks is intentional

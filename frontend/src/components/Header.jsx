@@ -1,21 +1,15 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useAuth, ROLE_ROUTES, ROLE_LABELS } from '../context/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
-const LANGUAGES = [
-  { code: 'en', label: 'English' },
-  { code: 'am', label: 'አማርኛ' },
-];
 
 export default function Header() {
-  const { isDark, toggleTheme, lang, switchLang, t } = useApp();
+  const { isDark, toggleTheme, lang, t } = useApp();
   const { user, isLoggedIn, logout } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const langRef = useRef(null);
 
   // Track scroll position for backdrop blur and opacity transition
   useEffect(() => {
@@ -26,17 +20,6 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close language dropdown when clicking outside
-  useEffect(() => {
-    function handleClick(e) {
-      if (langRef.current && !langRef.current.contains(e.target)) {
-        setLangOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
   // FDRE Mesob Center header navigation items matching https://mesobcenter.et/
   const navLinks = [
     { href: '/', type: 'link', label: t.nav_home || 'Home', id: 'home' },
@@ -45,8 +28,6 @@ export default function Header() {
     { href: '/#contact', type: 'scroll', label: t.nav_contact || 'Contact', id: 'contact' },
     { href: '/about-us', type: 'link', label: t.nav_about || 'About Us', id: 'about' },
   ];
-
-  const currentLang = LANGUAGES.find((l) => l.code === lang) || LANGUAGES[0];
 
   // Check if a link is active based on current path
   const isLinkActive = (link) => {
