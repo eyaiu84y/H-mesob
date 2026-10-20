@@ -267,6 +267,199 @@ export const joinQueue = async (queueData, currentUser) => {
     };
   }
 };
+/**
+ * Calculates live queue position, estimated waiting time, and current serving token
+ * based on actual database records for the relevant service and institution.
+ * 
+ * Rules:
+ * - Counter is serving any ticket with status 'IN_PROGRESS'.
+ * - People ahead of a WAITING/PENDING ticket:
+ *   1. Any ticket currently 'IN_PROGRESS' for the same institution and service.
+ *   2. Any ticket with status 'WAITING' or 'PENDING' for the same institution and service that is:
+ *      - Higher priority (URGENT > NORMAL), OR
+ *      - Same priority and created earlier (created_at < ticket.created_at, or if equal, queue_number < ticket.queue_number).
+ *   3. Excludes: COMPLETED, CANCELLED, and the ticket itself.
+ * - Estimated waiting time = peopleAhead * averageDurationMinutes (default 6 mins).
+ * 
+ * @param {Object} queueEntry - The queue record
+ * @returns {Promise<Object>} { people_ahead, estimated_wait_minutes, current_serving }
+ */
+export const calculateQueuePositionAndEstimate = async (queueEntry) => {
+  try {
+    if (!queueEntry) {
+      return {
+        people_ahead: 0,
+        estimated_wait_minutes: 0,
+        current_serving: 'None'
+      };
+    }
+
+    const status = queueEntry.status;
+
+    // Completed or cancelled entries have 0 people ahead and 0 wait time
+    if (status === 'COMPLETED' || status === 'CANCELLED') {
+      return {
+        people_ahead: 0,
+        estimated_wait_minutes: 0,
+        current_serving: 'None',
+        queue_readiness: status
+      };
+    }
+
+    const institutionId = queueEntry.institution_id;
+    const serviceId = queueEntry.service_id;
+
+    // Query all active entries for this institution and service
+    let query = supabase
+      .from('queue_entries')
+      .select('id, queue_number, priority, status, created_at, institution_id, service_id, citizen_id')
+      .in('status', ['IN_PROGRESS', 'PENDING', 'WAITING']);
+
+    if (institutionId) {
+      query = query.eq('institution_id', institutionId);
+    }
+    if (serviceId) {
+      query = query.eq('service_id', serviceId);
+    }
+
+    const { data: activeEntries, error } = await query;
+
+    if (error) {
+      console.error('Error fetching active queue entries for position calculation:', error);
+      return {
+        people_ahead: 0,
+        estimated_wait_minutes: 0,
+        current_serving: 'N/A'
+      };
+    }
+
+    const entries = activeEntries || [];
+
+    // Find who is currently being served
+    const inProgressEntries = entries.filter(e => e.status === 'IN_PROGRESS');
+    const currentServing = inProgressEntries.length > 0
+      ? inProgressEntries[0].queue_number
+      : 'None';
+
+    // If this ticket is currently IN_PROGRESS, customer is currently at counter
+    if (status === 'IN_PROGRESS') {
+      return {
+        people_ahead: 0,
+        estimated_wait_minutes: 0,
+        current_serving: queueEntry.queue_number,
+        queue_readiness: 'CALLED'
+      };
+    }
+
+    // Customer is WAITING or PENDING
+    const myPriority = queueEntry.priority === 'URGENT' ? 'URGENT' : 'NORMAL';
+    const myCreatedAt = new Date(queueEntry.created_at || Date.now()).getTime();
+
+    // 1. In-progress tickets count as ahead (being served at counter)
+    let peopleAhead = inProgressEntries.filter(e => e.id !== queueEntry.id).length;
+
+    // 2. Pending/Waiting tickets ahead of this ticket based on priority and creation order
+    for (const entry of entries) {
+      if (entry.id === queueEntry.id) continue;
+      if (entry.status !== 'PENDING' && entry.status !== 'WAITING') continue;
+
+      const entryPriority = entry.priority === 'URGENT' ? 'URGENT' : 'NORMAL';
+      const entryCreatedAt = new Date(entry.created_at).getTime();
+
+      if (myPriority === 'NORMAL') {
+        if (entryPriority === 'URGENT') {
+          // URGENT always ahead of NORMAL
+          peopleAhead++;
+        } else {
+          // Both NORMAL: earlier created_at or lower queue_number is ahead
+          if (entryCreatedAt < myCreatedAt) {
+            peopleAhead++;
+          } else if (entryCreatedAt === myCreatedAt && entry.queue_number < queueEntry.queue_number) {
+            peopleAhead++;
+          }
+        }
+      } else {
+        // myPriority === 'URGENT'
+        if (entryPriority === 'URGENT') {
+          if (entryCreatedAt < myCreatedAt) {
+            peopleAhead++;
+          } else if (entryCreatedAt === myCreatedAt && entry.queue_number < queueEntry.queue_number) {
+            peopleAhead++;
+          }
+        }
+        // NORMAL entries are behind URGENT
+      }
+    }
+
+    // Average duration in minutes (configurable default: 6 minutes)
+    const DEFAULT_SERVICE_DURATION_MINUTES = 6;
+    const estimatedWaitMinutes = peopleAhead * DEFAULT_SERVICE_DURATION_MINUTES;
+
+    // Trigger turn-approaching notification if peopleAhead <= 2 and > 0
+    if (peopleAhead <= 2 && peopleAhead > 0 && queueEntry.citizen_id) {
+      try {
+        const { data: existingNotif } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('recipient_id', queueEntry.citizen_id)
+          .eq('related_entity_id', queueEntry.id)
+          .eq('type', 'QUEUE_ASSIGNMENT')
+          .ilike('title', '%Turn Approaching%')
+          .limit(1)
+          .maybeSingle();
+
+        if (!existingNotif) {
+          await createNotification({
+            recipientId: queueEntry.citizen_id,
+            type: 'QUEUE_ASSIGNMENT',
+            title: 'Turn Approaching',
+            message: `Your turn is approaching! Token #${queueEntry.queue_number} has only ${peopleAhead} ${peopleAhead === 1 ? 'person' : 'people'} ahead.`,
+            relatedEntityId: queueEntry.id,
+            relatedEntityType: 'queue'
+          });
+          console.log(`🔔 Turn approaching notification sent to citizen ${queueEntry.citizen_id} for token ${queueEntry.queue_number}`);
+        }
+      } catch (notifErr) {
+        console.error('Failed to send turn approaching notification (non-blocking):', notifErr);
+      }
+    }
+
+    // Check queue readiness and staff availability
+    let queueReadiness = 'WAITING';
+    if (peopleAhead === 0) {
+      let employeeAvailable = true;
+      if (institutionId) {
+        const { count: staffCount, error: staffErr } = await supabase
+          .from('users')
+          .select('id', { count: 'exact', head: true })
+          .eq('institution_id', institutionId)
+          .in('role', ['EMPLOYEE', 'INSTITUTION_MANAGER'])
+          .eq('status', 'ACTIVE');
+
+        if (!staffErr && staffCount !== null) {
+          employeeAvailable = staffCount > 0;
+        }
+      }
+      queueReadiness = employeeAvailable ? 'READY_TO_CALL' : 'AWAITING_STAFF';
+    }
+
+    return {
+      people_ahead: peopleAhead,
+      estimated_wait_minutes: estimatedWaitMinutes,
+      current_serving: currentServing,
+      queue_readiness: queueReadiness
+    };
+  } catch (err) {
+    console.error('calculateQueuePositionAndEstimate error:', err);
+    return {
+      people_ahead: 0,
+      estimated_wait_minutes: 0,
+      current_serving: 'N/A',
+      queue_readiness: 'WAITING'
+    };
+  }
+};
+
 export const getQueues = async (filters = {}, currentUser) => {
   try {
     if (!currentUser || !currentUser.id || !currentUser.role) {
@@ -644,6 +837,23 @@ export const getQueues = async (filters = {}, currentUser) => {
       employee:
         employeeMap.get(queue.assigned_to) || null
     }));
+
+    // Enrich active tickets with live queue position, estimated wait time, and current serving token
+    for (const queue of result) {
+      if (['PENDING', 'WAITING', 'IN_PROGRESS'].includes(queue.status)) {
+        const liveInfo = await calculateQueuePositionAndEstimate(queue);
+        queue.people_ahead = liveInfo.people_ahead;
+        queue.estimated_wait_minutes = liveInfo.estimated_wait_minutes;
+        queue.current_serving = liveInfo.current_serving;
+        queue.queue_readiness = liveInfo.queue_readiness;
+      } else {
+        queue.people_ahead = 0;
+        queue.estimated_wait_minutes = 0;
+        queue.current_serving = 'None';
+        queue.queue_readiness = queue.status;
+      }
+    }
+
     return {
       success: true,
       data: result
@@ -720,6 +930,19 @@ export const getQueueById = async (queueId, currentUser) => {
         success: false,
         message: 'You do not have permission to view this queue entry.'
       };
+    }
+
+    if (['PENDING', 'WAITING', 'IN_PROGRESS'].includes(queue.status)) {
+      const liveInfo = await calculateQueuePositionAndEstimate(queue);
+      queue.people_ahead = liveInfo.people_ahead;
+      queue.estimated_wait_minutes = liveInfo.estimated_wait_minutes;
+      queue.current_serving = liveInfo.current_serving;
+      queue.queue_readiness = liveInfo.queue_readiness;
+    } else {
+      queue.people_ahead = 0;
+      queue.estimated_wait_minutes = 0;
+      queue.current_serving = 'None';
+      queue.queue_readiness = queue.status;
     }
 
     return {
@@ -1049,14 +1272,21 @@ export const getQueueStatus = async (queueId) => {
       .select(`
         id,
         queue_number,
+        institution_id,
+        service_id,
+        citizen_id,
+        priority,
         status,
         created_at,
         started_at,
         services (
+          id,
           title_en,
-          title_am
+          title_am,
+          processing_time
         ),
         institutions (
+          id,
           name_en,
           name_am
         )
@@ -1071,19 +1301,17 @@ export const getQueueStatus = async (queueId) => {
       };
     }
 
-    // Get position in queue (count pending tokens before this one)
-    const { count } = await supabase
-      .from('queue_entries')
-      .select('id', { count: 'exact', head: true })
-      .eq('institution_id', queue.institutions.id)
-      .in('status', ['PENDING', 'WAITING'])
-      .lt('queue_number', queue.queue_number);
+    const liveInfo = await calculateQueuePositionAndEstimate(queue);
 
     return {
       success: true,
       data: {
         ...queue,
-        position: (queue.status === 'PENDING' || queue.status === 'WAITING') ? (count || 0) + 1 : null
+        position: (queue.status === 'PENDING' || queue.status === 'WAITING') ? liveInfo.people_ahead + 1 : (queue.status === 'IN_PROGRESS' ? 1 : null),
+        people_ahead: liveInfo.people_ahead,
+        estimated_wait_minutes: liveInfo.estimated_wait_minutes,
+        current_serving: liveInfo.current_serving,
+        queue_readiness: liveInfo.queue_readiness
       }
     };
 

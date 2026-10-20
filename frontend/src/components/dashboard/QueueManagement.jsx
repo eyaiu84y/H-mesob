@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQueue } from '../../context/QueueContext';
 import { useServices } from '../../context/ServiceContext';
 import { useApp } from '../../context/AppContext';
@@ -12,6 +12,22 @@ const STATUS_STYLES = {
   completed: 'bg-slate-100 text-slate-700 border border-slate-200',
   cancelled: 'bg-rose-50 text-rose-800 border border-rose-200',
 };
+
+// ─── Format estimated wait label accurately ────────────────────────
+function formatEstimatedWait(ticket, lang, t) {
+  if (ticket.status === 'called') {
+    return t.at_counter || (lang === 'am' ? 'አሁን በመስኮት ላይ' : 'At counter');
+  }
+  if (ticket.peopleAhead > 0) {
+    return `~${ticket.estimatedWaitMinutes} min`;
+  }
+  // When peopleAhead === 0:
+  if (ticket.queueReadiness === 'AWAITING_STAFF') {
+    return t.awaiting_counter || (lang === 'am' ? 'መስኮት በመጠበቅ ላይ' : 'Awaiting counter');
+  }
+  // Ready to be called:
+  return t.ready_to_be_called || (lang === 'am' ? 'ሊጠሩ ተዘጋጅተዋል' : 'Ready to be called');
+}
 
 // ─── Ticket card component ────────────────────────────────────────
 function TicketCard({ ticket, onView, onCancel }) {
@@ -67,6 +83,13 @@ function TicketCard({ ticket, onView, onCancel }) {
               <p className="text-xs text-slate-500">{t.ahead || 'Ahead'}</p>
               <p className="text-lg font-bold text-slate-800">{ticket.peopleAhead}</p>
             </div>
+            <div className="h-10 border-l border-slate-200" />
+            <div className="text-center">
+              <p className="text-xs text-slate-500">{t.est_wait || (lang === 'am' ? 'የሚገመት ቆይታ' : 'Est. Wait')}</p>
+              <p className="text-lg font-bold text-[#1e3a8a]">
+                {formatEstimatedWait(ticket, lang, t)}
+              </p>
+            </div>
           </>
         )}
       </div>
@@ -101,7 +124,16 @@ function TicketCard({ ticket, onView, onCancel }) {
 // ─── Main QueueManagement component ───────────────────────────────
 export default function QueueManagement() {
   const { t, lang } = useApp();
-  const { getActiveTickets, getTicketHistory, registerForQueue, cancelTicket, myTickets } = useQueue();
+  const { 
+    getActiveTickets, 
+    getTicketHistory, 
+    registerForQueue, 
+    cancelTicket, 
+    myTickets,
+    isLive,
+    connectionError,
+    lastUpdated
+  } = useQueue();
   const { institutions, getServicesByInstitution } = useServices();
 
   // Steps: 'overview' | 'select-institution' | 'select-service' | 'confirm' | 'token-display'
@@ -112,13 +144,6 @@ export default function QueueManagement() {
   const [newTicket, setNewTicket] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [registrationError, setRegistrationError] = useState(null);
-
-  // Force re-render for live updates from simulation
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 5000);
-    return () => clearInterval(id);
-  }, []);
 
   const activeTickets = getActiveTickets();
   const ticketHistory = getTicketHistory();
@@ -197,28 +222,47 @@ export default function QueueManagement() {
           </button>
         </div>
 
-        {/* Tab switcher */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setHistoryTab('active')}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition cursor-pointer ${
-              historyTab === 'active' 
-                ? 'bg-[#314ea1] text-white shadow-xs' 
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80 font-medium'
-            }`}
-          >
-            {t.tab_active || 'Active'} ({activeTickets.length})
-          </button>
-          <button
-            onClick={() => setHistoryTab('history')}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition cursor-pointer ${
-              historyTab === 'history' 
-                ? 'bg-[#314ea1] text-white shadow-xs' 
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80 font-medium'
-            }`}
-          >
-            {t.tab_history || 'History'} ({ticketHistory.length})
-          </button>
+        {/* Tab switcher & Live Indicator */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setHistoryTab('active')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition cursor-pointer ${
+                historyTab === 'active' 
+                  ? 'bg-[#314ea1] text-white shadow-xs' 
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80 font-medium'
+              }`}
+            >
+              {t.tab_active || 'Active'} ({activeTickets.length})
+            </button>
+            <button
+              onClick={() => setHistoryTab('history')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition cursor-pointer ${
+                historyTab === 'history' 
+                  ? 'bg-[#314ea1] text-white shadow-xs' 
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80 font-medium'
+              }`}
+            >
+              {t.tab_history || 'History'} ({ticketHistory.length})
+            </button>
+          </div>
+
+          {activeTickets.length > 0 && historyTab === 'active' && (
+            isLive ? (
+              <span 
+                className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200"
+                title={lastUpdated ? (lang === 'am' ? `የመጨረሻ ዝመና: ${lastUpdated.toLocaleTimeString()}` : `Last updated: ${lastUpdated.toLocaleTimeString()}`) : ''}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {lang === 'am' ? 'የቀጥታ ዝመናዎች ነቅተዋል' : 'Live updates active'}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200" title={connectionError || 'Connection lost'}>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                {lang === 'am' ? 'ግንኙነት ተቋርጧል (እንደገና በመሞከር ላይ...)' : 'Offline (retrying...)'}
+              </span>
+            )
+          )}
         </div>
 
         {/* Active tickets */}
@@ -534,8 +578,22 @@ export default function QueueManagement() {
 
         {/* Queue status details */}
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
-          <h3 className="font-bold text-slate-900 mb-4 text-base">{t.queue_status || 'Queue Status'}</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h3 className="font-bold text-slate-900 text-base">{t.queue_status || 'Queue Status'}</h3>
+            {isLive ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {lang === 'am' ? 'የቀጥታ ክትትል ነቅቷል' : 'Live tracking active'}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200" title={connectionError || 'Connection lost'}>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                {lang === 'am' ? 'ግንኙነት ተቋርጧል (እንደገና በመሞከር ላይ...)' : 'Offline (retrying...)'}
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <div className="text-center p-3.5 bg-slate-50/80 border border-slate-100 rounded-xl">
               <p className="text-xs text-slate-500 mb-1">{t.now_serving || 'Now Serving'}</p>
               <p className="text-xl font-bold text-slate-900">{liveTicket.currentServing}</p>
@@ -543,6 +601,12 @@ export default function QueueManagement() {
             <div className="text-center p-3.5 bg-slate-50/80 border border-slate-100 rounded-xl">
               <p className="text-xs text-slate-500 mb-1">{t.people_ahead || 'People Ahead'}</p>
               <p className="text-xl font-bold text-[#314ea1]">{liveTicket.peopleAhead}</p>
+            </div>
+            <div className="text-center p-3.5 bg-blue-50/60 border border-blue-100 rounded-xl">
+              <p className="text-xs text-slate-500 mb-1">{t.est_wait || (lang === 'am' ? 'የሚገመት ቆይታ' : 'Est. Wait')}</p>
+              <p className="text-xl font-bold text-[#1e3a8a]">
+                {formatEstimatedWait(liveTicket, lang, t)}
+              </p>
             </div>
             <div className="text-center p-3.5 bg-slate-50/80 border border-slate-100 rounded-xl">
               <p className="text-xs text-slate-500 mb-1">{t.institution || 'Institution'}</p>

@@ -20,9 +20,12 @@ function mapBackendStatusToFrontend(backendStatus) {
 function transformQueueEntry(backendQueue, allQueues = []) {
   const status = mapBackendStatusToFrontend(backendQueue.status);
   
-  // Find the currently serving token for this institution/service combination
-  let currentServing = 'N/A';
-  if (allQueues && allQueues.length > 0) {
+  // Find current serving token: prefer backend calculated value, fallback to memory
+  let currentServing = backendQueue.current_serving !== undefined && backendQueue.current_serving !== null
+    ? backendQueue.current_serving
+    : 'None';
+
+  if ((currentServing === 'None' || currentServing === 'N/A') && allQueues && allQueues.length > 0) {
     const servingEntry = allQueues.find(q => 
       q.institution_id === backendQueue.institution_id &&
       q.service_id === backendQueue.service_id &&
@@ -31,9 +34,12 @@ function transformQueueEntry(backendQueue, allQueues = []) {
     currentServing = servingEntry ? servingEntry.queue_number : 'None';
   }
   
-  // Calculate people ahead (only count PENDING entries with lower queue numbers)
-  let peopleAhead = 0;
-  if (status === 'waiting' && allQueues && allQueues.length > 0) {
+  // Calculate people ahead: prefer backend calculated value from actual DB records
+  let peopleAhead = backendQueue.people_ahead !== undefined && backendQueue.people_ahead !== null
+    ? backendQueue.people_ahead
+    : 0;
+
+  if (backendQueue.people_ahead === undefined && status === 'waiting' && allQueues && allQueues.length > 0) {
     peopleAhead = allQueues.filter(q =>
       q.institution_id === backendQueue.institution_id &&
       q.service_id === backendQueue.service_id &&
@@ -41,6 +47,11 @@ function transformQueueEntry(backendQueue, allQueues = []) {
       q.queue_number < backendQueue.queue_number
     ).length;
   }
+
+  // Estimated wait minutes: prefer backend calculated value (peopleAhead * duration)
+  const estimatedWaitMinutes = backendQueue.estimated_wait_minutes !== undefined && backendQueue.estimated_wait_minutes !== null
+    ? backendQueue.estimated_wait_minutes
+    : (peopleAhead * 6);
   
   const token = backendQueue.queue_number || backendQueue.token || backendQueue.queueNumber || 'N/A';
   const customerName = backendQueue.users?.full_name || backendQueue.customer?.full_name || backendQueue.citizenName || backendQueue.customerName || 'Customer';
@@ -62,6 +73,8 @@ function transformQueueEntry(backendQueue, allQueues = []) {
     rawStatus: backendQueue.status,
     currentServing,
     peopleAhead,
+    estimatedWaitMinutes,
+    queueReadiness: backendQueue.queue_readiness || (status === 'called' ? 'CALLED' : (peopleAhead > 0 ? 'WAITING' : 'READY_TO_CALL')),
     createdAt,
     created_at: createdAt,
     calledAt: startedAt,
@@ -85,21 +98,23 @@ export function QueueProvider({ children }) {
   const [myTickets, setMyTickets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isLive, setIsLive] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [connectionError, setConnectionError] = useState(null);
 
   // ── Fetch queues from backend ──────────────────────────────────
-  const fetchQueues = useCallback(async (filters = {}) => {
+  const fetchQueues = useCallback(async (filters = {}, options = {}) => {
     const token = localStorage.getItem('mesob_token');
     if (!token) {
       setMyTickets([]);
       return;
     }
 
+    const { silent = false } = options;
+
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
-      
-      console.log('=== FETCHING QUEUES ===');
-      console.log('Filters:', filters);
       
       const params = new URLSearchParams();
       if (filters.status) params.append('status', filters.status);
@@ -109,30 +124,28 @@ export function QueueProvider({ children }) {
       const queryString = params.toString();
       const url = queryString ? `/queues?${queryString}` : '/queues';
       
-      console.log('Fetching from:', url);
-      
       const response = await api.get(url);
-      
-      console.log('=== FETCH QUEUES RESPONSE ===');
-      console.log('Response:', response);
-      console.log('Response.success:', response.success);
-      console.log('Response.data:', response.data);
       
       if (response.success && response.data) {
         const transformed = response.data.map(q => transformQueueEntry(q, response.data));
-        console.log('Transformed queues:', transformed);
         setMyTickets(transformed);
+        setIsLive(true);
+        setLastUpdated(new Date());
+        setConnectionError(null);
       } else {
-        console.log('No queues or failed response');
-        setMyTickets([]);
+        if (!silent) setMyTickets([]);
       }
     } catch (err) {
-      console.error('=== FETCH QUEUES ERROR ===');
-      console.error('Error:', err);
-      setError(err.response?.data?.message || 'Failed to fetch queues');
-      setMyTickets([]);
+      console.error('Fetch queues error:', err);
+      const errMsg = err.response?.data?.message || err.message || 'Failed to fetch queues';
+      setIsLive(false);
+      setConnectionError(errMsg);
+      if (!silent) {
+        setError(errMsg);
+        setMyTickets([]);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -144,6 +157,36 @@ export function QueueProvider({ children }) {
       setMyTickets([]);
     }
   }, [user, fetchQueues]);
+
+  // ── Live auto-updates polling mechanism ────────────────────────
+  useEffect(() => {
+    if (!user || !localStorage.getItem('mesob_token')) return;
+
+    // Check if user has active tickets (waiting or called)
+    const hasActiveTickets = myTickets.some(t => t.status === 'waiting' || t.status === 'called');
+    
+    // Poll every 3.5s when waiting in queue, or 10s otherwise
+    const pollInterval = hasActiveTickets ? 3500 : 10000;
+
+    const intervalId = setInterval(() => {
+      fetchQueues({}, { silent: true });
+    }, pollInterval);
+
+    // Immediate refresh on tab focus / visibility return
+    const handleFocus = () => fetchQueues({}, { silent: true });
+    const handleVisibility = () => {
+      if (!document.hidden) fetchQueues({}, { silent: true });
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [user, myTickets, fetchQueues]);
 
   // ── Register for a queue ───────────────────────────────────────
   const registerForQueue = useCallback(async (institutionUUID, serviceUUID, priority = 'NORMAL') => {
@@ -344,6 +387,9 @@ export function QueueProvider({ children }) {
         myTickets,
         loading,
         error,
+        isLive,
+        lastUpdated,
+        connectionError,
         registerForQueue,
         cancelTicket,
         getActiveTickets,
