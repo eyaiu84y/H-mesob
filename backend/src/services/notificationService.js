@@ -166,7 +166,7 @@ export const createNotification = async (options) => {
 
       if (!recUserErr && recipientUsers) {
         const customerIds = new Set(
-          recipientUsers.filter(u => u.role === 'CITIZEN').map(u => u.id)
+          recipientUsers.filter(u => u.role === 'CITIZEN' || u.role === 'CUSTOMER').map(u => u.id)
         );
         if (customerIds.size > 0) {
           console.warn(`[SECURITY] Stripped ${customerIds.size} CUSTOMER/CITIZEN recipients from internal notification: "${title}"`);
@@ -298,7 +298,7 @@ export const getNotifications = async (currentUser, filters = {}) => {
     const limit = Math.min(Math.max(parseInt(filters.limit) || 30, 1), 100);
     const offset = Math.max(parseInt(filters.offset) || 0, 0);
     const userRole = toDbRole(currentUser.role);
-    const isCustomer = userRole === 'CITIZEN';
+    const isCustomer = userRole === 'CITIZEN' || userRole === 'CUSTOMER';
 
     // Strict Authorization: User can ONLY see their own notifications
     let query = supabase
@@ -402,7 +402,7 @@ export const getUnreadCount = async (currentUser) => {
     }
 
     const userRole = toDbRole(currentUser.role);
-    const isCustomer = userRole === 'CITIZEN';
+    const isCustomer = userRole === 'CITIZEN' || userRole === 'CUSTOMER';
 
     let query = supabase
       .from('notifications')
@@ -464,7 +464,7 @@ export const markAsRead = async (notificationId, currentUser) => {
     }
 
     const userRole = toDbRole(currentUser.role);
-    const isCustomer = userRole === 'CITIZEN';
+    const isCustomer = userRole === 'CITIZEN' || userRole === 'CUSTOMER';
 
     // Verify ownership: notification must exist and belong strictly to current user
     const { data: notification, error: findError } = await supabase
@@ -546,7 +546,7 @@ export const markAllAsRead = async (currentUser) => {
     }
 
     const userRole = toDbRole(currentUser.role);
-    const isCustomer = userRole === 'CITIZEN';
+    const isCustomer = userRole === 'CITIZEN' || userRole === 'CUSTOMER';
 
     let updateQuery = supabase
       .from('notifications')

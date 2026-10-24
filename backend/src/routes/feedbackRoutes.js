@@ -9,13 +9,13 @@ const router = express.Router();
  * All routes require authentication
  */
 
-// Submit feedback (Citizens only)
+// Submit feedback (Customers only)
 router.post('/', authenticate, feedbackController.submitFeedback);
 
-// Get my feedback (Citizens only)
+// Get my feedback (Customers only)
 router.get('/my-feedback', authenticate, feedbackController.getMyFeedback);
 
-// Check if can submit feedback (Citizens only)
+// Check if can submit feedback (Customers only)
 router.get('/can-submit', authenticate, feedbackController.checkCanSubmit);
 
 // Get institution feedback (Institution Managers only)

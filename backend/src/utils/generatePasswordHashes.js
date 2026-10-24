@@ -34,34 +34,34 @@ function generateStrongPassword(length = 16) {
 const USE_CUSTOM_PASSWORDS = true;
 
 const CUSTOM_PASSWORDS = {
-  'superadmin@mesobcenter.et': 'SuperAdmin@2026',
-  'manager@mesobcenter.et': 'MesobManager@2026',
-  'inst.manager@mesobcenter.et': 'InstManager@2026',
-  'employee@mesobcenter.et': 'Employee@2026',
-  'tech@mesobcenter.et': 'tech@2026',
-  'customer@mesobcenter.et': 'customer@2026',
-  'cbe.manager@mesobcenter.et': 'CbeManager@2026',
-  'cbe.employee@mesobcenter.et': 'CbeEmployee@2026',
-  'cbe.tech@mesobcenter.et': 'tech@2026',
-  'ethiotel.manager@mesobcenter.et': 'EthioManager@2026',
-  'ethiotel.employee@mesobcenter.et': 'EthioEmployee@2026',
-  'ethiotel.tech@mesobcenter.et': 'tech@2026',
+  'superadmin@mesobcenterh.gov.et': 'Admin@2026',
+  'manager@mesobcenterh.gov.et': 'Manager@2026',
+  'instmanager@mesobcenterh.gov.et': 'InstMgr@2026',
+  'employee@mesobcenterh.gov.et': 'Employee@2026',
+  'technician@mesobcenterh.gov.et': 'Technician@2026',
+  'customer@gmail.com': 'Customer@2026',
+  'cbe.manager@mesobcenterh.gov.et': 'CbeManager@2026',
+  'cbe.employee@mesobcenterh.gov.et': 'CbeEmployee@2026',
+  'cbe.technician@mesobcenterh.gov.et': 'Technician@2026',
+  'ethiotel.manager@mesobcenterh.gov.et': 'EthioManager@2026',
+  'ethiotel.employee@mesobcenterh.gov.et': 'EthioEmployee@2026',
+  'ethiotel.technician@mesobcenterh.gov.et': 'Technician@2026',
 };
 
 // OPTION 2: Generate random strong passwords (for production)
 const RANDOM_PASSWORDS = {
-  'superadmin@mesobcenter.et': generateStrongPassword(),
-  'manager@mesobcenter.et': generateStrongPassword(),
-  'inst.manager@mesobcenter.et': generateStrongPassword(),
-  'employee@mesobcenter.et': generateStrongPassword(),
-  'tech@mesobcenter.et': generateStrongPassword(),
-  'customer@mesobcenter.et': generateStrongPassword(),
-  'cbe.manager@mesobcenter.et': generateStrongPassword(),
-  'cbe.employee@mesobcenter.et': generateStrongPassword(),
-  'cbe.tech@mesobcenter.et': generateStrongPassword(),
-  'ethiotel.manager@mesobcenter.et': generateStrongPassword(),
-  'ethiotel.employee@mesobcenter.et': generateStrongPassword(),
-  'ethiotel.tech@mesobcenter.et': generateStrongPassword(),
+  'superadmin@mesobcenterh.gov.et': generateStrongPassword(),
+  'manager@mesobcenterh.gov.et': generateStrongPassword(),
+  'instmanager@mesobcenterh.gov.et': generateStrongPassword(),
+  'employee@mesobcenterh.gov.et': generateStrongPassword(),
+  'technician@mesobcenterh.gov.et': generateStrongPassword(),
+  'customer@gmail.com': generateStrongPassword(),
+  'cbe.manager@mesobcenterh.gov.et': generateStrongPassword(),
+  'cbe.employee@mesobcenterh.gov.et': generateStrongPassword(),
+  'cbe.technician@mesobcenterh.gov.et': generateStrongPassword(),
+  'ethiotel.manager@mesobcenterh.gov.et': generateStrongPassword(),
+  'ethiotel.employee@mesobcenterh.gov.et': generateStrongPassword(),
+  'ethiotel.technician@mesobcenterh.gov.et': generateStrongPassword(),
 };
 
 const PASSWORDS = USE_CUSTOM_PASSWORDS ? CUSTOM_PASSWORDS : RANDOM_PASSWORDS;

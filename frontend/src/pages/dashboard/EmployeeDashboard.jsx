@@ -7,8 +7,10 @@ import { useApplications } from '../../context/ApplicationContext';
 import { useQueue } from '../../context/QueueContext';
 import { useServices } from '../../context/ServiceContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
+import ThemeToggle from '../../components/ThemeToggle';
 import EmployeeQueueManagement from '../../components/dashboard/EmployeeQueueManagement';
 import NotificationBell from '../../components/dashboard/NotificationBell';
+import SidebarNavIcon from '../../components/dashboard/SidebarNavIcon';
 
 // ─── Navigation sections ────────────────────────────────────────
 const SECTIONS = [
@@ -45,53 +47,227 @@ function StatusBadge({ status }) {
 // ─── SECTION: Dashboard Overview ────────────────────────────────
 function SectionDashboard({ setActiveSection }) {
   const { announcements } = useAnnouncements();
+  const { user } = useAuth();
+  const { applications } = useApplications();
+  const { myTickets } = useQueue();
   const unreadCount = announcements.filter(a => !a.is_read).length;
   
-  // TODO: Replace with real data from API
-  const myQueueCount = 0; // Will come from queue management system
-  const processedToday = 0; // Will come from queue management system
+  // Real data integration from live queues and submitted customer applications
+  const waitingTickets = myTickets ? myTickets.filter(t => t.status === 'waiting' || t.status === 'called') : [];
+  const completedTickets = myTickets ? myTickets.filter(t => t.status === 'completed') : [];
+  const myQueueCount = waitingTickets.length;
+  const processedToday = completedTickets.length;
+  const pendingApps = applications ? applications.filter(a => String(a.status).toUpperCase().includes('SUBMIT') || String(a.status).toUpperCase().includes('REVIEW')).length : 0;
   
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="stat-card">
-          <p className="text-sm text-slate-500 mb-1">In My Queue</p>
-          <p className="text-2xl font-bold text-slate-900">{myQueueCount}</p>
-          <p className="text-xs text-slate-400 mt-1">Assigned to you</p>
+      {/* Desk Overview Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-[#0f172a] via-[#1e3a8a] to-[#2563eb] rounded-2xl p-6 text-white mb-8 shadow-sm border border-blue-900/40">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#f4b51a] via-[#f59e0b] to-[#f4b51a]" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#f4b51a] border border-[#f4b51a]/30 text-xs font-semibold mb-2.5 backdrop-blur-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Service Processing Counter</span>
+              <span>•</span>
+              <span className="text-blue-100 font-normal">{user?.institution || 'MESOB Service Desk'}</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              Welcome, {user?.name || 'Staff Member'}
+            </h2>
+            <p className="text-blue-100/90 text-sm mt-1 max-w-xl">
+              Process customer service requests, serve live queue tickets, and record verified application actions.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 sm:self-center">
+            <button
+              onClick={() => setActiveSection('My Queue')}
+              className="px-4 py-2.5 rounded-xl bg-[#f4b51a] hover:bg-[#e0a20e] text-slate-900 text-xs font-bold transition shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+              </svg>
+              <span>Call Next Ticket</span>
+            </button>
+            <button
+              onClick={() => setActiveSection('Search Applications')}
+              className="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-semibold transition backdrop-blur-xs inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <svg className="w-4 h-4 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <span>Search</span>
+            </button>
+          </div>
         </div>
-        <div className="stat-card">
-          <p className="text-sm text-slate-500 mb-1">Processed Today</p>
-          <p className="text-2xl font-bold text-slate-900">{processedToday}</p>
+      </div>
+
+      {/* Operational Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <button
+          onClick={() => setActiveSection('My Queue')}
+          className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-amber-500 shadow-xs p-5 hover:border-amber-400 hover:shadow-sm transition-all text-left cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-amber-800 transition-colors">In My Queue</span>
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100 group-hover:bg-amber-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+          </div>
+          <p className="text-3xl font-extrabold text-amber-700">{myQueueCount}</p>
+          <p className="text-xs text-amber-800 font-medium mt-1.5 flex items-center justify-between">
+            <span>Customers waiting at counter</span>
+            <span>→</span>
+          </p>
+        </button>
+
+        <button
+          onClick={() => setActiveSection('Search Applications')}
+          className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-blue-500 shadow-xs p-5 hover:border-blue-400 hover:shadow-sm transition-all text-left cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-blue-800 transition-colors">Pending Review</span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#314ea1] flex items-center justify-center border border-blue-100 group-hover:bg-blue-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            </div>
+          </div>
+          <p className="text-3xl font-extrabold text-[#1e3a8a]">{pendingApps}</p>
+          <p className="text-xs text-blue-700 font-medium mt-1.5 flex items-center justify-between">
+            <span>Applications to inspect</span>
+            <span>→</span>
+          </p>
+        </button>
+
+        <div className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-emerald-500 shadow-xs p-5 hover:border-emerald-400 hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Processed Today</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+          </div>
+          <p className="text-3xl font-extrabold text-emerald-700">{processedToday}</p>
+          <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span>Completed services today</span>
+          </p>
         </div>
-        <div className="stat-card">
-          <p className="text-sm text-slate-500 mb-1">Announcements</p>
-          <p className="text-2xl font-bold text-slate-900">{unreadCount}</p>
-          <p className="text-xs text-slate-400 mt-1">Unread</p>
-        </div>
+
+        <button
+          onClick={() => setActiveSection('Announcements')}
+          className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-violet-500 shadow-xs p-5 hover:border-violet-400 hover:shadow-sm transition-all text-left cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-violet-800 transition-colors">Internal Circulars</span>
+            <div className="w-9 h-9 rounded-xl bg-violet-50 text-violet-700 flex items-center justify-center border border-violet-100 group-hover:bg-violet-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+            </div>
+          </div>
+          <p className="text-3xl font-extrabold text-violet-800">{unreadCount}</p>
+          <p className="text-xs text-violet-700 font-medium mt-1.5 flex items-center justify-between">
+            <span>Official staff notices</span>
+            <span>→</span>
+          </p>
+        </button>
       </div>
 
       {/* Queue preview */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <h2 className="font-semibold text-slate-900">My Processing Queue</h2>
+        <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-2.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#2563eb]" />
+            <h2 className="font-bold text-slate-900 text-base">My Processing Queue</h2>
+            {waitingTickets.length > 0 && (
+              <span className="text-xs bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded-full border border-amber-200">
+                {waitingTickets.length} waiting
+              </span>
+            )}
+          </div>
           <button
             onClick={() => setActiveSection('My Queue')}
-            className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold transition"
+            className="text-xs sm:text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8] flex items-center gap-1 group cursor-pointer"
           >
-            View all
+            <span>Open live queue</span>
+            <span className="group-hover:translate-x-0.5 transition-transform">→</span>
           </button>
         </div>
-        <div className="p-6 text-center text-slate-400 py-12">
-          <svg className="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-          <p className="text-sm font-medium text-slate-700 mb-1">No Queue Items Assigned</p>
-          <p className="text-xs text-slate-400">Queue items assigned to you will appear here.</p>
-        </div>
+        {waitingTickets.length === 0 ? (
+          <div className="p-8 text-center text-slate-400 py-14">
+            <div className="w-16 h-16 mx-auto mb-3.5 rounded-2xl bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center shadow-xs">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <p className="font-bold text-slate-800 text-base mb-1">No Customers Currently in Queue</p>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+              When customers request public service tickets for your counter or department, they will appear here in real time.
+            </p>
+            <button
+              onClick={() => setActiveSection('My Queue')}
+              className="mt-4 px-4 py-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-semibold transition shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>Go to Queue Management</span>
+              <span>→</span>
+            </button>
+          </div>
+        ) : (
+          <div className="table-container border-0 rounded-none overflow-x-auto">
+            <table className="data-table w-full">
+              <thead>
+                <tr className="bg-slate-50/80 text-xs font-semibold text-slate-600 uppercase tracking-wider border-b border-slate-200/80">
+                  <th className="px-5 py-3 text-left">Ticket Token</th>
+                  <th className="px-5 py-3 text-left">Service Requested</th>
+                  <th className="px-5 py-3 text-left">Waiting Since</th>
+                  <th className="px-5 py-3 text-left">Status</th>
+                  <th className="px-5 py-3 text-left">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {waitingTickets.slice(0, 5).map(ticket => (
+                  <tr key={ticket.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="px-5 py-3.5">
+                      <span className="font-mono text-base font-extrabold text-[#314ea1] bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200/60">
+                        #{ticket.token}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-slate-800 text-sm font-semibold">
+                      {ticket.serviceName || 'Public Service'}
+                    </td>
+                    <td className="px-5 py-3.5 text-slate-500 text-xs">
+                      {ticket.createdAt ? new Date(ticket.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className={`badge text-xs px-2.5 py-0.5 rounded-full font-semibold ${ticket.status === 'called' ? 'bg-blue-100 text-blue-900 border border-blue-200' : 'bg-amber-50 text-amber-800 border border-amber-200'}`}>
+                        {ticket.status === 'called' ? 'Being Served' : 'Waiting'}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <button
+                        onClick={() => setActiveSection('My Queue')}
+                        className="px-3 py-1.5 bg-[#314ea1] hover:bg-[#253d82] text-white text-xs font-bold rounded-lg transition shadow-xs cursor-pointer inline-flex items-center gap-1"
+                      >
+                        <span>Serve Ticket</span>
+                        <span>→</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      <div className="p-4 bg-blue-50/80 border border-blue-200/80 rounded-2xl text-sm text-[#1e3a8a] shadow-xs">
-        <strong className="font-semibold">Employee:</strong> Process assigned applications and manage the assigned service queue. You cannot manage users, institutions, or system settings.
+      <div className="p-4.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl flex items-start sm:items-center gap-3.5 shadow-xs">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a8a] to-[#0f172a] text-[#f4b51a] flex items-center justify-center flex-shrink-0 shadow-xs border border-blue-900/40">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div className="text-xs sm:text-sm text-blue-950 leading-relaxed">
+          <strong className="font-semibold text-[#1e3a8a]">Employee Operational Role:</strong>{' '}
+          Process assigned customer applications and manage your active counter queue. Staff members cannot alter global institution configurations or system roles.
+        </div>
       </div>
     </>
   );
@@ -113,8 +289,8 @@ function SectionSearchApplications() {
     const q = query.toLowerCase();
     return (
       (app.applicationNumber && app.applicationNumber.toLowerCase().includes(q)) ||
-      (app.citizenName && app.citizenName.toLowerCase().includes(q)) ||
-      (app.citizenEmail && app.citizenEmail.toLowerCase().includes(q)) ||
+      ((app.customerName || app.citizenName) && (app.customerName || app.citizenName).toLowerCase().includes(q)) ||
+      ((app.customerEmail || app.citizenEmail) && (app.customerEmail || app.citizenEmail).toLowerCase().includes(q)) ||
       (app.service && app.service.toLowerCase().includes(q)) ||
       (app.status && app.status.toLowerCase().includes(q))
     );
@@ -207,15 +383,15 @@ function SectionSearchApplications() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
                 <label className="text-xs text-slate-500">Name</label>
-                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.citizenName || 'N/A'}</p>
+                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.customerName || selectedApp.citizenName || selectedApp.applicationData?.fullName || 'N/A'}</p>
               </div>
               <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
                 <label className="text-xs text-slate-500">Email</label>
-                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.citizenEmail || 'N/A'}</p>
+                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.customerEmail || selectedApp.citizenEmail || selectedApp.applicationData?.email || 'N/A'}</p>
               </div>
               <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
                 <label className="text-xs text-slate-500">Phone</label>
-                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.citizenPhone || 'N/A'}</p>
+                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.customerPhone || selectedApp.citizenPhone || selectedApp.applicationData?.phone || selectedApp.phone || 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -452,7 +628,7 @@ function SectionSearchApplications() {
                 filtered.map(app => (
                   <tr key={app.id}>
                     <td className="font-semibold text-slate-900">{app.applicationNumber || app.id}</td>
-                    <td>{app.citizenName || app.citizenEmail}</td>
+                    <td>{app.customerName || app.citizenName || app.customerEmail || app.citizenEmail}</td>
                     <td>{app.service}</td>
                     <td><StatusBadge status={app.status} /></td>
                     <td className="text-slate-500">{app.submittedDate}</td>
@@ -1745,85 +1921,126 @@ function SectionMyProfile() {
 export default function EmployeeDashboard() {
   const { user, logout } = useAuth();
   const [activeSection, setActiveSection] = useState('Dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (!user) return null;
+
+  const initials = (user.name || user.full_name || 'EMP')
+    .split(' ')
+    .filter(Boolean)
+    .map(n => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
 
   return (
     <div className="dashboard-bg min-h-screen text-slate-900 relative">
       <div className="flex min-h-screen relative z-10">
-        <aside className="w-64 db-sidebar p-4 hidden lg:flex flex-col shadow-xs">
-          <div className="p-2 mb-6 border-b border-blue-100/70 pb-5">
+
+        {/* ── Sidebar ── */}
+        <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 flex flex-col transition-transform duration-200 shadow-xs${sidebarOpen ? ' open' : ' -translate-x-full lg:translate-x-0'}`}>
+          <div className="p-5 border-b border-slate-800">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-base shadow-xs border border-[#314ea1]/20">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a8a] to-[#0f172a] text-[#f4b51a] flex items-center justify-center font-bold text-base shadow-sm border border-slate-700/60">
                 E
               </div>
               <div>
-                <p className="font-bold text-slate-900 text-sm">MESOB Center</p>
-                <p className="text-xs text-slate-500">Employee Portal</p>
+                <p className="font-bold text-white text-sm tracking-tight">MESOB Center</p>
+                <p className="text-xs text-slate-400 font-medium">Employee Portal</p>
               </div>
             </div>
           </div>
         
-        <nav className="space-y-1 flex-1">
-          {SECTIONS.map(section => (
+          <nav className="p-3.5 space-y-1 flex-1 overflow-y-auto">
+            {SECTIONS.map(section => {
+              const isActive = activeSection === section;
+              return (
+                <button
+                  key={section}
+                  onClick={() => {
+                    setActiveSection(section);
+                    setSidebarOpen(false);
+                  }}
+                  className={`sidebar-link w-full text-left${isActive ? ' active' : ''} cursor-pointer`}
+                >
+                  <SidebarNavIcon section={section} className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="truncate">{section}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="p-3.5 border-t border-slate-800">
             <button
-              key={section}
-              onClick={() => setActiveSection(section)}
-              className={`sidebar-link w-full text-left px-4 py-2.5 rounded-xl text-sm transition ${
-                activeSection === section 
-                  ? 'bg-blue-50 text-[#1e3a8a] border-l-4 border-[#314ea1] font-semibold' 
-                  : 'text-slate-700 hover:bg-slate-100/80 hover:text-[#1e3a8a]'
-              }`}
+              onClick={logout}
+              className="sidebar-link w-full text-left text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 font-medium transition cursor-pointer"
             >
-              {section}
+              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+              </svg>
+              <span>Logout</span>
             </button>
-          ))}
-        </nav>
-
-        <div className="mt-6 pt-5 border-t border-slate-100">
-          <div className="flex items-center gap-3 mb-4 p-2 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-xs shadow-xs">
-              {user.name.charAt(0)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-slate-900 text-xs truncate">{user.name}</p>
-              <p className="text-[11px] text-slate-500 truncate">{user.institution || 'Not assigned'}</p>
-            </div>
           </div>
-          <button
-            onClick={logout}
-            className="sidebar-link w-full text-left text-rose-600 hover:bg-rose-50"
-          >
-            Logout
-          </button>
-        </div>
-      </aside>
+        </aside>
 
-      <main className="flex-1 p-6 lg:p-8 min-w-0">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Employee Dashboard</h1>
-              <p className="text-slate-600 text-sm">Welcome back, {user.name.split(' ')[0]}</p>
+        {/* ── Main Content ── */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="bg-white border-b border-slate-200/80 px-4 lg:px-8 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+            <div className="flex items-center gap-3">
+              <button
+                className="lg:hidden p-2 rounded-xl hover:bg-slate-100 text-slate-700 cursor-pointer"
+                onClick={() => setSidebarOpen(o => !o)}
+                aria-label="Toggle sidebar"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/>
+                </svg>
+              </button>
+              <div>
+                <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+                  {activeSection === 'Dashboard' ? 'Employee Dashboard' : activeSection}
+                </h1>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
-              <NotificationBell onNavigate={(section) => setActiveSection(section)} />
-              <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium">Employee</span>
+              <ThemeToggle />
+              <NotificationBell onNavigate={(section) => { setActiveSection(section); setSidebarOpen(false); }} />
+              <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold">Employee</span>
+              <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200 hidden sm:flex">
+                <div className="w-8 h-8 rounded-full bg-blue-100 text-[#1e3a8a] font-bold text-xs flex items-center justify-center border border-blue-200/80">
+                  {initials}
+                </div>
+                <div className="text-left hidden md:block">
+                  <p className="text-sm font-semibold text-slate-900 leading-tight">{user.name}</p>
+                  <p className="text-xs text-slate-500 leading-tight">{user.institution || user.email}</p>
+                </div>
+              </div>
             </div>
-          </div>
+          </header>
 
-          {activeSection === 'Dashboard' && <SectionDashboard setActiveSection={setActiveSection} />}
-          {activeSection === 'My Queue' && <SectionMyQueue />}
-          {activeSection === 'Search Applications' && <SectionSearchApplications />}
-          {activeSection === 'Service Requirements' && <SectionServiceRequirements />}
-          {activeSection === 'Maintenance Report' && <SectionMaintenanceReport />}
-          {activeSection === 'Reports' && <SectionReports />}
-          {activeSection === 'Announcements' && <SectionAnnouncements />}
-          {activeSection === 'My Profile' && <SectionMyProfile />}
+          <main className="flex-1 p-4 lg:p-8 min-w-0">
+            <div className="max-w-7xl mx-auto">
+              {activeSection === 'Dashboard' && <SectionDashboard setActiveSection={setActiveSection} />}
+              {activeSection === 'My Queue' && <SectionMyQueue />}
+              {activeSection === 'Search Applications' && <SectionSearchApplications />}
+              {activeSection === 'Service Requirements' && <SectionServiceRequirements />}
+              {activeSection === 'Maintenance Report' && <SectionMaintenanceReport />}
+              {activeSection === 'Reports' && <SectionReports />}
+              {activeSection === 'Announcements' && <SectionAnnouncements />}
+              {activeSection === 'My Profile' && <SectionMyProfile />}
+            </div>
+          </main>
         </div>
-      </main>
       </div>
+
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
     </div>
   );
 }

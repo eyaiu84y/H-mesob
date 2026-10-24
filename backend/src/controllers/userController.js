@@ -1,4 +1,4 @@
-import { getAllUsers, getUserById, createUser, updateUser, updateUserStatus, deleteUser } from '../services/userService.js';
+import { getAllUsers, getUserById, createUser, updateUser, updateUserStatus, deleteUser, resetUserPassword } from '../services/userService.js';
 
 /**
  * GET /api/users
@@ -96,14 +96,15 @@ export const patchUser = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = {
-      fullName: req.body.fullName,
+      fullName: req.body.fullName || req.body.name,
       phone: req.body.phone,
       role: req.body.role,
       institutionId: req.body.institutionId,
       employeeId: req.body.employeeId,
       nationalId: req.body.nationalId,
       profilePhotoUrl: req.body.profilePhotoUrl,
-      password: req.body.password
+      password: req.body.password,
+      metadata: req.body.metadata
     };
 
     const result = await updateUser(id, updates, req.user);
@@ -177,6 +178,31 @@ export const removeUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to delete user.'
+    });
+  }
+};
+
+/**
+ * POST /api/users/:id/reset-password
+ * Reset internal user password to a secure temporary password (SUPER_ADMIN only)
+ */
+export const resetPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await resetUserPassword(id, req.user);
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    res.status(200).json(result);
+
+  } catch (error) {
+    console.error('Reset password controller error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reset password.'
     });
   }
 };

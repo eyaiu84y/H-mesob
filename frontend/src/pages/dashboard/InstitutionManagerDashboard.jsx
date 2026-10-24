@@ -6,9 +6,11 @@ import { useApplications } from '../../context/ApplicationContext';
 import { useMaintenance } from '../../context/MaintenanceContext';
 import { useQueue } from '../../context/QueueContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
+import ThemeToggle from '../../components/ThemeToggle';
 import { createTaskAssignmentNotification } from '../../utils/sharedData';
 import InstitutionFeedback from '../../components/dashboard/InstitutionFeedback';
 import NotificationBell from '../../components/dashboard/NotificationBell';
+import SidebarNavIcon from '../../components/dashboard/SidebarNavIcon';
 import api from '../../utils/api';
 
 // ─── Navigation sections ──────────────────────────────────────────
@@ -110,39 +112,129 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
 
   return (
     <>
-      {/* Institution banner */}
-      <div className="mb-6 p-4 bg-blue-50/80 border border-blue-200/80 rounded-2xl flex items-center gap-3.5 shadow-xs">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-base flex-shrink-0 shadow-xs border border-[#314ea1]/20">
-          I
-        </div>
-        <div>
-          <p className="text-xs text-[#314ea1] font-bold uppercase tracking-wider">Assigned Institution</p>
-          <p className="text-sm font-bold text-slate-900 mt-0.5">{userInstitution || 'Not Assigned'}</p>
+      {/* Institution Management Hero Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-[#0f172a] via-[#1e3a8a] to-[#2563eb] rounded-2xl p-6 text-white mb-8 shadow-sm border border-blue-900/40">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#f4b51a] via-[#f59e0b] to-[#f4b51a]" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#f4b51a] border border-[#f4b51a]/30 text-xs font-semibold mb-2.5 backdrop-blur-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Assigned Institution Portal</span>
+              <span>•</span>
+              <span className="text-blue-100 font-normal">MESOB Partner Agency</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              {userInstitution || 'Institutional Operations'}
+            </h2>
+            <p className="text-blue-100/90 text-sm mt-1 max-w-xl">
+              Oversee departmental queues, review customer service applications, approve documents, and coordinate staff operations.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 sm:self-center">
+            <button
+              onClick={() => setActiveSection('Central Approvals')}
+              className="px-4 py-2.5 rounded-xl bg-[#f4b51a] hover:bg-[#e0a20e] text-slate-900 text-xs font-bold transition shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Review Approvals</span>
+            </button>
+            <button
+              onClick={() => setActiveSection('Queue Management')}
+              className="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-semibold transition backdrop-blur-xs inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <svg className="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+              </svg>
+              <span>Queue Status</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        <div className="stat-card">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Queue Status</p>
-          <p className="text-2xl font-bold text-slate-900">{activeQueue}</p>
-          <p className="text-xs text-amber-700 font-medium mt-1">Active tickets</p>
-        </div>
-        <div className="stat-card">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Applications</p>
-          <p className="text-2xl font-bold text-slate-900">{activeApps}</p>
-          <p className="text-xs text-slate-400 mt-1">Pending / in progress</p>
-        </div>
-        <div className="stat-card">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Maintenance</p>
-          <p className="text-2xl font-bold text-slate-900">{openMaint}</p>
-          <p className="text-xs text-slate-400 mt-1">Open tasks</p>
-        </div>
-        <div className="stat-card">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Announcements</p>
-          <p className="text-2xl font-bold text-slate-900">{unread}</p>
-          <p className="text-xs text-slate-400 mt-1">Unread</p>
-        </div>
+        <button
+          onClick={() => setActiveSection('Queue Management')}
+          className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-amber-500 shadow-xs p-5 hover:border-amber-400 hover:shadow-sm transition-all text-left cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-amber-800 transition-colors">Queue Status</span>
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100 group-hover:bg-amber-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>
+            </div>
+          </div>
+          <p className="text-3xl font-extrabold text-amber-700">{activeQueue}</p>
+          <p className="text-xs text-amber-800 font-medium mt-1.5 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              <span>Active counter tickets</span>
+            </span>
+            <span>→</span>
+          </p>
+        </button>
+
+        <button
+          onClick={() => setActiveSection('Applications')}
+          className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-blue-500 shadow-xs p-5 hover:border-blue-400 hover:shadow-sm transition-all text-left cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-blue-800 transition-colors">Applications</span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:bg-blue-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            </div>
+          </div>
+          <p className="text-3xl font-extrabold text-[#1e3a8a]">{activeApps}</p>
+          <p className="text-xs text-slate-500 mt-1.5 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              <span>Pending & under review</span>
+            </span>
+            <span>→</span>
+          </p>
+        </button>
+
+        <button
+          onClick={() => setActiveSection('Maintenance')}
+          className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-purple-500 shadow-xs p-5 hover:border-purple-400 hover:shadow-sm transition-all text-left cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-purple-800 transition-colors">Maintenance</span>
+            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-100 group-hover:bg-purple-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
+            </div>
+          </div>
+          <p className="text-3xl font-extrabold text-slate-900">{openMaint}</p>
+          <p className="text-xs text-slate-500 mt-1.5 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+              <span>Facility reports</span>
+            </span>
+            <span>→</span>
+          </p>
+        </button>
+
+        <button
+          onClick={() => setActiveSection('Announcements')}
+          className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-emerald-500 shadow-xs p-5 hover:border-emerald-400 hover:shadow-sm transition-all text-left cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-emerald-800 transition-colors">Announcements</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+            </div>
+          </div>
+          <p className="text-3xl font-extrabold text-emerald-700">{unread}</p>
+          <p className="text-xs text-slate-500 mt-1.5 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>Unread bulletins</span>
+            </span>
+            <span>→</span>
+          </p>
+        </button>
       </div>
 
       {/* Queue overview */}
@@ -340,8 +432,8 @@ function SectionApplications({ userInstitution }) {
     const q = searchQuery.toLowerCase();
     return (
       (app.applicationNumber && app.applicationNumber.toLowerCase().includes(q)) ||
-      (app.citizenName && app.citizenName.toLowerCase().includes(q)) ||
-      (app.citizenEmail && app.citizenEmail.toLowerCase().includes(q)) ||
+      ((app.customerName || app.citizenName) && (app.customerName || app.citizenName).toLowerCase().includes(q)) ||
+      ((app.customerEmail || app.citizenEmail) && (app.customerEmail || app.citizenEmail).toLowerCase().includes(q)) ||
       (app.service && app.service.toLowerCase().includes(q)) ||
       (app.status && app.status.toLowerCase().includes(q))
     );
@@ -399,15 +491,15 @@ function SectionApplications({ userInstitution }) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
                 <label className="text-xs text-slate-500">Name</label>
-                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.citizenName || 'N/A'}</p>
+                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.customerName || selectedApp.citizenName || selectedApp.applicationData?.fullName || 'N/A'}</p>
               </div>
               <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
                 <label className="text-xs text-slate-500">Email</label>
-                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.citizenEmail || 'N/A'}</p>
+                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.customerEmail || selectedApp.citizenEmail || selectedApp.applicationData?.email || 'N/A'}</p>
               </div>
               <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
                 <label className="text-xs text-slate-500">Phone</label>
-                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.citizenPhone || 'N/A'}</p>
+                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.customerPhone || selectedApp.citizenPhone || selectedApp.applicationData?.phone || selectedApp.phone || 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -520,7 +612,7 @@ function SectionApplications({ userInstitution }) {
                 {filteredApplications.map(app => (
                   <tr key={app.id}>
                     <td className="font-semibold text-slate-900">{app.applicationNumber || app.id}</td>
-                    <td>{app.citizenName || app.citizenEmail}</td>
+                    <td>{app.customerName || app.citizenName || app.customerEmail || app.citizenEmail}</td>
                     <td>{app.service}</td>
                     <td>
                       <StatusBadge status={app.status} />
@@ -2519,59 +2611,80 @@ export default function InstitutionManagerDashboard() {
     }
   }
 
+  const initials = (user?.name || user?.full_name || 'IM')
+    .split(' ')
+    .filter(Boolean)
+    .map(n => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
   return (
     <div className="dashboard-bg min-h-screen text-slate-900 relative">
       <div className="flex min-h-screen relative z-10">
 
         {/* ── Sidebar ── */}
         <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 flex flex-col transition-transform duration-200 shadow-xs${sidebarOpen ? ' open' : ''}`}>
-          <div className="p-5 border-b border-blue-100/70">
+          <div className="p-5 border-b border-slate-800">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-xs border border-blue-400/20">I</div>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a8a] to-[#0f172a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-sm border border-slate-700/60">I</div>
               <div>
-                <p className="font-bold text-slate-900 text-sm">MESOB Center</p>
-                <p className="text-xs text-slate-500">Institution Manager</p>
+                <p className="font-bold text-white text-sm tracking-tight">MESOB Center</p>
+                <p className="text-xs text-slate-400 font-medium">Institution Manager</p>
               </div>
             </div>
           </div>
 
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {SECTIONS.map(section => (
-              <button key={section} onClick={() => navigate(section)}
-                className={`sidebar-link w-full text-left${activeSection === section ? ' active' : ''}`}>
-                {section}
-              </button>
-            ))}
+          <nav className="flex-1 p-3.5 space-y-1 overflow-y-auto">
+            {SECTIONS.map(section => {
+              const isActive = activeSection === section;
+              return (
+                <button key={section} onClick={() => navigate(section)}
+                  className={`sidebar-link w-full text-left${isActive ? ' active' : ''} cursor-pointer`}>
+                  <SidebarNavIcon section={section} className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="truncate">{section}</span>
+                </button>
+              );
+            })}
           </nav>
 
-          <div className="p-4 border-t border-blue-100/70">
+          <div className="p-3.5 border-t border-slate-800">
             <button onClick={logout}
-              className="sidebar-link w-full text-left text-rose-600 hover:bg-rose-50 font-medium">
-              Logout
+              className="sidebar-link w-full text-left text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 font-medium transition cursor-pointer">
+              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+              </svg>
+              <span>Logout</span>
             </button>
           </div>
         </aside>
 
         {/* ── Main content ── */}
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="bg-white/85 backdrop-blur-xl border-b border-blue-100/80 shadow-[0_4px_20px_-4px_rgba(30,58,138,0.04)] px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+          <header className="bg-white border-b border-slate-200/80 px-4 lg:px-8 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
             <div className="flex items-center gap-3">
-              <button className="lg:hidden p-2 rounded-lg hover:bg-slate-100" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle sidebar">
+              <button className="lg:hidden p-2 rounded-xl hover:bg-slate-100 text-slate-700 cursor-pointer" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle sidebar">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/>
                 </svg>
               </button>
-              <h1 className="text-lg font-bold text-slate-900">
+              <h1 className="text-lg font-bold text-slate-900 tracking-tight">
                 {activeSection === 'Dashboard' ? 'Institution Manager Dashboard' : activeSection}
               </h1>
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
+              <ThemeToggle />
               <NotificationBell onNavigate={(section) => navigate(section)} />
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#314ea1]/10 text-[#1e3a8a] border border-[#314ea1]/20">Institution Manager</span>
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-slate-900">{user?.name}</p>
-                <p className="text-xs text-slate-500">{user?.email}</p>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-[#1e3a8a] border border-blue-200">Institution Manager</span>
+              <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200 hidden sm:flex">
+                <div className="w-8 h-8 rounded-full bg-blue-100 text-[#1e3a8a] font-bold text-xs flex items-center justify-center border border-blue-200/80">
+                  {initials}
+                </div>
+                <div className="text-left hidden md:block">
+                  <p className="text-sm font-semibold text-slate-900 leading-tight">{user?.name}</p>
+                  <p className="text-xs text-slate-500 leading-tight">{user?.email}</p>
+                </div>
               </div>
             </div>
           </header>
@@ -2582,9 +2695,8 @@ export default function InstitutionManagerDashboard() {
         </div>
       </div>
 
-      {/* Mobile overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
     </div>
   );

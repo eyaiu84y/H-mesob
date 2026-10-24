@@ -98,7 +98,8 @@ export function QueueProvider({ children }) {
   const [myTickets, setMyTickets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isLive, setIsLive] = useState(true);
+  const [isLive, setIsLive] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('connecting'); // 'connecting' | 'connected' | 'offline'
   const [lastUpdated, setLastUpdated] = useState(null);
   const [connectionError, setConnectionError] = useState(null);
 
@@ -107,6 +108,8 @@ export function QueueProvider({ children }) {
     const token = localStorage.getItem('mesob_token');
     if (!token) {
       setMyTickets([]);
+      setIsLive(false);
+      setConnectionStatus('offline');
       return;
     }
 
@@ -126,19 +129,28 @@ export function QueueProvider({ children }) {
       
       const response = await api.get(url);
       
-      if (response.success && response.data) {
+      if (response && response.success && Array.isArray(response.data)) {
         const transformed = response.data.map(q => transformQueueEntry(q, response.data));
-        setMyTickets(transformed);
+        setMyTickets(prev => {
+          const prevKey = prev.map(p => `${p.id}_${p.status}_${p.peopleAhead}_${p.estimatedWaitMinutes}_${p.currentServing}_${p.queueReadiness}`).join('|');
+          const nextKey = transformed.map(p => `${p.id}_${p.status}_${p.peopleAhead}_${p.estimatedWaitMinutes}_${p.currentServing}_${p.queueReadiness}`).join('|');
+          return prevKey === nextKey ? prev : transformed;
+        });
         setIsLive(true);
+        setConnectionStatus('connected');
         setLastUpdated(new Date());
         setConnectionError(null);
       } else {
+        setIsLive(false);
+        setConnectionStatus('offline');
+        setConnectionError(response?.message || 'Failed to fetch queue data');
         if (!silent) setMyTickets([]);
       }
     } catch (err) {
       console.error('Fetch queues error:', err);
       const errMsg = err.response?.data?.message || err.message || 'Failed to fetch queues';
       setIsLive(false);
+      setConnectionStatus('offline');
       setConnectionError(errMsg);
       if (!silent) {
         setError(errMsg);
@@ -155,18 +167,19 @@ export function QueueProvider({ children }) {
       fetchQueues();
     } else {
       setMyTickets([]);
+      setIsLive(false);
+      setConnectionStatus('offline');
     }
   }, [user, fetchQueues]);
 
-  // ── Live auto-updates polling mechanism ────────────────────────
+  // ── Live auto-updates polling & connectivity mechanism ──────────
+  const hasActiveTickets = myTickets.some(t => t.status === 'waiting' || t.status === 'called');
+
   useEffect(() => {
     if (!user || !localStorage.getItem('mesob_token')) return;
 
-    // Check if user has active tickets (waiting or called)
-    const hasActiveTickets = myTickets.some(t => t.status === 'waiting' || t.status === 'called');
-    
-    // Poll every 3.5s when waiting in queue, or 10s otherwise
-    const pollInterval = hasActiveTickets ? 3500 : 10000;
+    // Poll every 3 seconds when waiting in queue, or 8s otherwise
+    const pollInterval = hasActiveTickets ? 3000 : 8000;
 
     const intervalId = setInterval(() => {
       fetchQueues({}, { silent: true });
@@ -178,15 +191,30 @@ export function QueueProvider({ children }) {
       if (!document.hidden) fetchQueues({}, { silent: true });
     };
 
+    // Network status listeners
+    const handleOffline = () => {
+      setIsLive(false);
+      setConnectionStatus('offline');
+      setConnectionError('Network connection lost');
+    };
+    const handleOnline = () => {
+      setConnectionStatus('connecting');
+      fetchQueues({}, { silent: true });
+    };
+
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
 
     return () => {
       clearInterval(intervalId);
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
     };
-  }, [user, myTickets, fetchQueues]);
+  }, [user, hasActiveTickets, fetchQueues]);
 
   // ── Register for a queue ───────────────────────────────────────
   const registerForQueue = useCallback(async (institutionUUID, serviceUUID, priority = 'NORMAL') => {
@@ -388,6 +416,7 @@ export function QueueProvider({ children }) {
         loading,
         error,
         isLive,
+        connectionStatus,
         lastUpdated,
         connectionError,
         registerForQueue,

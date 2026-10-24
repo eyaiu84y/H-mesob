@@ -13,8 +13,7 @@ const VALID_ROLES = [
   'employee',
   'technician',
   'customer',
-  'ict_staff',
-  'citizen'
+  'ict_staff'
 ];
 
 export function AuthProvider({ children }) {
@@ -25,7 +24,6 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     async function restoreSession() {
       try {
-        // Check if token exists
         const token = localStorage.getItem('mesob_token');
         if (!token) {
           setLoading(false);
@@ -36,10 +34,8 @@ export function AuthProvider({ children }) {
         const response = await api.get('/auth/me');
         
         if (response.success && response.data && response.data.user) {
-          // Transform backend user to frontend format
           const frontendUser = transformUserFromBackend(response.data.user);
           
-          // Validate role
           if (!VALID_ROLES.includes(frontendUser.role)) {
             console.warn('Invalid role from backend:', frontendUser.role);
             removeToken();
@@ -50,7 +46,6 @@ export function AuthProvider({ children }) {
           
           setUser(frontendUser);
         } else {
-          // Invalid or expired token
           removeToken();
           setUser(null);
         }
@@ -66,7 +61,6 @@ export function AuthProvider({ children }) {
     restoreSession();
   }, []);
 
-  // Note: User management functions (createUser, updateUser, etc.) are kept for Super Admin features
   // ==========================================
   // USER MANAGEMENT (Backend API)
   // ==========================================
@@ -81,7 +75,6 @@ export function AuthProvider({ children }) {
       const response = await api.get('/users');
       
       if (response.success && Array.isArray(response.data)) {
-        // Transform backend users to frontend format
         const transformedUsers = response.data.map(backendUser => transformUserFromBackend(backendUser));
         setAllUsers(transformedUsers);
         return transformedUsers;
@@ -98,22 +91,19 @@ export function AuthProvider({ children }) {
     }
   }, []);
   
-  // Get users - now returns from state (fetched from backend)
   function getUsers() {
     return allUsers;
   }
   
-  // Load users on mount (for Super Admin)
   useEffect(() => {
     if (user && user.role === 'super_admin') {
       fetchUsers();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.role]); // Only re-run when role changes
+  }, [user?.role]);
 
   async function createUser(userData, creatorRole) {
     try {
-      // Authorization: Only Super Admin can create users
       if (creatorRole !== 'super_admin') {
         return { 
           success: false, 
@@ -121,7 +111,6 @@ export function AuthProvider({ children }) {
         };
       }
 
-      // Validation
       if (!userData.name?.trim()) {
         return { success: false, message: "Full name is required." };
       }
@@ -161,22 +150,17 @@ export function AuthProvider({ children }) {
         return { success: false, message: "Please enter a valid phone number." };
       }
       
-      // Generate temporary password
-      const tempPassword = `temp${Date.now().toString().slice(-6)}`;
-      
-      // Map frontend fields to backend API fields
       const apiData = {
         email: userData.email.trim().toLowerCase(),
-        password: tempPassword,
+        password: userData.password?.trim() || undefined,
         fullName: userData.name.trim(),
         phone: userData.phone?.trim() || null,
-        role: toBackendRole(userData.role) || userData.role.toUpperCase(), // Backend expects UPPERCASE roles
+        role: toBackendRole(userData.role) || userData.role.toUpperCase(),
         institutionId: userData.institution?.trim() || null,
         employeeId: userData.employeeId?.trim() || null,
         nationalId: userData.nationalId?.trim() || null
       };
       
-      // Call backend API to create user
       const response = await api.post('/users', apiData);
       
       if (!response.success) {
@@ -186,15 +170,13 @@ export function AuthProvider({ children }) {
         };
       }
       
-      // Refresh users list from backend
       await fetchUsers();
       
-      // Success - return temp password for display
       return { 
         success: true, 
-        message: "User created successfully.", 
+        message: response.message || "User created successfully.", 
         user: response.data,
-        tempPassword: tempPassword
+        tempPassword: response.data?.tempPassword
       };
       
     } catch (error) {
@@ -208,22 +190,20 @@ export function AuthProvider({ children }) {
 
   async function updateUser(userId, updates) {
     try {
-      // Map frontend updates to backend API fields
       const apiUpdates = {
-        fullName: updates.name,
+        fullName: updates.name !== undefined ? updates.name : updates.fullName,
         phone: updates.phone,
         role: updates.role ? (toBackendRole(updates.role) || updates.role.toUpperCase()) : undefined,
         institutionId: updates.institution,
         employeeId: updates.employeeId,
-        nationalId: updates.nationalId
+        nationalId: updates.nationalId,
+        metadata: updates.metadata
       };
       
-      // Remove undefined fields
       Object.keys(apiUpdates).forEach(key => 
         apiUpdates[key] === undefined && delete apiUpdates[key]
       );
       
-      // Call backend API
       const response = await api.patch(`/users/${userId}`, apiUpdates);
       
       if (!response.success) {
@@ -233,8 +213,17 @@ export function AuthProvider({ children }) {
         };
       }
       
-      // Refresh users list from backend
       await fetchUsers();
+
+      if (user && user.id === userId && response.data) {
+        const frontendUser = transformUserFromBackend(response.data);
+        setUser(frontendUser);
+        try {
+          localStorage.setItem('user', JSON.stringify(frontendUser));
+        } catch {
+          // Ignore localStorage errors
+        }
+      }
       
       return {
         success: true,
@@ -252,21 +241,18 @@ export function AuthProvider({ children }) {
 
   async function toggleUserStatus(userId) {
     try {
-      // Get current user to determine new status
       const currentUsers = getUsers();
-      const user = currentUsers.find(u => u.id === userId);
+      const targetUser = currentUsers.find(u => u.id === userId);
       
-      if (!user) {
+      if (!targetUser) {
         return { success: false, message: 'User not found.' };
       }
       
-      // Determine new status (toggle)
-      const currentStatus = user.status || 'Active';
+      const currentStatus = targetUser.status || 'Active';
       const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
       
-      // Call backend API
       const response = await api.patch(`/users/${userId}/status`, {
-        status: newStatus.toUpperCase() // Backend expects UPPERCASE
+        status: newStatus.toUpperCase()
       });
       
       if (!response.success) {
@@ -276,7 +262,6 @@ export function AuthProvider({ children }) {
         };
       }
       
-      // Refresh users list from backend
       await fetchUsers();
       
       return {
@@ -295,12 +280,26 @@ export function AuthProvider({ children }) {
 
   async function login(email, password) {
     try {
+      const cleanEmail = (email || '').trim().toLowerCase();
       console.log('=== LOGIN ATTEMPT (Backend API) ===');
-      console.log('Email:', email);
+      console.log('Email:', cleanEmail);
+
+      if (cleanEmail.endsWith('@mesobcenter.et')) {
+        return {
+          success: false,
+          message: 'Access restricted: Legacy @mesobcenter.et domain is prohibited. Internal staff must use @mesobcenterh.gov.et and customers must use @gmail.com.'
+        };
+      }
+
+      if (!cleanEmail.endsWith('@gmail.com') && !cleanEmail.endsWith('@mesobcenterh.gov.et')) {
+        return {
+          success: false,
+          message: 'Invalid email domain. Customers must use @gmail.com and internal staff must use @mesobcenterh.gov.et.'
+        };
+      }
       
-      // Call backend login API
       const response = await api.post('/auth/login', {
-        email: email.trim(),
+        email: cleanEmail,
         password: password,
       });
       
@@ -311,63 +310,161 @@ export function AuthProvider({ children }) {
         return { success: false, message: response.message || "Invalid email or password. Please try again." };
       }
       
-      // Extract data from response
-      const { user: backendUser, accessToken } = response.data;
+      const { user: backendUser, accessToken, mustChangePassword } = response.data;
       
       if (!backendUser || !accessToken) {
         console.error('Invalid response format: missing user or token');
         return { success: false, message: "Invalid server response. Please try again." };
       }
       
-      // Transform backend user to frontend format
       const frontendUser = transformUserFromBackend(backendUser);
       
-      console.log('Transformed user:', frontendUser);
-      
-      // Validate role
       if (!VALID_ROLES.includes(frontendUser.role)) {
         console.error('Invalid role from backend:', frontendUser.role);
         return { success: false, message: "Invalid user role. Please contact support." };
       }
       
-      // Save JWT token
       saveToken(accessToken);
-      console.log('Token saved');
-      
-      // Update state
       setUser(frontendUser);
-      console.log('User state updated');
       
-      return { success: true, message: "Login successful.", user: frontendUser };
+      return { 
+        success: true, 
+        message: "Login successful.", 
+        user: frontendUser,
+        mustChangePassword: mustChangePassword || frontendUser.mustChangePassword
+      };
     } catch (error) {
       console.error('Login error:', error);
       return { success: false, message: "An error occurred during login. Please try again." };
     }
   }
 
+  async function changePassword(currentPassword, newPassword, confirmPassword) {
+    try {
+      const response = await api.post('/auth/change-password', {
+        currentPassword,
+        newPassword,
+        confirmPassword
+      });
+
+      if (!response.success) {
+        return {
+          success: false,
+          message: response.message || 'Failed to change password.'
+        };
+      }
+
+      const { user: backendUser, accessToken } = response.data;
+      if (backendUser) {
+        const frontendUser = transformUserFromBackend(backendUser);
+        frontendUser.mustChangePassword = false;
+        setUser(frontendUser);
+      }
+      if (accessToken) {
+        saveToken(accessToken);
+      }
+
+      return {
+        success: true,
+        message: 'Password changed successfully.'
+      };
+    } catch (error) {
+      console.error('changePassword error:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'An error occurred while changing password.'
+      };
+    }
+  }
+
+  async function verifyEmail(email, code, token = null) {
+    try {
+      const response = await api.post('/auth/verify-email', { email, code, token });
+      if (response.success && user) {
+        setUser(prev => ({ ...prev, emailVerified: true }));
+      }
+      return response;
+    } catch (error) {
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Verification failed.' 
+      };
+    }
+  }
+
+  async function resendVerification(email) {
+    try {
+      return await api.post('/auth/resend-verification', { email });
+    } catch (error) {
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Failed to resend code.' 
+      };
+    }
+  }
+
+  async function sendPhoneOTP(phone) {
+    try {
+      return await api.post('/auth/send-phone-otp', { phone });
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to send phone OTP.'
+      };
+    }
+  }
+
+  async function verifyPhoneOTP(code) {
+    try {
+      const res = await api.post('/auth/verify-phone-otp', { code });
+      if (res.success) {
+        setUser(prev => {
+          const updated = prev ? { ...prev, phoneVerified: true } : prev;
+          try {
+            if (updated) localStorage.setItem('user', JSON.stringify(updated));
+          } catch {
+            // ignore
+          }
+          return updated;
+        });
+      }
+      return res;
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to verify phone OTP.'
+      };
+    }
+  }
+
   async function logout() {
     try {
-      // Call backend logout API (best effort)
       await api.post('/auth/logout');
     } catch (error) {
       console.error('Logout API error:', error);
-      // Continue with client-side logout even if backend call fails
     }
     
-    // Clear token and user state
     removeToken();
     setUser(null);
-    
-    // Redirect to login page
     window.location.href = '/';
   }
 
   async function signup(name, email, password, role) {
     try {
+      const cleanEmail = (email || '').trim().toLowerCase();
+
       // Email format validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.trim())) {
+      if (!emailRegex.test(cleanEmail)) {
         return { success: false, message: "Please enter a valid email address." };
+      }
+
+      // Customer accounts strictly require Gmail address ending in @gmail.com
+      if (!cleanEmail.endsWith('@gmail.com')) {
+        return {
+          success: false,
+          message: "Customer registration requires a valid Google account ending in @gmail.com."
+        };
       }
       
       // Block staff role self-registration
@@ -376,41 +473,41 @@ export function AuthProvider({ children }) {
         return { success: false, message: "Staff accounts can only be created by administrators." };
       }
       
-      // Validate role is 'customer' or 'citizen' for public signup
-      if (role !== 'customer' && role !== 'citizen') {
+      // Validate role is 'customer' for public signup
+      if (role !== 'customer') {
         return { success: false, message: "Invalid role for public registration." };
       }
       
       // Call backend register API
       const response = await api.post('/auth/register', {
-        email: email.trim(),
+        email: cleanEmail,
         password: password,
         firstName: name.trim().split(' ')[0],
         lastName: name.trim().split(' ').slice(1).join(' ') || name.trim().split(' ')[0],
-        role: 'CUSTOMER', // Backend expects UPPERCASE
+        role: 'CUSTOMER',
       });
       
       if (!response.success) {
         return { success: false, message: response.message || "Registration failed. Please try again." };
       }
       
-      // Extract data from response
-      const { user: backendUser, accessToken } = response.data;
+      const { user: backendUser, accessToken, verificationCode } = response.data;
       
       if (!backendUser || !accessToken) {
         return { success: false, message: "Invalid server response. Please try again." };
       }
       
-      // Transform backend user to frontend format
       const frontendUser = transformUserFromBackend(backendUser);
       
-      // Save JWT token
       saveToken(accessToken);
-      
-      // Update state
       setUser(frontendUser);
       
-      return { success: true, message: "Account created successfully.", user: frontendUser };
+      return { 
+        success: true, 
+        message: "Account created successfully. Please verify your email.", 
+        user: frontendUser,
+        verificationCode 
+      };
     } catch (error) {
       console.error('Signup error:', error);
       return { success: false, message: "An error occurred during registration. Please try again." };
@@ -423,6 +520,11 @@ export function AuthProvider({ children }) {
       login, 
       logout, 
       signup, 
+      changePassword,
+      verifyEmail,
+      resendVerification,
+      sendPhoneOTP,
+      verifyPhoneOTP,
       getUsers, 
       fetchUsers,
       createUser, 
@@ -467,6 +569,16 @@ export const ROLE_LABELS = {
 // Legacy label aliases (non-enumerable so Object.entries / Object.keys don't produce duplicate items)
 Object.defineProperty(ROLE_LABELS, 'ict_staff', { value: 'Technician', enumerable: false, writable: true, configurable: true });
 Object.defineProperty(ROLE_LABELS, 'citizen', { value: 'Customer', enumerable: false, writable: true, configurable: true });
+
+// Internal staff roles manageable by administrators (Customer excluded as customers self-register)
+export const INTERNAL_ROLE_LABELS = {
+  super_admin:          "Super Admin",
+  mesob_manager:        "MESOB Manager",
+  institution_manager:  "Institution Manager",
+  employee:             "Employee",
+  technician:           "Technician",
+};
+Object.defineProperty(INTERNAL_ROLE_LABELS, 'ict_staff', { value: 'Technician', enumerable: false, writable: true, configurable: true });
 
 export const ROLE_BADGE = {
   super_admin:          "bg-slate-100 text-slate-800 border border-slate-300 font-medium",

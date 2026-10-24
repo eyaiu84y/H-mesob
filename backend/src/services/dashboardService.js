@@ -26,7 +26,7 @@ export const getDashboardData = async (currentUser) => {
         break;
       case 'CUSTOMER':
       case 'CITIZEN':
-        dashboardData = await getCitizenDashboard(currentUser.id);
+        dashboardData = await getCustomerDashboard(currentUser.id);
         break;
       default:
         return {
@@ -154,11 +154,14 @@ const getInstitutionManagerDashboard = async (institutionId) => {
 
   // Today's queue
   const today = new Date().toISOString().split('T')[0];
-  const { count: todayQueue } = await supabase
+  let todayQueueQuery = supabase
     .from('queues')
     .select('id', { count: 'exact', head: true })
-    .eq('institution_id', institutionId)
     .gte('queue_date', today);
+  if (institutionId) {
+    todayQueueQuery = todayQueueQuery.eq('institution_id', institutionId);
+  }
+  const { count: todayQueue } = await todayQueueQuery;
 
   const { count: pendingQueue } = await supabase
     .from('queues')
@@ -198,11 +201,14 @@ const getEmployeeDashboard = async (userId, institutionId) => {
 
   // Today's queue
   const today = new Date().toISOString().split('T')[0];
-  const { count: todayQueue } = await supabase
+  let todayQueueQuery = supabase
     .from('queues')
     .select('id', { count: 'exact', head: true })
-    .eq('institution_id', institutionId)
     .gte('queue_date', today);
+  if (institutionId) {
+    todayQueueQuery = todayQueueQuery.eq('institution_id', institutionId);
+  }
+  const { count: todayQueue } = await todayQueueQuery;
 
   const { count: myQueue } = await supabase
     .from('queues')
@@ -228,7 +234,7 @@ const getEmployeeDashboard = async (userId, institutionId) => {
 };
 
 /**
- * ICT Staff Dashboard
+ * ICT Staff / Technician Dashboard
  */
 const getIctStaffDashboard = async (userId, institutionId) => {
   // My tasks
@@ -239,11 +245,14 @@ const getIctStaffDashboard = async (userId, institutionId) => {
     .in('status', ['PENDING', 'IN_PROGRESS']);
 
   // Pending reports (unassigned)
-  const { count: pendingReports } = await supabase
+  let pendingReportsQuery = supabase
     .from('maintenance_reports')
     .select('id', { count: 'exact', head: true })
-    .eq('institution_id', institutionId)
     .eq('status', 'REPORTED');
+  if (institutionId) {
+    pendingReportsQuery = pendingReportsQuery.eq('institution_id', institutionId);
+  }
+  const { count: pendingReports } = await pendingReportsQuery;
 
   // Completed this week
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -255,25 +264,28 @@ const getIctStaffDashboard = async (userId, institutionId) => {
     .gte('completed_at', weekAgo);
 
   // Critical reports
-  const { count: criticalReports } = await supabase
+  let criticalReportsQuery = supabase
     .from('maintenance_reports')
     .select('id', { count: 'exact', head: true })
-    .eq('institution_id', institutionId)
     .eq('priority', 'CRITICAL')
     .in('status', ['REPORTED', 'ASSIGNED', 'IN_PROGRESS']);
+  if (institutionId) {
+    criticalReportsQuery = criticalReportsQuery.eq('institution_id', institutionId);
+  }
+  const { count: criticalReports } = await criticalReportsQuery;
 
   return {
-    myTasks,
-    pendingReports,
-    completedThisWeek,
-    criticalReports
+    myTasks: myTasks || 0,
+    pendingReports: pendingReports || 0,
+    completedThisWeek: completedThisWeek || 0,
+    criticalReports: criticalReports || 0
   };
 };
 
 /**
- * Citizen Dashboard
+ * Customer Dashboard
  */
-const getCitizenDashboard = async (userId) => {
+const getCustomerDashboard = async (userId) => {
   // My applications
   const { count: myApplications } = await supabase
     .from('applications')

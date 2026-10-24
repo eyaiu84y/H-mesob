@@ -1,6 +1,11 @@
 import { supabase } from '../config/supabase.js';
 import { sendQueueCallSMS, sendQueueJoinSMS, logSMSNotification } from './smsService.js';
 import { createNotification } from './notificationService.js';
+import {
+  dispatchQueueJoinNotifications,
+  dispatchQueueCallNotifications,
+  dispatchApplicationCompletedNotifications
+} from './customerNotificationOrchestrator.js';
 
 /**
  * Join queue
@@ -21,7 +26,7 @@ export const joinQueue = async (queueData, currentUser) => {
       console.error('❌ No authenticated user');
       return {
         success: false,
-        message: 'Authenticated citizen information is required.'
+        message: 'Authenticated customer information is required.'
       };
     }
 
@@ -205,47 +210,27 @@ export const joinQueue = async (queueData, currentUser) => {
       `Joined queue with token ${queueNumber}`
     );
 
-    // Send SMS confirmation (don't let this block success)
+    // Dispatch automated SMS and Gmail notifications (asynchronous, non-blocking)
     try {
-      if (currentUser.phone) {
-        // Count pending tokens before this one to get position
-        const { count } = await supabase
-          .from('queue_entries')
-          .select('id', { count: 'exact', head: true })
-          .eq('institution_id', institutionId)
-          .eq('status', 'PENDING')
-          .lt('created_at', new Date().toISOString());
+      const { count } = await supabase
+        .from('queue_entries')
+        .select('id', { count: 'exact', head: true })
+        .eq('institution_id', institutionId)
+        .eq('status', 'PENDING')
+        .lt('created_at', new Date().toISOString());
 
-        const position = (count || 0) + 1;
+      const position = (count || 0) + 1;
 
-        // Send SMS
-        const smsResult = await sendQueueJoinSMS(
-          currentUser.phone,
-          queueNumber,
-          newQueue.institutions?.name_en || 'MESOB Center',
-          position,
-          'en' // or 'am' for Amharic
-        );
-
-        // Log SMS attempt
-        await logSMSNotification(
-          currentUser.id,
-          currentUser.phone,
-          `Queue join: ${queueNumber}`,
-          smsResult.success ? 'SUCCESS' : 'FAILED',
-          smsResult.data
-        );
-
-        if (smsResult.success) {
-          console.log('✅ Queue join SMS sent to citizen:', currentUser.phone);
-        } else {
-          console.log('⚠️ Queue join SMS failed (non-critical):', smsResult.message);
-        }
-      } else {
-        console.log('⚠️ No phone number for citizen (SMS skipped)');
-      }
-    } catch (smsError) {
-      console.error('⚠️ Failed to send queue join SMS (non-critical):', smsError);
+      dispatchQueueJoinNotifications({
+        queueEntry: newQueue,
+        citizenId: currentUser.id,
+        serviceName: newQueue.services?.name_en || newQueue.services?.name || 'Public Service',
+        institutionName: newQueue.institutions?.name_en || newQueue.institutions?.name || 'Hawassa MESOB Center',
+        position,
+        estimatedWaitMinutes: position * 6,
+      });
+    } catch (notifErr) {
+      console.error('⚠️ Queue join notification trigger error (non-critical):', notifErr.message);
     }
 
     return {
@@ -417,7 +402,7 @@ export const calculateQueuePositionAndEstimate = async (queueEntry) => {
             relatedEntityId: queueEntry.id,
             relatedEntityType: 'queue'
           });
-          console.log(`🔔 Turn approaching notification sent to citizen ${queueEntry.citizen_id} for token ${queueEntry.queue_number}`);
+          console.log(`🔔 Turn approaching notification sent to customer ${queueEntry.citizen_id} for token ${queueEntry.queue_number}`);
         }
       } catch (notifErr) {
         console.error('Failed to send turn approaching notification (non-blocking):', notifErr);
@@ -738,7 +723,7 @@ export const getQueues = async (filters = {}, currentUser) => {
 
         return {
           success: false,
-          message: 'Failed to fetch queue citizens.'
+          message: 'Failed to fetch queue customers.'
         };
       }
 
@@ -1070,69 +1055,36 @@ export const callNext = async (queueId, currentUser) => {
 
     console.log('✅ Queue updated to IN_PROGRESS:', updatedQueue);
 
-    // Notify customer
+    // Dispatch automated SMS and Gmail notifications when called
     try {
-      await createNotification({
-        recipientId: queue.citizen_id,
-        type: 'QUEUE_ASSIGNMENT',
-        title: 'Your Turn in Queue',
-        message: `Token #${queue.queue_number} - Please proceed to the service counter.`,
-        relatedEntityId: queue.id,
-        relatedEntityType: 'queue'
-      });
-      console.log('✅ Notification sent to customer');
-    } catch (notifError) {
-      console.error('⚠️ Failed to send notification (non-critical):', notifError);
-    }
-
-    // Send SMS notification when citizen is called (don't let this block success)
-    try {
-      // Fetch citizen phone number and name
-      const { data: citizen, error: citizenError } = await supabase
-        .from('users')
-        .select('phone, full_name')
-        .eq('id', queue.citizen_id)
+      const { data: institution } = await supabase
+        .from('institutions')
+        .select('name_en, name_am')
+        .eq('id', queue.institution_id)
         .single();
 
-      if (!citizenError && citizen && citizen.phone) {
-        // Fetch institution name
-        const { data: institution } = await supabase
-          .from('institutions')
-          .select('name_en, name_am')
-          .eq('id', queue.institution_id)
+      let serviceTitle = 'Public Service';
+      if (queue.service_id) {
+        const { data: svc } = await supabase
+          .from('services')
+          .select('title_en, title_am')
+          .eq('id', queue.service_id)
           .single();
-
-        const institutionName = institution?.name_en || 'MESOB Center';
-
-        console.log('[SMS] Preparing to send queue call SMS to:', citizen.phone);
-
-        // Send SMS notification (in English by default, can add language preference later)
-        const smsResult = await sendQueueCallSMS(
-          citizen.phone,
-          queue.queue_number,
-          institutionName,
-          'en' // Change to 'am' for Amharic
-        );
-
-        // Log SMS attempt to database
-        await logSMSNotification(
-          queue.citizen_id,
-          citizen.phone,
-          `Queue ${queue.queue_number} called at ${institutionName}`,
-          smsResult.success ? 'SUCCESS' : 'FAILED',
-          smsResult.data
-        );
-
-        if (smsResult.success) {
-          console.log('✅ SMS sent successfully to citizen:', citizen.phone);
-        } else {
-          console.log('⚠️ SMS failed (non-critical):', smsResult.message);
-        }
-      } else {
-        console.log('⚠️ No phone number for citizen (SMS skipped)');
+        if (svc?.title_en) serviceTitle = svc.title_en;
       }
-    } catch (smsError) {
-      console.error('⚠️ Failed to send SMS (non-critical):', smsError);
+
+      const institutionName = institution?.name_en || 'Hawassa MESOB Center';
+      const counterNumber = currentUser.counter_number || currentUser.metadata?.counter || '1';
+
+      dispatchQueueCallNotifications({
+        queueEntry: updatedQueue,
+        citizenId: queue.citizen_id,
+        serviceName: serviceTitle,
+        institutionName,
+        counterNumber,
+      });
+    } catch (notifErr) {
+      console.error('⚠️ Queue call notification trigger error (non-critical):', notifErr.message);
     }
 
     // Log audit (don't let this block success)
@@ -1176,10 +1128,27 @@ export const updateQueueStatus = async (queueId, status, currentUser) => {
       };
     }
 
-    // Get queue
+    // Get queue with institution and service relationships
     const { data: queue } = await supabase
       .from('queue_entries')
-      .select('id, institution_id, queue_number, citizen_id')
+      .select(`
+        id,
+        institution_id,
+        service_id,
+        queue_number,
+        citizen_id,
+        started_at,
+        services (
+          id,
+          title_en,
+          title_am
+        ),
+        institutions (
+          id,
+          name_en,
+          name_am
+        )
+      `)
       .eq('id', queueId)
       .single();
 
@@ -1218,7 +1187,19 @@ export const updateQueueStatus = async (queueId, status, currentUser) => {
       .from('queue_entries')
       .update(updateData)
       .eq('id', queueId)
-      .select()
+      .select(`
+        *,
+        services (
+          id,
+          title_en,
+          title_am
+        ),
+        institutions (
+          id,
+          name_en,
+          name_am
+        )
+      `)
       .single();
 
     if (error) {
@@ -1241,6 +1222,33 @@ export const updateQueueStatus = async (queueId, status, currentUser) => {
       relatedEntityId: queueId,
       relatedEntityType: 'queue'
     });
+
+    // Trigger automated SMS & Gmail notifications if called or completed
+    try {
+      const serviceTitle = updatedQueue?.services?.title_en || queue?.services?.title_en || 'Counter Service';
+      const institutionName = updatedQueue?.institutions?.name_en || queue?.institutions?.name_en || 'Hawassa MESOB Center';
+
+      if (status === 'IN_PROGRESS') {
+        const counterNumber = currentUser.counter_number || currentUser.metadata?.counter || '1';
+        dispatchQueueCallNotifications({
+          queueEntry: updatedQueue || queue,
+          citizenId: queue.citizen_id,
+          serviceName: serviceTitle,
+          institutionName,
+          counterNumber,
+        });
+      } else if (isCompleted) {
+        dispatchApplicationCompletedNotifications({
+          application: { id: queue.id, application_number: queue.queue_number },
+          citizenId: queue.citizen_id,
+          serviceName: serviceTitle,
+          institutionName,
+          completedAt: new Date().toISOString(),
+        });
+      }
+    } catch (notifErr) {
+      console.error('⚠️ Queue status notification trigger error (non-critical):', notifErr.message);
+    }
 
     // Log audit
     await logAudit(currentUser.id, 'QUEUE_STATUS_UPDATE', `Updated queue token ${queue.queue_number} to ${status}`);

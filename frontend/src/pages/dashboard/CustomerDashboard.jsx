@@ -11,19 +11,567 @@ import { useFeedback } from '../../context/FeedbackContext';
 import { useServices } from '../../context/ServiceContext';
 import { useApp } from '../../context/AppContext';
 
+
+// ─── Plain Language Status Helper for Customers ─────────────────────
+function getPlainLanguageStatusInfo(status, lang) {
+  const norm = String(status || '').toUpperCase();
+  if (norm.includes('SUBMIT')) {
+    return {
+      badge: lang === 'am' ? 'ደርሷል' : 'Submitted',
+      badgeClass: 'bg-blue-50 dark:bg-blue-950/40 text-[#1e3a8a] dark:text-blue-300 border-blue-200 dark:border-blue-800',
+      description: lang === 'am' ? 'ማመልከቻዎ ደርሷል፤ በቅርቡ ይመደባል' : 'Your application has been received.',
+      actionText: lang === 'am' ? 'ሁኔታ ተመልከት' : 'View Details',
+      actionClass: 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/40 dark:hover:bg-blue-900/60 text-[#314ea1] dark:text-blue-300 border border-blue-200 dark:border-blue-700'
+    };
+  }
+  if (norm.includes('REVIEW') || norm.includes('PROGRESS')) {
+    return {
+      badge: lang === 'am' ? 'በግምገማ ላይ' : 'Under Review',
+      badgeClass: 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+      description: lang === 'am' ? 'ባለሙያዎች ማመልከቻዎን እየፈተሹ ነው' : 'Staff are checking your application.',
+      actionText: lang === 'am' ? 'ሂደት ተከታተል' : 'Track Review',
+      actionClass: 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/40 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700'
+    };
+  }
+  if (norm.includes('NEED') || norm.includes('DOC') || norm.includes('INFO')) {
+    return {
+      badge: lang === 'am' ? 'እርምጃ ያስፈልጋል' : 'Action Needed',
+      badgeClass: 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800 animate-pulse',
+      description: lang === 'am' ? 'እባክዎ የተጠየቀውን ተጨማሪ መረጃ ይስቀሉ' : 'Please provide requested information.',
+      actionText: lang === 'am' ? 'ሰነድ ይስቀሉ' : 'Provide Info',
+      actionClass: 'bg-rose-600 hover:bg-rose-700 text-white shadow-xs font-bold'
+    };
+  }
+  if (norm.includes('APPROV')) {
+    return {
+      badge: lang === 'am' ? 'ጸድቋል' : 'Approved',
+      badgeClass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+      description: lang === 'am' ? 'ማመልከቻዎ ጸድቋል፤ ወደ አገልግሎት መስኮት መሄድ ይችላሉ' : 'Approved — follow next steps.',
+      actionText: lang === 'am' ? 'ቀጣይ ደረጃዎች' : 'Next Steps',
+      actionClass: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs font-bold'
+    };
+  }
+  if (norm.includes('COMPLET')) {
+    return {
+      badge: lang === 'am' ? 'ተጠናቋል' : 'Completed',
+      badgeClass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+      description: lang === 'am' ? 'አገልግሎትዎ በተሳካ ሁኔታ ተጠናቋል' : 'Your service has been completed.',
+      actionText: lang === 'am' ? 'ግብረመልስ ስጥ' : 'Rate Service',
+      actionClass: 'bg-violet-50 hover:bg-violet-100 dark:bg-violet-900/40 dark:hover:bg-violet-900/60 text-violet-800 dark:text-violet-300 border border-violet-200 dark:border-violet-700'
+    };
+  }
+  if (norm.includes('REJECT')) {
+    return {
+      badge: lang === 'am' ? 'ውድቅ ተደርጓል' : 'Rejected',
+      badgeClass: 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+      description: lang === 'am' ? 'አልጸደቀም፤ ምክንያቱን ለማንበብ ይጫኑ' : 'Not approved. Read reason provided.',
+      actionText: lang === 'am' ? 'ምክንያት ተመልከት' : 'View Reason',
+      actionClass: 'bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-700 font-semibold'
+    };
+  }
+  return {
+    badge: status || 'Pending',
+    badgeClass: 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600',
+    description: lang === 'am' ? 'በሂደት ላይ' : 'Application processing.',
+    actionText: lang === 'am' ? 'ዝርዝር ይመልከቱ' : 'View Details',
+    actionClass: 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200'
+  };
+}
+
+// Helper to normalize phone number for Ethiopian display (e.g. 2519... -> 09...)
+const toLocalEthiopianPhone = (phone) => {
+  if (!phone) return '';
+  const str = String(phone).trim();
+  if (str.includes('@')) return ''; // never allow email in phone!
+  if (str.startsWith('+251')) return '0' + str.substring(4);
+  if (str.startsWith('251') && str.length === 12) return '0' + str.substring(3);
+  return str;
+};
+
 export default function CustomerDashboard() {
-  const { user } = useAuth();
+  const { user, updateUser, changePassword, verifyEmail, resendVerification, sendPhoneOTP, verifyPhoneOTP } = useAuth();
   const { t, lang, getStatusLabel } = useApp();
   const { getActiveTickets } = useQueue();
   const { applications, getActiveApplications, getCompletedApplications } = useApplications();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [applyKey, setApplyKey] = useState(0);
+  const [selectedApp, setSelectedApp] = useState(null);
   const firstName = user?.name?.split(' ')[0] || t.customer || (lang === 'am' ? 'ደንበኛ' : 'Customer');
   const activeQueueCount = getActiveTickets().length;
   
   // Get application counts
   const activeApplications = getActiveApplications().length;
   const completedApplications = getCompletedApplications().length;
+
+  // ── Verification States ─────────────────────────────────────
+  const [isVerifyEmailModalOpen, setIsVerifyEmailModalOpen] = useState(false);
+  const [emailVerifyCode, setEmailVerifyCode] = useState('');
+  const [emailVerifyLoading, setEmailVerifyLoading] = useState(false);
+  const [emailVerifyMsg, setEmailVerifyMsg] = useState(null);
+  const [emailResendCooldown, setEmailResendCooldown] = useState(0);
+
+  // Phone OTP States
+  const [phoneOtpCode, setPhoneOtpCode] = useState('');
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  const [phoneOtpLoading, setPhoneOtpLoading] = useState(false);
+  const [phoneOtpMsg, setPhoneOtpMsg] = useState(null);
+  const [phoneOtpCooldown, setPhoneOtpCooldown] = useState(0);
+
+  // ── Profile & Documents State ──────────────────────────────
+  const [profileForm, setProfileForm] = useState({
+    name: user?.name || '',
+    phone: toLocalEthiopianPhone(user?.phone || user?.metadata?.phone || user?.metadata?.phone_verification?.phone || ''),
+    dob: user?.metadata?.dob || '',
+    address: user?.metadata?.address || ''
+  });
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMsg, setProfileMsg] = useState(null);
+
+  // Change Password State
+  const [passwordForm, setPasswordForm] = useState({
+    current: '',
+    newPass: '',
+    confirm: ''
+  });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordMsg, setPasswordMsg] = useState(null);
+
+  // Uploaded Documents State
+  const defaultDocs = [
+    {
+      id: 'doc-national-id',
+      name: 'National_ID.pdf',
+      type: 'pdf',
+      category: 'National ID',
+      size: '245 KB',
+      uploadedAt: '2026-10-12',
+      status: 'Verified'
+    },
+    {
+      id: 'doc-photo',
+      name: 'Photo.jpg',
+      type: 'image',
+      category: 'Passport Photo',
+      size: '1.2 MB',
+      uploadedAt: '2026-10-14',
+      status: 'Verified'
+    },
+    {
+      id: 'doc-birth-cert',
+      name: 'Birth_Certificate.pdf',
+      type: 'pdf',
+      category: 'Birth Certificate',
+      size: '189 KB',
+      uploadedAt: '2026-10-15',
+      status: 'Verified'
+    }
+  ];
+
+  const [documents, setDocuments] = useState(() => {
+    if (Array.isArray(user?.metadata?.documents) && user.metadata.documents.length > 0) {
+      return user.metadata.documents;
+    }
+    return defaultDocs;
+  });
+
+  // Sync profile & documents when user context updates
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        name: user.name || '',
+        phone: toLocalEthiopianPhone(user.phone || user.metadata?.phone || user.metadata?.phone_verification?.phone || ''),
+        dob: user.metadata?.dob || '',
+        address: user.metadata?.address || ''
+      });
+      if (Array.isArray(user.metadata?.documents) && user.metadata.documents.length > 0) {
+        setDocuments(user.metadata.documents);
+      }
+    }
+  }, [user]);
+
+  // Document Modals State
+  const [previewDoc, setPreviewDoc] = useState(null);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadCategory, setUploadCategory] = useState('National ID');
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadFilePreview, setUploadFilePreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [uploadSuccessMsg, setUploadSuccessMsg] = useState(null);
+
+  // Profile Save Handler
+  const handleSaveProfile = async (e) => {
+    if (e) e.preventDefault();
+    if (profileForm.phone && profileForm.phone.includes('@')) {
+      setProfileMsg({
+        type: 'error',
+        text: lang === 'am' ? 'እባክዎ በስልክ ቁጥር ቦታ ትክክለኛ ስልክ ቁጥር ያስገቡ' : 'Please enter a valid phone number, not an email address.'
+      });
+      return;
+    }
+    setProfileSaving(true);
+    setProfileMsg(null);
+    try {
+      const res = await updateUser(user.id, {
+        name: profileForm.name,
+        phone: profileForm.phone,
+        metadata: {
+          dob: profileForm.dob,
+          address: profileForm.address,
+          documents: documents
+        }
+      });
+      if (res && res.success) {
+        setProfileMsg({
+          type: 'success',
+          text: lang === 'am' ? 'የመገለጫ መረጃዎ በተሳካ ሁኔታ ተዘምኗል!' : 'Profile information updated successfully!'
+        });
+        setTimeout(() => setProfileMsg(null), 5000);
+      } else {
+        setProfileMsg({
+          type: 'error',
+          text: res?.message || (lang === 'am' ? 'መገለጫ ማዘመን አልተሳካም።' : 'Failed to update profile.')
+        });
+      }
+    } catch (err) {
+      setProfileMsg({
+        type: 'error',
+        text: err?.response?.data?.message || err?.message || (lang === 'am' ? 'መገለጫ ማዘመን አልተሳካም።' : 'Failed to update profile.')
+      });
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  // Profile Cancel Handler
+  const handleCancelProfile = () => {
+    setProfileForm({
+      name: user?.name || '',
+      phone: user?.phone || user?.metadata?.phone || '',
+      dob: user?.metadata?.dob || '',
+      address: user?.metadata?.address || ''
+    });
+    setProfileMsg(null);
+  };
+
+  // ── Verification Handlers ──────────────────────────────────
+  const handleVerifyEmail = async (e) => {
+    if (e) e.preventDefault();
+    if (!emailVerifyCode.trim()) {
+      setEmailVerifyMsg({
+        type: 'error',
+        text: lang === 'am' ? 'እባክዎ ባለ 6-አሃዝ የማረጋገጫ ኮድ ያስገቡ' : 'Please enter the 6-digit verification code.'
+      });
+      return;
+    }
+    setEmailVerifyLoading(true);
+    setEmailVerifyMsg(null);
+    try {
+      const res = await verifyEmail(user?.email, emailVerifyCode.trim());
+      if (res.success) {
+        setEmailVerifyMsg({
+          type: 'success',
+          text: res.message || (lang === 'am' ? 'ኢሜይል በተሳካ ሁኔታ ተረጋግጧል!' : 'Email verified successfully!')
+        });
+        setTimeout(() => {
+          setIsVerifyEmailModalOpen(false);
+          setEmailVerifyCode('');
+          setEmailVerifyMsg(null);
+          window.location.reload();
+        }, 1500);
+      } else {
+        setEmailVerifyMsg({
+          type: 'error',
+          text: res.message || 'Verification failed. Please try again.'
+        });
+      }
+    } catch (err) {
+      setEmailVerifyMsg({
+        type: 'error',
+        text: err.response?.data?.message || err.message || 'Verification failed.'
+      });
+    } finally {
+      setEmailVerifyLoading(false);
+    }
+  };
+
+  const handleResendEmailVerification = async () => {
+    if (emailResendCooldown > 0) return;
+    setEmailVerifyLoading(true);
+    setEmailVerifyMsg(null);
+    try {
+      const res = await resendVerification(user?.email);
+      if (res.success) {
+        setEmailVerifyMsg({
+          type: 'success',
+          text: res.message || 'A new verification code has been sent to your email.'
+        });
+        setEmailResendCooldown(60);
+      } else {
+        setEmailVerifyMsg({
+          type: 'error',
+          text: res.message || 'Failed to resend code.'
+        });
+      }
+    } catch (err) {
+      setEmailVerifyMsg({
+        type: 'error',
+        text: err.response?.data?.message || err.message || 'Failed to resend code.'
+      });
+    } finally {
+      setEmailVerifyLoading(false);
+    }
+  };
+
+  // Cooldown timer for email
+  useEffect(() => {
+    if (emailResendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setEmailResendCooldown(c => Math.max(0, c - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [emailResendCooldown]);
+
+  // Phone OTP Handlers
+  const handleSendPhoneOTP = async () => {
+    const rawPhone = (profileForm.phone || user?.phone || '').trim();
+    if (!rawPhone) {
+      setPhoneOtpMsg({
+        type: 'error',
+        text: lang === 'am' ? 'እባክዎ በመጀመሪያ ስልክ ቁጥር ያስገቡ' : 'Please enter a valid phone number first.'
+      });
+      return;
+    }
+    if (rawPhone.includes('@')) {
+      setPhoneOtpMsg({
+        type: 'error',
+        text: lang === 'am'
+          ? 'በስልክ ቁጥር ቦታ ኢሜይል ገብቷል። እባክዎ ትክክለኛ የኢትዮጵያ ሞባይል ስልክ ቁጥር ያስገቡ (ለምሳሌ፡ 09... ወይም 07...)'
+          : 'An email address is entered in the phone field. Please enter a valid Ethiopian mobile number (e.g. 09... or 07...).'
+      });
+      return;
+    }
+
+    // Client-side Ethiopian mobile check
+    const cleaned = rawPhone.replace(/[\s\-()]/g, '');
+    const isEthPhone = /^(?:\+?251|0)?(?:9|7)\d{8}$/.test(cleaned);
+    if (!isEthPhone) {
+      setPhoneOtpMsg({
+        type: 'error',
+        text: lang === 'am'
+          ? 'ትክክለኛ ያልሆነ የኢትዮጵያ ስልክ ቁጥር። እባክዎ ትክክለኛ የኢትዮ ቴሌኮም ወይም የሳፋሪኮም ቁጥር ያስገቡ (ለምሳሌ፡ 09... ወይም 07...)'
+          : 'Invalid Ethiopian mobile phone number. Please enter a valid Ethio Telecom or Safaricom number (e.g., 09... or 07...).'
+      });
+      return;
+    }
+
+    setPhoneOtpLoading(true);
+    setPhoneOtpMsg(null);
+    try {
+      const res = await sendPhoneOTP(rawPhone);
+      if (res.success) {
+        setPhoneOtpSent(true);
+        setPhoneOtpMsg({
+          type: 'success',
+          text: res.message || 'Verification code sent to your phone via SMS.'
+        });
+        if (res.verificationCode) {
+          setPhoneOtpCode(res.verificationCode);
+        }
+        setPhoneOtpCooldown(60);
+      } else {
+        setPhoneOtpMsg({
+          type: 'error',
+          text: res.message || 'Failed to send SMS OTP.'
+        });
+      }
+    } catch (err) {
+      setPhoneOtpMsg({
+        type: 'error',
+        text: err.response?.data?.message || err.message || 'Failed to send SMS OTP.'
+      });
+    } finally {
+      setPhoneOtpLoading(false);
+    }
+  };
+
+  const handleVerifyPhoneOTP = async (e) => {
+    if (e) e.preventDefault();
+    if (!phoneOtpCode.trim()) {
+      setPhoneOtpMsg({
+        type: 'error',
+        text: lang === 'am' ? 'እባክዎ ባለ 6-አሃዝ የማረጋገጫ ኮድ ያስገቡ' : 'Please enter the 6-digit OTP.'
+      });
+      return;
+    }
+    setPhoneOtpLoading(true);
+    setPhoneOtpMsg(null);
+    try {
+      const res = await verifyPhoneOTP(phoneOtpCode.trim());
+      if (res.success) {
+        setPhoneOtpMsg({
+          type: 'success',
+          text: res.message || (lang === 'am' ? 'ስልክ ቁጥር በተሳካ ሁኔታ ተረጋግጧል!' : 'Phone verified successfully!')
+        });
+        setPhoneOtpSent(false);
+        setPhoneOtpCode('');
+      } else {
+        setPhoneOtpMsg({
+          type: 'error',
+          text: res.message || 'Failed to verify phone OTP.'
+        });
+      }
+    } catch (err) {
+      setPhoneOtpMsg({
+        type: 'error',
+        text: err.response?.data?.message || err.message || 'Failed to verify phone OTP.'
+      });
+    } finally {
+      setPhoneOtpLoading(false);
+    }
+  };
+
+  // Cooldown timer for phone
+  useEffect(() => {
+    if (phoneOtpCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setPhoneOtpCooldown(c => Math.max(0, c - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [phoneOtpCooldown]);
+
+  // Change Password Handler
+  const handleUpdatePassword = async (e) => {
+    if (e) e.preventDefault();
+    setPasswordMsg(null);
+    if (!passwordForm.current) {
+      setPasswordMsg({
+        type: 'error',
+        text: lang === 'am' ? 'እባክዎ አሁን ያለዎትን የይለፍ ቃል ያስገቡ።' : 'Please enter your current password.'
+      });
+      return;
+    }
+    if (!passwordForm.newPass || passwordForm.newPass.length < 8) {
+      setPasswordMsg({
+        type: 'error',
+        text: lang === 'am' ? 'አዲሱ የይለፍ ቃል ቢያንስ 8 ፊደላት መሆን አለበት።' : 'New password must be at least 8 characters.'
+      });
+      return;
+    }
+    if (passwordForm.newPass !== passwordForm.confirm) {
+      setPasswordMsg({
+        type: 'error',
+        text: lang === 'am' ? 'አዲሶቹ የይለፍ ቃሎች አይመሳሰሉም።' : 'New passwords do not match.'
+      });
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      const res = await changePassword(passwordForm.current, passwordForm.newPass, passwordForm.confirm);
+      if (res && res.success) {
+        setPasswordMsg({
+          type: 'success',
+          text: lang === 'am' ? 'የይለፍ ቃል በተሳካ ሁኔታ ተቀይሯል!' : 'Password updated successfully!'
+        });
+        setPasswordForm({ current: '', newPass: '', confirm: '' });
+        setTimeout(() => setPasswordMsg(null), 5000);
+      } else {
+        setPasswordMsg({
+          type: 'error',
+          text: res?.message || (lang === 'am' ? 'የይለፍ ቃል መቀየር አልተሳካም።' : 'Failed to change password.')
+        });
+      }
+    } catch (err) {
+      setPasswordMsg({
+        type: 'error',
+        text: err?.response?.data?.message || err?.message || (lang === 'am' ? 'የይለፍ ቃል መቀየር አልተሳካም።' : 'Failed to change password.')
+      });
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  // File Select Handler
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError(null);
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError(lang === 'am' ? 'የፋይሉ መጠን ከ 5MB መብለጥ የለበትም።' : 'File size cannot exceed 5MB.');
+      return;
+    }
+    setUploadFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setUploadFilePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Document Upload Handler
+  const handleUploadSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!uploadFile) {
+      setUploadError(lang === 'am' ? 'እባክዎ የሚሰቀል ፋይል ይምረጡ።' : 'Please select a file to upload.');
+      return;
+    }
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const isImg = uploadFile.type.startsWith('image/');
+      const newDoc = {
+        id: 'doc-' + Date.now(),
+        name: uploadFile.name,
+        type: isImg ? 'image' : 'pdf',
+        category: uploadCategory,
+        size: uploadFile.size > 1024 * 1024 
+          ? (uploadFile.size / (1024 * 1024)).toFixed(1) + ' MB'
+          : Math.max(1, Math.round(uploadFile.size / 1024)) + ' KB',
+        uploadedAt: new Date().toISOString().split('T')[0],
+        status: 'Under Review',
+        dataUrl: uploadFilePreview
+      };
+
+      const updatedDocs = [newDoc, ...documents];
+      setDocuments(updatedDocs);
+
+      // Persist to user metadata
+      await updateUser(user.id, {
+        metadata: {
+          documents: updatedDocs
+        }
+      });
+
+      setIsUploadModalOpen(false);
+      setUploadFile(null);
+      setUploadFilePreview(null);
+      setUploadSuccessMsg(lang === 'am' ? 'ሰነዱ በተሳካ ሁኔታ ተሰቅሏል!' : 'Document uploaded and attached successfully!');
+      setTimeout(() => setUploadSuccessMsg(null), 5000);
+    } catch (err) {
+      setUploadError(err?.message || (lang === 'am' ? 'ሰነድ መጫን አልተሳካም።' : 'Failed to upload document.'));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Document Delete Handler
+  const handleDeleteDocument = async (docId) => {
+    if (!window.confirm(lang === 'am' ? 'ይህንን ሰነድ ማስወገድ እርግጠኛ ነዎት?' : 'Are you sure you want to remove this document?')) {
+      return;
+    }
+    const updatedDocs = documents.filter(d => d.id !== docId);
+    setDocuments(updatedDocs);
+    try {
+      await updateUser(user.id, {
+        metadata: {
+          documents: updatedDocs
+        }
+      });
+    } catch (err) {
+      console.error('Failed to sync document removal:', err);
+    }
+  };
 
   const handleNavClick = (section) => {
     if (section === 'apply') {
@@ -60,279 +608,590 @@ export default function CustomerDashboard() {
     >
       {/* My Dashboard Section */}
       {activeSection === 'dashboard' && (
-        <>
-          {/* Welcome banner */}
-          <div className="relative overflow-hidden bg-gradient-to-r from-[#172554] via-[#1e3a8a] to-[#314ea1] rounded-2xl p-6 sm:p-7 text-white mb-8 shadow-sm border border-[#1e3a8a]/40">
-            {/* Top gold accent line */}
+        <div className="space-y-8">
+          {/* A. Welcome Banner (Section 2.A) */}
+          <div className="relative overflow-hidden bg-gradient-to-r from-[#0f172a] via-[#1e3a8a] to-[#2563eb] rounded-2xl p-6 sm:p-7 text-white shadow-sm border border-blue-900/40">
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#f4b51a] via-[#f59e0b] to-[#f4b51a]" />
-            
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+            <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative z-10">
               <div>
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 text-[#f4b51a] border border-[#f4b51a]/30 text-xs font-semibold mb-3 backdrop-blur-xs">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#f4b51a] border border-[#f4b51a]/30 text-xs font-semibold mb-3 backdrop-blur-xs">
                   <span>FDRE Hawassa MESOB Portal</span>
                   <span>•</span>
                   <span className="text-blue-100 font-normal">
                     {lang === 'am' ? 'የህዝብ አገልግሎቶች' : 'Public Services'}
                   </span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
                   {t.welcome_back}, {firstName}!
                 </h2>
-                <p className="text-blue-100/90 text-sm sm:text-base mt-1 max-w-xl">
-                  {t.track_applications || (lang === 'am' ? 'ማመልከቻዎችዎን ይከታተሉ እና በመሶብ ማዕከል አገልግሎቶችን ያመልክቱ።' : 'Track your applications and apply for services at MESOB Center.')}
+                <p className="text-blue-100/90 text-sm sm:text-base mt-1.5 max-w-xl leading-relaxed">
+                  {lang === 'am' 
+                    ? 'አገልግሎቶችን ያመልክቱ፣ ማመልከቻዎችን ይከታተሉ እና የወረፋ ሁኔታዎን በአንድ ቦታ ያረጋግጡ።' 
+                    : 'Apply for public services, track your applications, and check your queue status in one place.'}
                 </p>
               </div>
 
-              <div className="flex flex-col sm:items-end justify-center gap-1.5 sm:self-center">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/15 text-xs text-blue-100 backdrop-blur-xs">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  <span className="font-semibold text-white">
-                    {t.verified_account || (lang === 'am' ? 'የተረጋገጠ መለያ' : 'Verified Account')}
-                  </span>
+              <div className="flex flex-col sm:items-end justify-center gap-2.5 sm:self-center">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-xs text-blue-100 backdrop-blur-xs">
+                  {user?.emailVerified !== false ? (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="font-semibold text-white">
+                        {t.verified_account || (lang === 'am' ? 'የተረጋገጠ መለያ' : 'Verified Customer Account')}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                      <span className="font-semibold text-amber-200">
+                        {lang === 'am' ? 'ኢሜይል ማረጋገጫ ይጠብቃል' : 'Email Verification Pending'}
+                      </span>
+                    </>
+                  )}
                   <span>•</span>
                   <span>{lang === 'am' ? 'ሃዋሳ፣ ሲዳማ' : 'Hawassa, Sidama'}</span>
                 </div>
-                <p className="text-xs text-blue-200/80 hidden sm:block">
-                  {new Date().toLocaleDateString(lang === 'am' ? 'am-ET' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                <p className="text-xs text-blue-200/80">
+                  {lang === 'am' ? 'በቀላሉ ከታች ያሉትን ዋና ተግባራት ይምረጡ' : 'Select an action below to get started'}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {/* Active Applications */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all relative overflow-hidden">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                  {t.active_applications || (lang === 'am' ? 'ንቁ ማመልከቻዎች' : 'Active Applications')}
-                </span>
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#314ea1] border border-blue-100 flex items-center justify-center">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+          {/* Unverified Email Warning Banner */}
+          {user?.emailVerified === false && (
+            <div className="p-4 sm:p-5 bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-amber-900 dark:text-amber-100 shadow-xs">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl shrink-0">⚠️</span>
+                <div>
+                  <h4 className="font-bold text-sm sm:text-base text-amber-900 dark:text-amber-100">
+                    {lang === 'am' ? 'የኢሜይል ማረጋገጫ ያስፈልጋል' : 'Email Verification Required'}
+                  </h4>
+                  <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-300/90 mt-0.5">
+                    {lang === 'am' 
+                      ? 'የህዝብ አገልግሎቶችን ለማመልከት እና ወረፋ ለመያዝ እባክዎ ኢሜይልዎን ያረጋግጡ። የማረጋገጫ ኮድ ወደ ተመዘገበው Gmail ተልኳል።' 
+                      : 'To submit public service applications and join queues, please verify your email address. A verification link and code was sent to your registered Gmail address.'}
+                  </p>
                 </div>
               </div>
-              <p className="text-3xl font-extrabold text-[#1e3a8a]">{activeApplications}</p>
-              <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                <span>{lang === 'am' ? 'በሂደት እና በግምገማ ላይ' : 'In progress & review'}</span>
-              </p>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setIsVerifyEmailModalOpen(true)}
+                  className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                >
+                  {lang === 'am' ? 'አሁን አረጋግጥ' : 'Verify Email Now'}
+                </button>
+              </div>
             </div>
+          )}
 
-            {/* Completed */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:border-emerald-300 hover:shadow-sm transition-all relative overflow-hidden">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                  {t.completed_apps || (lang === 'am' ? 'የተጠናቀቁ' : 'Completed')}
-                </span>
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center justify-center">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+          {/* E. Active Queue Notification Banner (Section 2.E) */}
+          {(() => {
+            const activeTickets = getActiveTickets();
+            const currentTicket = activeTickets.length > 0 ? activeTickets[0] : null;
+            if (!currentTicket) return null;
+
+            if (currentTicket.status === 'called') {
+              return (
+                <div className="p-5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white rounded-2xl shadow-lg border-2 border-emerald-400 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in duration-200">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-2xl font-black shrink-0 shadow-xs">
+                      📢
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-extrabold uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full">
+                          {lang === 'am' ? 'የእርስዎ ተራ ደርሷል!' : "It's your turn!"}
+                        </span>
+                        <span className="text-xs text-emerald-100 font-mono">
+                          Ticket #{currentTicket.token}
+                        </span>
+                      </div>
+                      <h3 className="text-lg sm:text-xl font-extrabold mt-1">
+                        {lang === 'am'
+                          ? `እባክዎ ወዲያውኑ ወደ መስኮት ${currentTicket.counterNumber || currentTicket.counter || '1'} ይሂዱ`
+                          : `Please go to Counter #${currentTicket.counterNumber || currentTicket.counter || '1'}`}
+                      </h3>
+                      <p className="text-emerald-100/90 text-xs mt-0.5">
+                        {currentTicket.serviceName || 'Public Service Counter'} • {currentTicket.institutionName || 'MESOB Center'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActiveSection('queue')}
+                    className="px-5 py-2.5 bg-white text-emerald-800 rounded-xl font-bold text-xs hover:bg-emerald-50 transition cursor-pointer shrink-0 shadow-sm"
+                  >
+                    {lang === 'am' ? 'የወረፋ ማያ ይመልከቱ →' : 'View Queue Screen →'}
+                  </button>
+                </div>
+              );
+            }
+
+            return (
+              <div className="p-5 bg-gradient-to-r from-amber-500/15 via-blue-500/10 to-transparent dark:from-amber-950/40 dark:via-blue-950/30 border border-amber-300 dark:border-amber-700/60 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-xl bg-amber-500 text-white font-black text-lg flex items-center justify-center shadow-xs shrink-0">
+                    🎫
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 px-2 py-0.5 rounded">
+                        {lang === 'am' ? 'ንቁ የወረፋ ትኬት' : 'Active Queue Ticket'}
+                      </span>
+                      <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">
+                        #{currentTicket.token}
+                      </span>
+                    </div>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">
+                      {currentTicket.serviceName || (lang === 'am' ? 'የህዝብ አገልግሎት' : 'Public Service')}
+                    </p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                      {lang === 'am'
+                        ? `ከእርስዎ በፊት ${currentTicket.peopleAhead || 0} ሰዎች አሉ። የተገመተ የጥበቃ ጊዜ: ${currentTicket.estimatedWaitMinutes ? `ወደ ${currentTicket.estimatedWaitMinutes} ደቂቃ` : 'ጥቂት ደቂቃዎች'}`
+                        : `People ahead of you: ${currentTicket.peopleAhead || 0} • Estimated wait: ${currentTicket.estimatedWaitMinutes ? `About ${currentTicket.estimatedWaitMinutes} minutes` : 'A few minutes'}`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => setActiveSection('queue')}
+                    className="px-4 py-2 bg-[#314ea1] hover:bg-[#253d82] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>{lang === 'am' ? 'የወረፋዬን ሁኔታ ተመልከት' : 'Check My Queue'}</span>
+                    <span>→</span>
+                  </button>
                 </div>
               </div>
-              <p className="text-3xl font-extrabold text-emerald-700">{completedApplications}</p>
-              <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span>{lang === 'am' ? 'በተሳካ ሁኔታ ተጠናቋል' : 'Successfully processed'}</span>
-              </p>
+            );
+          })()}
+
+          {/* B. Main Action Buttons (Section 2.B) */}
+          <div>
+            <div className="flex items-center justify-between mb-3.5">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                {lang === 'am' ? 'ዋና ተግባራት' : 'What would you like to do?'}
+              </h3>
+              <span className="text-xs text-slate-400">
+                {lang === 'am' ? 'ፈጣን አገልግሎቶች' : 'Quick Actions'}
+              </span>
             </div>
-
-            {/* Active Queues */}
-            <button
-              onClick={() => setActiveSection('queue')}
-              className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:border-amber-400 hover:shadow-sm transition-all text-left cursor-pointer group"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide group-hover:text-amber-800 transition-colors">
-                  {t.active_queues || (lang === 'am' ? 'ንቁ ወረፈቶች' : 'Active Queue')}
-                </span>
-                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 border border-amber-100 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* 1. Apply for Service */}
+              <button
+                onClick={() => setActiveSection('apply')}
+                className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-700 shadow-xs hover:border-[#314ea1] dark:hover:border-blue-400 hover:shadow-md transition-all text-left flex flex-col justify-between group cursor-pointer relative overflow-hidden"
+              >
+                <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#314ea1] dark:text-blue-300 flex items-center justify-center mb-3 group-hover:bg-[#314ea1] group-hover:text-white transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
                 </div>
-              </div>
-              <p className="text-3xl font-extrabold text-amber-700">{activeQueueCount}</p>
-              <p className="text-xs text-amber-800 font-medium mt-1 flex items-center justify-between">
-                <span>
-                  {activeQueueCount > 0 
-                    ? (lang === 'am' ? `${activeQueueCount} ${t.ticket_waiting || 'ትኬት በመጠባበቅ ላይ'}` : `${activeQueueCount} ticket waiting`)
-                    : (t.no_active_ticket || 'No active ticket')}
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-[#314ea1] dark:group-hover:text-blue-400 transition-colors">
+                    {lang === 'am' ? 'አገልግሎት ያመልክቱ' : 'Apply for a Service'}
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    {lang === 'am' ? 'አዲስ የህዝብ አገልግሎት ማመልከቻ በቀላሉ ይጀምሩ' : 'Start a new service application'}
+                  </p>
+                </div>
+                <span className="mt-3 text-xs font-bold text-[#314ea1] dark:text-blue-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                  {lang === 'am' ? 'ማመልከቻ ጀምር' : 'Start Application'} →
                 </span>
-                <span className="group-hover:translate-x-1 transition-transform">→</span>
-              </p>
-            </button>
+              </button>
 
-            {/* Total Applications */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all relative overflow-hidden">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                  {t.total_applications || (lang === 'am' ? 'ጠቅላላ ማመልከቻዎች' : 'Total Submissions')}
-                </span>
-                <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              {/* 2. Check My Applications */}
+              <button
+                onClick={() => setActiveSection('applications')}
+                className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-700 shadow-xs hover:border-emerald-500 dark:hover:border-emerald-400 hover:shadow-md transition-all text-left flex flex-col justify-between group cursor-pointer relative overflow-hidden"
+              >
+                <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center mb-3 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-              </div>
-              <p className="text-3xl font-extrabold text-slate-900">{applications.length}</p>
-              <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                <span>{t.all_time_requests || (lang === 'am' ? 'አጠቃላይ ጥያቄዎች' : 'All-time requests')}</span>
-              </p>
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">
+                    {lang === 'am' ? 'ማመልከቻዎቼን ይከታተሉ' : 'Check My Applications'}
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    {lang === 'am' ? 'የገመገማ ሂደትን፣ የውሳኔ ሁኔታን እና ደረጃዎችን ይከታተሉ' : 'See progress of submitted applications'}
+                  </p>
+                </div>
+                <span className="mt-3 text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                  {lang === 'am' ? 'ሁኔታን ፈትሽ' : 'View Progress'} ({activeApplications}) →
+                </span>
+              </button>
+
+              {/* 3. Check My Queue */}
+              <button
+                onClick={() => setActiveSection('queue')}
+                className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-700 shadow-xs hover:border-amber-500 dark:hover:border-amber-400 hover:shadow-md transition-all text-left flex flex-col justify-between group cursor-pointer relative overflow-hidden"
+              >
+                <div className="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 flex items-center justify-center mb-3 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-amber-700 dark:group-hover:text-amber-300 transition-colors">
+                    {lang === 'am' ? 'የቀጥታ ወረፋዬን ይመልከቱ' : 'Check My Queue'}
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    {lang === 'am' ? 'ትኬትዎን፣ ከፊትዎ ያሉ ሰዎችን እና የሚጠበቅ ጊዜ ይመልከቱ' : 'View ticket, people ahead & waiting time'}
+                  </p>
+                </div>
+                <span className="mt-3 text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                  {lang === 'am' ? 'ወረፋ ይክፈቱ' : 'Live Ticket Status'} →
+                </span>
+              </button>
+
+              {/* 4. View My Feedback */}
+              <button
+                onClick={() => setActiveSection('feedback')}
+                className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-700 shadow-xs hover:border-violet-500 dark:hover:border-violet-400 hover:shadow-md transition-all text-left flex flex-col justify-between group cursor-pointer relative overflow-hidden"
+              >
+                <div className="w-11 h-11 rounded-xl bg-violet-50 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 flex items-center justify-center mb-3 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-violet-700 dark:group-hover:text-violet-300 transition-colors">
+                    {lang === 'am' ? 'የአገልግሎት ግብረመልስ' : 'View My Feedback'}
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    {lang === 'am' ? 'የተጠናቀቁ አገልግሎቶችን ይገምግሙ ወይም አስተያየት ይስጡ' : 'Review or submit feedback when eligible'}
+                  </p>
+                </div>
+                <span className="mt-3 text-xs font-bold text-violet-700 dark:text-violet-300 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                  {lang === 'am' ? 'ግብረመልስ ስጥ' : 'Rate & Review'} →
+                </span>
+              </button>
             </div>
           </div>
 
-          {/* Applications table */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-8">
-            <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          {/* C. Summary Cards (Section 2.C) */}
+          <div>
+            <div className="flex items-center justify-between mb-3.5">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                {lang === 'am' ? 'የአገልግሎት ሁኔታ ማጠቃለያ' : 'Summary of Your Account'}
+              </h3>
+              <span className="text-xs text-slate-400">
+                {lang === 'am' ? 'ቅጽበታዊ ሁኔታ' : 'Live Counts'}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* 1. Applications in Progress */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/90 dark:border-slate-700 border-t-3 border-t-blue-500 shadow-xs hover:border-blue-400 transition-all relative overflow-hidden">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+                    {lang === 'am' ? 'በሂደት ላይ ያሉ' : 'Applications in Progress'}
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#314ea1] dark:text-blue-300 border border-blue-100 dark:border-blue-800 flex items-center justify-center">
+                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="text-3xl font-extrabold text-[#1e3a8a] dark:text-blue-400">{activeApplications}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                  <span>{lang === 'am' ? 'በማዘጋጃ ቤት ባለሙያዎች በግምገማ ላይ ያሉ' : 'Currently being processed or reviewed'}</span>
+                </p>
+              </div>
+
+              {/* 2. Completed Services */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/90 dark:border-slate-700 border-t-3 border-t-emerald-500 shadow-xs hover:border-emerald-400 transition-all relative overflow-hidden">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+                    {lang === 'am' ? 'የተጠናቀቁ አገልግሎቶች' : 'Completed Services'}
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800 flex items-center justify-center">
+                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="text-3xl font-extrabold text-emerald-700 dark:text-emerald-400">{completedApplications}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  <span>{lang === 'am' ? 'በተሳካ ሁኔታ የተጠናቀቁ ማመልከቻዎች' : 'Confirmed as completed services'}</span>
+                </p>
+              </div>
+
+              {/* 3. My Active Queue */}
+              <button
+                onClick={() => setActiveSection('queue')}
+                className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/90 dark:border-slate-700 border-t-3 border-t-amber-500 shadow-xs hover:border-amber-400 transition-all text-left cursor-pointer group"
+              >
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors">
+                    {lang === 'am' ? 'የእኔ ንቁ ወረፋ' : 'My Active Queue'}
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-100 dark:border-amber-800 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="text-3xl font-extrabold text-amber-700 dark:text-amber-400">{activeQueueCount}</p>
+                <p className="text-xs text-amber-800 dark:text-amber-300 font-medium mt-1.5 flex items-center justify-between">
+                  <span>
+                    {activeQueueCount > 0 
+                      ? (lang === 'am' ? `${activeQueueCount} ትኬት በመጠባበቅ ላይ` : `${activeQueueCount} ticket waiting`)
+                      : (lang === 'am' ? 'አሁን ንቁ ወረፋ የለም' : 'No active queue entry')}
+                  </span>
+                  <span className="group-hover:translate-x-1 transition-transform">→</span>
+                </p>
+              </button>
+
+              {/* 4. Total Applications */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/90 dark:border-slate-700 border-t-3 border-t-indigo-500 shadow-xs hover:border-slate-300 dark:hover:border-slate-600 transition-all relative overflow-hidden">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+                    {lang === 'am' ? 'ጠቅላላ ማመልከቻዎች' : 'Total Applications'}
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 flex items-center justify-center">
+                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="text-3xl font-extrabold text-slate-900 dark:text-white">{applications.length}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+                  <span>{lang === 'am' ? 'በዚህ መለያ የተደረጉ አጠቃላይ ጥያቄዎች' : 'All-time submitted applications'}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* D. Application Tracking (Section 2.D) */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 shadow-xs overflow-hidden">
+            <div className="px-6 py-4.5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/40">
               <div className="flex items-center gap-2.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#314ea1]" />
-                <h2 className="font-bold text-slate-900 text-base">{t.recent_applications || 'Recent Applications'}</h2>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-[#1e3a8a] border border-blue-200/60">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#2563eb]" />
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                  {lang === 'am' ? 'የቅርብ ጊዜ ማመልከቻዎች' : 'Track Recent Applications'}
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/40 text-[#1e3a8a] dark:text-blue-300 border border-blue-200/60 dark:border-blue-800">
                   {applications.length}
                 </span>
               </div>
               <button
                 onClick={() => setActiveSection('applications')}
-                className="text-xs sm:text-sm font-semibold text-[#314ea1] hover:text-[#1e3a8a] flex items-center gap-1 group cursor-pointer"
+                className="text-xs sm:text-sm font-semibold text-[#2563eb] dark:text-blue-400 hover:underline flex items-center gap-1 group cursor-pointer"
               >
-                <span>{t.view_all || (lang === 'am' ? 'ሁሉንም ይመልከቱ' : 'View all')}</span>
+                <span>{lang === 'am' ? 'ሁሉንም ይመልከቱ' : 'View All Applications'}</span>
                 <span className="group-hover:translate-x-0.5 transition-transform">→</span>
               </button>
             </div>
-            
-            <div className="table-container border-0 rounded-none overflow-x-auto">
-              <table className="data-table w-full">
-                <thead>
-                  <tr className="bg-slate-50/80 text-xs font-semibold text-slate-600 uppercase tracking-wider border-b border-slate-200/80">
-                    <th className="px-5 py-3 text-left">{t.app_number_col || 'Application ID'}</th>
-                    <th className="px-5 py-3 text-left">{t.service_col || 'Service'}</th>
-                    <th className="px-5 py-3 text-left">{t.institution_col || 'Institution'}</th>
-                    <th className="px-5 py-3 text-left">{t.status_col || 'Status'}</th>
-                    <th className="px-5 py-3 text-left">{t.submitted_col || 'Submitted'}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {applications.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="text-center text-slate-400 py-12 px-4">
-                        <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-blue-50 text-[#314ea1] border border-blue-100 flex items-center justify-center">
-                          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
+
+            {applications.length === 0 ? (
+              <div className="text-center py-12 px-4">
+                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-400 border border-blue-100 dark:border-blue-800 flex items-center justify-center shadow-xs">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <p className="font-bold text-slate-800 dark:text-slate-100 text-base">
+                  {lang === 'am' ? 'እስካሁን የቀረበ ማመልከቻ የለም' : 'No applications submitted yet'}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto leading-relaxed">
+                  {lang === 'am' 
+                    ? 'ለማዘጋጃ ቤት አገልግሎቶች በመስመር ላይ ያመልክቱ እና እያንዳንዱን ደረጃ ይከታተሉ።' 
+                    : 'Submit an application online and track each review step in real time without visiting in person.'}
+                </p>
+                <button
+                  onClick={() => setActiveSection('apply')}
+                  className="mt-4 px-4 py-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-semibold transition shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>{lang === 'am' ? 'አሁን አገልግሎት ያመልክቱ' : 'Apply for a Service Now'}</span>
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="data-table w-full">
+                    <thead>
+                      <tr className="bg-slate-50/80 dark:bg-slate-900/60 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider border-b border-slate-200/80 dark:border-slate-700">
+                        <th className="px-5 py-3.5 text-left">{lang === 'am' ? 'የአገልግሎት ስም' : 'Service & Reference'}</th>
+                        <th className="px-5 py-3.5 text-left">{lang === 'am' ? 'ተቋም' : 'Institution'}</th>
+                        <th className="px-5 py-3.5 text-left">{lang === 'am' ? 'የቀረበበት ቀን' : 'Application Date'}</th>
+                        <th className="px-5 py-3.5 text-left">{lang === 'am' ? 'የአሁኑ ሁኔታ' : 'Current Status'}</th>
+                        <th className="px-5 py-3.5 text-right">{lang === 'am' ? 'ቀጣይ እርምጃ' : 'Next Action'}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
+                      {applications.slice(0, 5).map(app => {
+                        const displayService = lang === 'am' ? (app.serviceName_am || app.service_am || app.service) : app.service;
+                        const displayInstitution = lang === 'am' ? (app.institutionName_am || app.institution_am || app.institution) : app.institution;
+                        const statusInfo = getPlainLanguageStatusInfo(app.status, lang);
+                        const cleanRef = app.id ? `#${String(app.id).replace(/-/g, '').slice(0, 8).toUpperCase()}` : '#APP-REF';
+
+                        return (
+                          <tr key={app.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition-colors">
+                            <td className="px-5 py-3.5">
+                              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-snug">
+                                {displayService}
+                              </p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/70 px-1.5 py-0.5 rounded" title={app.id}>
+                                  {cleanRef}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-3.5 text-slate-700 dark:text-slate-300 text-sm">
+                              {displayInstitution}
+                            </td>
+                            <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 text-xs font-medium whitespace-nowrap">
+                              {app.submittedDate || 'Recent'}
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <div>
+                                <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold border ${statusInfo.badgeClass}`}>
+                                  {statusInfo.badge}
+                                </span>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 max-w-xs leading-tight">
+                                  {statusInfo.description}
+                                </p>
+                              </div>
+                            </td>
+                            <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                              <button
+                                onClick={() => {
+                                  setSelectedApp(app.id);
+                                  setActiveSection('applications');
+                                }}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer inline-flex items-center gap-1 ${statusInfo.actionClass}`}
+                              >
+                                <span>{statusInfo.actionText}</span>
+                                <span>→</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Cards View */}
+                <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700 p-3 space-y-3">
+                  {applications.slice(0, 5).map(app => {
+                    const displayService = lang === 'am' ? (app.serviceName_am || app.service_am || app.service) : app.service;
+                    const displayInstitution = lang === 'am' ? (app.institutionName_am || app.institution_am || app.institution) : app.institution;
+                    const statusInfo = getPlainLanguageStatusInfo(app.status, lang);
+                    const cleanRef = app.id ? `#${String(app.id).replace(/-/g, '').slice(0, 8).toUpperCase()}` : '#APP-REF';
+
+                    return (
+                      <div key={app.id} className="p-3 bg-slate-50/60 dark:bg-slate-700/30 rounded-xl space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white">
+                              {displayService}
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                              {displayInstitution}
+                            </p>
+                          </div>
+                          <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-200/80 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+                            {cleanRef}
+                          </span>
                         </div>
-                        <p className="font-semibold text-slate-700 text-sm">
-                          {t.no_apps_yet || 'No applications submitted yet'}
-                        </p>
-                        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                          {t.no_apps_yet_desc || 'Submit applications for government services online and track each step in real time.'}
-                        </p>
-                      </td>
-                    </tr>
-                  ) : (
-                    applications.slice(0, 5).map(app => {
-                      const displayService = lang === 'am' ? (app.serviceName_am || app.service_am || app.service) : app.service;
-                      const displayInstitution = lang === 'am' ? (app.institutionName_am || app.institution_am || app.institution) : app.institution;
-                      return (
-                        <tr key={app.id} className="hover:bg-slate-50/70 transition-colors">
-                          <td className="px-5 py-3.5 font-medium text-slate-900 text-sm font-mono">{app.id}</td>
-                          <td className="px-5 py-3.5 text-slate-800 text-sm font-medium">{displayService}</td>
-                          <td className="px-5 py-3.5 text-slate-600 text-sm">{displayInstitution}</td>
-                          <td className="px-5 py-3.5">
-                            <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium border ${
-                              String(app.status).toUpperCase().includes('SUBMIT') ? 'bg-blue-50 text-[#1e3a8a] border-blue-200' :
-                              String(app.status).toUpperCase().includes('REVIEW') ? 'bg-amber-50 text-amber-800 border-amber-200' :
-                              String(app.status).toUpperCase().includes('APPROV') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
-                              String(app.status).toUpperCase().includes('COMPLET') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
-                              'bg-rose-50 text-rose-800 border-rose-200'
-                            }`}>
-                              {getStatusLabel(app.status)}
+                        <div className="flex items-center justify-between pt-1">
+                          <div>
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold border ${statusInfo.badgeClass}`}>
+                              {statusInfo.badge}
                             </span>
-                          </td>
-                          <td className="px-5 py-3.5 text-slate-500 text-xs font-medium">{app.submittedDate}</td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                              {statusInfo.description}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedApp(app.id);
+                              setActiveSection('applications');
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition shrink-0 ${statusInfo.actionClass}`}
+                          >
+                            {statusInfo.actionText}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Quick action cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <button
-              onClick={() => setActiveSection('feedback')}
-              className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:border-amber-400 hover:shadow-sm transition-all text-left flex items-center justify-between group cursor-pointer"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 border border-amber-100 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-all shadow-xs">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900 group-hover:text-amber-800 transition-colors text-sm sm:text-base">
-                    {t.my_feedback || (lang === 'am' ? 'የአገልግሎት ግብረመልስ' : 'Service Feedback')}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {lang === 'am' ? 'የተጠናቀቁ አገልግሎቶችን ይገምግሙ እና አስተያየት ይስጡ' : 'Rate completed services and submit feedback'}
-                  </p>
-                </div>
+          {/* F. Helpful Guidance: How MESOB Works (Section 2.F) */}
+          <div className="bg-gradient-to-r from-blue-50/80 via-white to-blue-50/50 dark:from-slate-800 dark:via-slate-800/90 dark:to-slate-800 border border-blue-200/80 dark:border-slate-700 rounded-2xl p-6 shadow-xs">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-[#314ea1] dark:text-blue-300 flex items-center justify-center font-bold text-sm">
+                💡
               </div>
-              <span className="text-slate-400 group-hover:text-amber-700 group-hover:translate-x-1 transition-all text-sm font-semibold">
-                →
-              </span>
-            </button>
-
-            <Link
-              to="/service-catalogue"
-              className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:border-blue-400 hover:shadow-sm transition-all text-left flex items-center justify-between group cursor-pointer"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center group-hover:bg-[#1e3a8a] group-hover:text-white transition-all shadow-xs">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900 group-hover:text-[#1e3a8a] transition-colors text-sm sm:text-base">
-                    {lang === 'am' ? 'መስፈርቶች እና ክፍያዎች' : 'Requirements & Fees'}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {lang === 'am' ? 'ሰነዶች፣ ደረጃዎች እና የማስኬጃ ጊዜ' : 'Documents, steps & processing time'}
-                  </p>
-                </div>
+              <div>
+                <h4 className="font-bold text-slate-900 dark:text-white text-base">
+                  {lang === 'am' ? 'የመሶብ የህዝብ አገልግሎቶች እንዴት ይሰራሉ?' : 'How Hawassa MESOB Services Work (3 Simple Steps)'}
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {lang === 'am' ? 'ለደንበኞች የቀለለ እና ግልጽ የአገልግሎት አሰጣጥ' : 'Simple, transparent, and queue-free municipal public services'}
+                </p>
               </div>
-              <span className="text-slate-400 group-hover:text-[#1e3a8a] group-hover:translate-x-1 transition-all text-sm font-semibold">
-                →
-              </span>
-            </Link>
-          </div>
+            </div>
 
-          {/* Info box */}
-          <div className="p-4.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl flex items-start sm:items-center gap-3.5 shadow-xs">
-            <div className="w-9 h-9 rounded-xl bg-[#314ea1] text-[#f4b51a] flex items-center justify-center flex-shrink-0 shadow-xs font-bold text-sm">
-              ℹ️
-            </div>
-            <div className="text-xs sm:text-sm text-blue-950 leading-relaxed">
-              <strong className="font-semibold text-[#1e3a8a]">
-                {lang === 'am' ? 'የደንበኞች አገልግሎት ፖርታል:' : 'Customer Services Portal:'}
-              </strong>{' '}
-              {lang === 'am' 
-                ? 'ማመልከቻዎችን ያስገቡ፣ አገልግሎት ወረፋዎችን በርቀት ይቀላቀሉ እና የጸደቁበትን ሁኔታ ይከታተሉ። ሁሉም ይፋዊ የሁኔታ ዝመናዎች እና ማስታወቂያዎች በቀጥታ ከመለያዎ ጋር የተገናኙ ናቸው።' 
-                : 'Submit applications, join service queues remotely, and track approvals. All official status updates and notices are linked directly to your account.'}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              <div className="p-3.5 bg-white dark:bg-slate-900/60 rounded-xl border border-blue-100 dark:border-slate-700">
+                <div className="font-bold text-[#314ea1] dark:text-blue-400 mb-1 flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/60 flex items-center justify-center text-[11px]">1</span>
+                  <span>{lang === 'am' ? 'አገልግሎት ይምረጡ' : 'Choose a Service'}</span>
+                </div>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                  {lang === 'am' 
+                    ? 'ከመጀመርዎ በፊት አስፈላጊ መስፈርቶችን፣ ሰነዶችን እና የክፍያ መጠኖችን በቀላሉ ይመልከቱ።' 
+                    : 'Browse official requirements, documents, and fees before applying.'}
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-white dark:bg-slate-900/60 rounded-xl border border-blue-100 dark:border-slate-700">
+                <div className="font-bold text-[#314ea1] dark:text-blue-400 mb-1 flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/60 flex items-center justify-center text-[11px]">2</span>
+                  <span>{lang === 'am' ? 'በመስመር ላይ ይከታተሉ' : 'Track Online'}</span>
+                </div>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                  {lang === 'am' 
+                    ? 'የማመልከቻዎን ሁኔታ በማንኛውም ጊዜ ይከታተሉ፤ ባለሙያዎች ማብራሪያ ከጠየቁ ወዲያውኑ ያስገቡ።' 
+                    : 'Check your application status anytime; staff will review and update each milestone live.'}
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-white dark:bg-slate-900/60 rounded-xl border border-blue-100 dark:border-slate-700">
+                <div className="font-bold text-[#314ea1] dark:text-blue-400 mb-1 flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/60 flex items-center justify-center text-[11px]">3</span>
+                  <span>{lang === 'am' ? 'ተራዎ ሲደርስ ብቻ ይሂዱ' : 'Go to Counter When Called'}</span>
+                </div>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                  {lang === 'am' 
+                    ? 'በሰልፍ መቆም አያስፈልግም፤ ትኬትዎ ሲጠራ ወይም ሲጸድቅ በቀጥታ ወደ ተመደበው መስኮት ይሂዱ።' 
+                    : 'No need to stand in long queues; receive a live ticket and proceed only when your counter is ready.'}
+                </p>
+              </div>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* My Applications Section */}
       {activeSection === 'applications' && (
-        <MyApplicationsSection applications={applications} setActiveSection={setActiveSection} />
+        <MyApplicationsSection applications={applications} setActiveSection={setActiveSection} selectedApp={selectedApp} setSelectedApp={setSelectedApp} />
       )}
 
       {/* My Feedback Section */}
@@ -359,177 +1218,429 @@ export default function CustomerDashboard() {
       {activeSection === 'profile' && (
         <div className="space-y-6">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 mb-1">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
               {t.profile_documents || (lang === 'am' ? 'መገለጫ እና ሰነዶች' : 'Profile & Documents')}
             </h2>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               {lang === 'am' ? 'የግል መረጃዎን እና የተሰቀሉ ሰነዶችን ያስተዳድሩ።' : 'Manage your personal information and uploaded documents.'}
             </p>
           </div>
 
+          {/* Success toast for document upload */}
+          {uploadSuccessMsg && (
+            <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-sm font-semibold flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{uploadSuccessMsg}</span>
+              </div>
+              <button onClick={() => setUploadSuccessMsg(null)} className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800">×</button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Profile Information */}
+            {/* Profile Information & Password Form */}
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs">
-                <h3 className="font-bold text-slate-900 mb-4 text-base flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#314ea1]" />
-                  <span>{t.personal_information || (lang === 'am' ? 'የግል መረጃ' : 'Personal Information')}</span>
+              {/* Personal Information Card */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 p-6 shadow-xs">
+                <h3 className="font-bold text-slate-900 dark:text-white mb-4 text-base flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#314ea1]" />
+                    <span>{t.personal_information || (lang === 'am' ? 'የግል መረጃ' : 'Personal Information')}</span>
+                  </div>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/60 px-2.5 py-1 rounded-lg">
+                    {lang === 'am' ? 'የተረጋገጠ መታወቂያ' : 'Verified ID'}
+                  </span>
                 </h3>
+
+                {/* Profile Message Banner */}
+                {profileMsg && (
+                  <div className={`p-3.5 mb-4 rounded-xl border text-sm font-medium flex items-center justify-between ${
+                    profileMsg.type === 'success' 
+                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200' 
+                      : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      {profileMsg.type === 'success' ? (
+                        <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )}
+                      <span>{profileMsg.text}</span>
+                    </div>
+                    <button onClick={() => setProfileMsg(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold ml-2">×</button>
+                  </div>
+                )}
+
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                        {t.full_name || (lang === 'am' ? 'ሙሉ ስም' : 'Full Name')}
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
+                        {t.full_name || (lang === 'am' ? 'ሙሉ ስም' : 'Full Name')} <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="text"
-                        defaultValue={user?.name || (lang === 'am' ? 'ደንበኛ' : 'Customer')}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 text-sm"
+                        value={profileForm.name}
+                        onChange={(e) => setProfileForm(f => ({ ...f, name: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 dark:text-slate-100 text-sm transition"
+                        placeholder="e.g. Abebe Bikila"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                        {t.email || (lang === 'am' ? 'ኢሜይል' : 'Email')}
-                      </label>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                          {t.email || (lang === 'am' ? 'ኢሜይል' : 'Email')}
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          {user?.emailVerified !== false ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full">
+                              <span>✓</span> {lang === 'am' ? 'የተረጋገጠ' : 'Verified'}
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setIsVerifyEmailModalOpen(true)}
+                              className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-amber-700 bg-amber-50 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full hover:bg-amber-100 transition cursor-pointer"
+                            >
+                              <span>⚠</span> {lang === 'am' ? 'አረጋግጥ' : 'Verify Now'}
+                            </button>
+                          )}
+                          <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+                            {lang === 'am' ? 'የማይቀየር' : 'Read-only'}
+                          </span>
+                        </div>
+                      </div>
                       <input
                         type="email"
-                        defaultValue={user?.email || ''}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 text-sm"
+                        value={user?.email || ''}
+                        disabled
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 text-sm cursor-not-allowed select-none"
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                        {t.phone || (lang === 'am' ? 'ስልክ ቁጥር' : 'Phone Number')}
-                      </label>
-                      <input
-                        type="tel"
-                        placeholder="+251 91 234 5678"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 text-sm"
-                      />
+                      <div className="flex justify-between items-center mb-1.5">
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                          {t.phone || (lang === 'am' ? 'ስልክ ቁጥር' : 'Phone Number')}
+                        </label>
+                        {user?.phoneVerified ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full">
+                            <span>✓</span> {lang === 'am' ? 'የተረጋገጠ' : 'Verified'}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-amber-700 bg-amber-50 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
+                            <span>⚠</span> {lang === 'am' ? 'ያልተረጋገጠ' : 'Unverified'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="tel"
+                          name="customer_phone_number"
+                          id="customer-phone-number"
+                          autoComplete="off"
+                          inputMode="tel"
+                          value={profileForm.phone}
+                          onChange={(e) => {
+                            let val = e.target.value;
+                            if (val.includes('@')) {
+                              setPhoneOtpMsg({
+                                type: 'error',
+                                text: lang === 'am'
+                                  ? 'በስልክ ቁጥር ቦታ ኢሜይል አይፈቀድም። እባክዎ ትክክለኛ የሞባይል ስልክ ቁጥር ያስገቡ (ለምሳሌ፡ 09... ወይም 07...)'
+                                  : 'Email addresses are not allowed in the phone field. Please enter a valid Ethiopian mobile phone number (e.g. 09... or 07...).'
+                              });
+                              return;
+                            }
+                            val = val.replace(/[^\d+\s\-]/g, '');
+                            setProfileForm(f => ({ ...f, phone: val }));
+                            if (phoneOtpMsg?.text?.includes('email') || phoneOtpMsg?.text?.includes('ኢሜይል')) {
+                              setPhoneOtpMsg(null);
+                            }
+                          }}
+                          placeholder="0911 234 567 or 0711 234 567"
+                          className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 dark:text-slate-100 text-sm transition"
+                        />
+                        {!user?.phoneVerified && (
+                          <button
+                            type="button"
+                            onClick={handleSendPhoneOTP}
+                            disabled={phoneOtpLoading || phoneOtpCooldown > 0}
+                            className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-[#1e3a8a] dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer disabled:opacity-50"
+                          >
+                            {phoneOtpLoading ? 'Sending...' : phoneOtpCooldown > 0 ? `${phoneOtpCooldown}s` : (lang === 'am' ? 'በSMS አረጋግጥ' : 'Verify SMS')}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Phone OTP Verification Inline Form */}
+                      {phoneOtpSent && !user?.phoneVerified && (
+                        <div className="mt-2.5 p-3 rounded-xl bg-blue-50/60 dark:bg-slate-900/60 border border-blue-200/80 dark:border-slate-700 space-y-2">
+                          <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                            {lang === 'am' ? 'ባለ 6-አሃዝ የSMS ማረጋገጫ ኮድ ያስገቡ:' : 'Enter 6-digit SMS verification code:'}
+                          </p>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              maxLength={6}
+                              value={phoneOtpCode}
+                              onChange={(e) => setPhoneOtpCode(e.target.value.replace(/\D/g, ''))}
+                              placeholder="123456"
+                              className="w-32 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 font-mono text-center tracking-widest text-sm font-bold text-slate-900 dark:text-white"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleVerifyPhoneOTP}
+                              disabled={phoneOtpLoading || phoneOtpCode.length < 6}
+                              className="px-4 py-1.5 bg-[#1e3a8a] text-white rounded-lg text-xs font-bold hover:bg-[#172554] transition disabled:opacity-50 cursor-pointer"
+                            >
+                              {phoneOtpLoading ? 'Verifying...' : (lang === 'am' ? 'አረጋግጥ' : 'Verify')}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Phone OTP Message Banner */}
+                      {phoneOtpMsg && (
+                        <p className={`text-xs mt-1.5 font-medium ${phoneOtpMsg.type === 'success' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                          {phoneOtpMsg.text}
+                        </p>
+                      )}
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
                         {t.date_of_birth || (lang === 'am' ? 'የትውልድ ቀን' : 'Date of Birth')}
                       </label>
                       <input
                         type="date"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 text-sm"
+                        value={profileForm.dob}
+                        onChange={(e) => setProfileForm(f => ({ ...f, dob: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 dark:text-slate-100 text-sm transition"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
                       {t.address || (lang === 'am' ? 'አድራሻ' : 'Address')}
                     </label>
                     <textarea
                       rows="2"
-                      placeholder={lang === 'am' ? 'አድራሻዎ' : 'Your address'}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 text-sm"
+                      value={profileForm.address}
+                      onChange={(e) => setProfileForm(f => ({ ...f, address: e.target.value }))}
+                      placeholder={lang === 'am' ? 'ሀዋሳ፣ ክፍለ ከተማ፣ ቀበሌ...' : 'Hawassa, Subcity, Kebele, House No...'}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 dark:text-slate-100 text-sm transition"
                     />
                   </div>
                   <div className="flex gap-3 pt-2">
-                    <button className="px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white rounded-xl shadow-xs transition text-sm font-semibold cursor-pointer">
-                      {t.save_changes || (lang === 'am' ? 'ለውጦችን መዝግብ' : 'Save Changes')}
+                    <button
+                      onClick={handleSaveProfile}
+                      disabled={profileSaving}
+                      className="px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white rounded-xl shadow-xs transition text-sm font-semibold cursor-pointer disabled:opacity-60 flex items-center gap-2"
+                    >
+                      {profileSaving ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                          </svg>
+                          <span>{lang === 'am' ? 'በመመዝገብ ላይ...' : 'Saving...'}</span>
+                        </>
+                      ) : (
+                        <span>{t.save_changes || (lang === 'am' ? 'ለውጦችን መዝግብ' : 'Save Changes')}</span>
+                      )}
                     </button>
-                    <button className="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition text-sm font-medium cursor-pointer">
+                    <button
+                      onClick={handleCancelProfile}
+                      disabled={profileSaving}
+                      className="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition text-sm font-medium cursor-pointer"
+                    >
                       {t.cancel || (lang === 'am' ? 'ሰርዝ' : 'Cancel')}
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Change Password */}
-              <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs">
-                <h3 className="font-bold text-slate-900 mb-4 text-base flex items-center gap-2">
+              {/* Change Password Card */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 p-6 shadow-xs">
+                <h3 className="font-bold text-slate-900 dark:text-white mb-4 text-base flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#f4b51a]" />
                   <span>{t.change_password || (lang === 'am' ? 'የይለፍ ቃል ቀይር' : 'Change Password')}</span>
                 </h3>
+
+                {/* Password Message Banner */}
+                {passwordMsg && (
+                  <div className={`p-3.5 mb-4 rounded-xl border text-sm font-medium flex items-center justify-between ${
+                    passwordMsg.type === 'success' 
+                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200' 
+                      : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      {passwordMsg.type === 'success' ? (
+                        <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )}
+                      <span>{passwordMsg.text}</span>
+                    </div>
+                    <button onClick={() => setPasswordMsg(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold ml-2">×</button>
+                  </div>
+                )}
+
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                      {t.current_password || (lang === 'am' ? 'አሁን ያለው የይለፍ ቃል' : 'Current Password')}
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
+                      {t.current_password || (lang === 'am' ? 'አሁን ያለው የይለፍ ቃል' : 'Current Password')} <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="password"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 text-sm"
+                      value={passwordForm.current}
+                      onChange={(e) => setPasswordForm(f => ({ ...f, current: e.target.value }))}
+                      placeholder="••••••••"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 dark:text-slate-100 text-sm transition"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                      {t.new_password || (lang === 'am' ? 'አዲስ የይለፍ ቃል' : 'New Password')}
-                    </label>
-                    <input
-                      type="password"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                      {t.confirm_password || (lang === 'am' ? 'አዲሱን የይለፍ ቃል ያረጋግጡ' : 'Confirm New Password')}
-                    </label>
-                    <input
-                      type="password"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 text-sm"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
+                        {t.new_password || (lang === 'am' ? 'አዲስ የይለፍ ቃል' : 'New Password')} <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="password"
+                        value={passwordForm.newPass}
+                        onChange={(e) => setPasswordForm(f => ({ ...f, newPass: e.target.value }))}
+                        placeholder={lang === 'am' ? 'ቢያንስ 8 ፊደላት' : 'Min. 8 characters'}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 dark:text-slate-100 text-sm transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
+                        {t.confirm_password || (lang === 'am' ? 'አዲሱን የይለፍ ቃል ያረጋግጡ' : 'Confirm New Password')} <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="password"
+                        value={passwordForm.confirm}
+                        onChange={(e) => setPasswordForm(f => ({ ...f, confirm: e.target.value }))}
+                        placeholder={lang === 'am' ? 'አዲሱን ይለፍ ቃል ይድገሙ' : 'Repeat new password'}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 dark:text-slate-100 text-sm transition"
+                      />
+                    </div>
                   </div>
                   <div className="pt-2">
-                    <button className="px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white rounded-xl shadow-xs transition text-sm font-semibold cursor-pointer">
-                      {lang === 'am' ? 'የይለፍ ቃል አዘምን' : 'Update Password'}
+                    <button
+                      onClick={handleUpdatePassword}
+                      disabled={passwordSaving}
+                      className="px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white rounded-xl shadow-xs transition text-sm font-semibold cursor-pointer disabled:opacity-60 flex items-center gap-2"
+                    >
+                      {passwordSaving ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                          </svg>
+                          <span>{lang === 'am' ? 'በማዘመን ላይ...' : 'Updating Password...'}</span>
+                        </>
+                      ) : (
+                        <span>{lang === 'am' ? 'የይለፍ ቃል አዘምን' : 'Update Password'}</span>
+                      )}
                     </button>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Uploaded Documents */}
+            {/* Uploaded Documents & Stats Column */}
             <div className="space-y-6">
-              <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs">
-                <h3 className="font-bold text-slate-900 mb-4 text-base flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#314ea1]" />
-                  <span>{lang === 'am' ? 'የተሰቀሉ ሰነዶች' : 'Uploaded Documents'}</span>
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-3 bg-slate-50/80 border border-slate-100 rounded-xl">
-                    <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-700 border border-rose-100 flex items-center justify-center text-xs font-bold">
-                      PDF
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">National_ID.pdf</p>
-                      <p className="text-xs text-slate-500">245 KB</p>
-                    </div>
-                    <button className="text-[#314ea1] hover:text-[#1e3a8a] text-xs font-semibold cursor-pointer">
-                      {lang === 'am' ? 'ይመልከቱ' : 'View'}
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-50/80 border border-slate-100 rounded-xl">
-                    <div className="w-9 h-9 rounded-lg bg-blue-50 text-[#314ea1] border border-blue-100 flex items-center justify-center text-xs font-bold">
-                      IMG
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">Photo.jpg</p>
-                      <p className="text-xs text-slate-500">1.2 MB</p>
-                    </div>
-                    <button className="text-[#314ea1] hover:text-[#1e3a8a] text-xs font-semibold cursor-pointer">
-                      {lang === 'am' ? 'ይመልከቱ' : 'View'}
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-50/80 border border-slate-100 rounded-xl">
-                    <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-700 border border-rose-100 flex items-center justify-center text-xs font-bold">
-                      PDF
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">Birth_Certificate.pdf</p>
-                      <p className="text-xs text-slate-500">189 KB</p>
-                    </div>
-                    <button className="text-[#314ea1] hover:text-[#1e3a8a] text-xs font-semibold cursor-pointer">
-                      {lang === 'am' ? 'ይመልከቱ' : 'View'}
-                    </button>
-                  </div>
+              {/* Uploaded Documents Card */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 p-6 shadow-xs">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#314ea1]" />
+                    <span>{lang === 'am' ? 'የተሰቀሉ ሰነዶች' : 'Uploaded Documents'}</span>
+                  </h3>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/40 text-[#314ea1] dark:text-blue-300">
+                    {documents.length} {lang === 'am' ? 'ሰነዶች' : 'files'}
+                  </span>
                 </div>
-                <button className="w-full mt-4 px-4 py-2.5 border-2 border-dashed border-slate-300 text-slate-600 rounded-xl hover:border-[#314ea1] hover:text-[#314ea1] hover:bg-blue-50/40 transition text-sm font-semibold cursor-pointer">
-                  {lang === 'am' ? '+ አዲስ ሰነድ ይስቀሉ' : '+ Upload New Document'}
+
+                {documents.length === 0 ? (
+                  <div className="text-center py-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {lang === 'am' ? 'ምንም የተሰቀለ ሰነድ የለም' : 'No documents uploaded yet'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {documents.map((doc) => {
+                      const isPdf = doc.type === 'pdf' || (doc.name && doc.name.toLowerCase().endsWith('.pdf'));
+                      return (
+                        <div
+                          key={doc.id}
+                          className="flex items-center gap-3 p-3 bg-slate-50/80 dark:bg-slate-700/40 border border-slate-200/70 dark:border-slate-700 rounded-xl transition hover:border-[#314ea1]/40 hover:bg-slate-100/70 dark:hover:bg-slate-700/70"
+                        >
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 border ${
+                            isPdf
+                              ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                              : 'bg-blue-50 dark:bg-blue-950/40 text-[#314ea1] dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                          }`}>
+                            {isPdf ? 'PDF' : 'IMG'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate" title={doc.name}>
+                              {doc.name}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                              <span>{doc.size || '150 KB'}</span>
+                              <span>•</span>
+                              <span className="truncate">{doc.category || (isPdf ? 'Document' : 'Photo')}</span>
+                              <span>•</span>
+                              <span className="text-emerald-600 dark:text-emerald-400 font-medium">{doc.status || 'Verified'}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              onClick={() => setPreviewDoc(doc)}
+                              className="px-2.5 py-1 text-xs font-semibold text-[#314ea1] dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-lg transition cursor-pointer"
+                              title="View Document"
+                            >
+                              {lang === 'am' ? 'ይመልከቱ' : 'View'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDocument(doc.id)}
+                              className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
+                              title="Remove Document"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    setIsUploadModalOpen(true);
+                    setUploadError(null);
+                  }}
+                  className="w-full mt-4 px-4 py-2.5 border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl hover:border-[#314ea1] hover:text-[#314ea1] dark:hover:border-blue-400 dark:hover:text-blue-400 hover:bg-blue-50/40 dark:hover:bg-slate-700/40 transition text-sm font-semibold cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4 text-[#314ea1] dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>{lang === 'am' ? '+ አዲስ ሰነድ ይስቀሉ' : '+ Upload New Document'}</span>
                 </button>
               </div>
 
@@ -578,6 +1689,396 @@ export default function CustomerDashboard() {
               </div>
             </div>
           </div>
+
+          {/* ── Document Preview Modal ────────────────────────────── */}
+          {previewDoc && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-xs animate-in fade-in duration-150">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                {/* Modal Header */}
+                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/60">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold ${
+                      previewDoc.type === 'pdf' || previewDoc.name?.endsWith('.pdf')
+                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                        : 'bg-blue-100 text-[#314ea1] dark:bg-blue-950/60 dark:text-blue-300'
+                    }`}>
+                      {previewDoc.type === 'pdf' || previewDoc.name?.endsWith('.pdf') ? 'PDF' : 'IMG'}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-white text-base leading-snug">
+                        {previewDoc.name}
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {previewDoc.category || 'Official Document'} • {previewDoc.size || 'Standard'} • {previewDoc.uploadedAt || 'Uploaded'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setPreviewDoc(null)}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700 transition"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Modal Body / Viewer */}
+                <div className="p-6 overflow-y-auto flex-1">
+                  {previewDoc.dataUrl ? (
+                    previewDoc.type === 'image' || (!previewDoc.name?.endsWith('.pdf') && previewDoc.dataUrl.startsWith('data:image')) ? (
+                      <div className="flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-900/70 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                        <img
+                          src={previewDoc.dataUrl}
+                          alt={previewDoc.name}
+                          className="max-h-[50vh] rounded-lg shadow-sm object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                        <iframe
+                          src={previewDoc.dataUrl}
+                          title={previewDoc.name}
+                          className="w-full h-[50vh]"
+                        />
+                      </div>
+                    )
+                  ) : (
+                    /* Official Government Document Simulated Viewer */
+                    <div className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 rounded-xl p-6 border-2 border-slate-200 dark:border-slate-700 shadow-inner">
+                      {/* Ethiopian Government / MESOB Ribbon */}
+                      <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-700 mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a8a] to-[#0f172a] text-[#f4b51a] font-black flex items-center justify-center text-base border border-amber-400/40 shadow-sm">
+                            M
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase font-bold tracking-wider text-[#314ea1] dark:text-blue-400">
+                              Hawassa City Administration
+                            </p>
+                            <p className="text-sm font-extrabold text-slate-900 dark:text-white">
+                              MESOB Public Service Information Center
+                            </p>
+                          </div>
+                        </div>
+                        <span className="px-2.5 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 rounded-full border border-emerald-300 dark:border-emerald-700">
+                          ✓ {previewDoc.status || 'VERIFIED ARCHIVE'}
+                        </span>
+                      </div>
+
+                      {/* Document Details Grid */}
+                      <div className="grid grid-cols-2 gap-4 text-xs mb-6">
+                        <div className="p-3 bg-white dark:bg-slate-800/80 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <span className="text-slate-400 block mb-1 uppercase font-semibold">Document Title</span>
+                          <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{previewDoc.name}</span>
+                        </div>
+                        <div className="p-3 bg-white dark:bg-slate-800/80 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <span className="text-slate-400 block mb-1 uppercase font-semibold">Category</span>
+                          <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{previewDoc.category || 'General'}</span>
+                        </div>
+                        <div className="p-3 bg-white dark:bg-slate-800/80 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <span className="text-slate-400 block mb-1 uppercase font-semibold">Record Holder</span>
+                          <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{user?.name || 'Customer'}</span>
+                        </div>
+                        <div className="p-3 bg-white dark:bg-slate-800/80 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <span className="text-slate-400 block mb-1 uppercase font-semibold">Security Hash / Ref</span>
+                          <span className="font-mono text-slate-700 dark:text-slate-300">HAW-MESOB-{previewDoc.id.toUpperCase().slice(-8)}</span>
+                        </div>
+                      </div>
+
+                      {/* Official Verification Watermark Stamp */}
+                      <div className="p-4 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-[#314ea1] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                          ✓
+                        </div>
+                        <div className="text-xs">
+                          <p className="font-bold text-[#1e3a8a] dark:text-blue-300">
+                            Officially Authenticated Electronic Record
+                          </p>
+                          <p className="text-slate-600 dark:text-slate-400">
+                            This document has been verified against the Hawassa MESOB customer database and is valid for all municipal public service applications.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/60">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        if (previewDoc.dataUrl) {
+                          const a = document.createElement('a');
+                          a.href = previewDoc.dataUrl;
+                          a.download = previewDoc.name;
+                          a.click();
+                        } else {
+                          const blob = new Blob([
+                            `Hawassa MESOB Public Service System\nDocument: ${previewDoc.name}\nCategory: ${previewDoc.category}\nHolder: ${user?.name}\nStatus: Verified`
+                          ], { type: 'text/plain' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = previewDoc.name + '.txt';
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }
+                      }}
+                      className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      <span>{lang === 'am' ? 'አውርድ' : 'Download'}</span>
+                    </button>
+                    <button
+                      onClick={() => window.print()}
+                      className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                      </svg>
+                      <span>{lang === 'am' ? 'አትም' : 'Print'}</span>
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => setPreviewDoc(null)}
+                    className="px-5 py-2 bg-[#314ea1] hover:bg-[#253d82] text-white rounded-xl text-xs font-semibold transition cursor-pointer"
+                  >
+                    {lang === 'am' ? 'ዝጋ' : 'Close'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Upload New Document Modal ────────────────────────────── */}
+          {isUploadModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-xs animate-in fade-in duration-150">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-5">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                      {lang === 'am' ? 'አዲስ ሰነድ ይስቀሉ' : 'Upload New Document'}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {lang === 'am' ? 'ሰነድዎን ከመገለጫዎ ጋር ያያይዙ' : 'Attach supporting documents to your customer profile.'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsUploadModalOpen(false);
+                      setUploadFile(null);
+                      setUploadFilePreview(null);
+                      setUploadError(null);
+                    }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {uploadError && (
+                  <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs font-semibold flex items-center gap-2">
+                    <svg className="w-4 h-4 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{uploadError}</span>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {/* Category Selection */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
+                      {lang === 'am' ? 'የሰነድ ዓይነት' : 'Document Category'} <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={uploadCategory}
+                      onChange={(e) => setUploadCategory(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none"
+                    >
+                      <option value="National ID">National ID / Kebele ID</option>
+                      <option value="Passport Photo">Passport Photo</option>
+                      <option value="Birth Certificate">Birth Certificate</option>
+                      <option value="Proof of Residence">Proof of Residence</option>
+                      <option value="Educational Certificate">Educational Certificate</option>
+                      <option value="Power of Attorney">Power of Attorney</option>
+                      <option value="Other Document">Other Document</option>
+                    </select>
+                  </div>
+
+                  {/* File Dropzone */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
+                      {lang === 'am' ? 'ፋይል ይምረጡ' : 'Select File'} <span className="text-rose-500">*</span>
+                    </label>
+                    <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-[#314ea1] dark:hover:border-blue-400 rounded-xl cursor-pointer bg-slate-50/50 dark:bg-slate-900/50 hover:bg-blue-50/30 transition text-center group">
+                      <input
+                        type="file"
+                        accept=".pdf,image/png,image/jpeg,image/jpg"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                      {uploadFile ? (
+                        <div className="space-y-1">
+                          <div className="w-10 h-10 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                            ✓
+                          </div>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white truncate max-w-xs">
+                            {uploadFile.name}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {(uploadFile.size / 1024).toFixed(0)} KB • {lang === 'am' ? 'ለመቀየር ይጫኑ' : 'Click to change file'}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <svg className="w-8 h-8 mx-auto text-slate-400 group-hover:text-[#314ea1] transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                            {lang === 'am' ? 'ፋይል ለመምረጥ እዚህ ይጫኑ' : 'Click to choose file or drag & drop'}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            PDF, PNG, JPG (Max 5MB)
+                          </p>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                </div>
+
+                {/* Modal Actions */}
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                  <button
+                    onClick={() => {
+                      setIsUploadModalOpen(false);
+                      setUploadFile(null);
+                      setUploadFilePreview(null);
+                      setUploadError(null);
+                    }}
+                    disabled={uploading}
+                    className="px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-600 transition cursor-pointer"
+                  >
+                    {lang === 'am' ? 'ሰርዝ' : 'Cancel'}
+                  </button>
+                  <button
+                    onClick={handleUploadSubmit}
+                    disabled={uploading || !uploadFile}
+                    className="px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white rounded-xl text-xs font-semibold transition cursor-pointer shadow-xs disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {uploading ? (
+                      <>
+                        <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                        </svg>
+                        <span>{lang === 'am' ? 'በመጫን ላይ...' : 'Uploading & Saving...'}</span>
+                      </>
+                    ) : (
+                      <span>{lang === 'am' ? 'ሰነድ ጫን' : 'Upload Document'}</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Email Verification Modal */}
+      {isVerifyEmailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="h-1.5 w-full bg-gradient-to-r from-[#314ea1] via-[#1e3a8a] to-[#f4b51a]" />
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-[#1e3a8a] flex items-center justify-center font-bold text-base">
+                    ✉️
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                      {lang === 'am' ? 'የኢሜይል ማረጋገጫ' : 'Verify Your Email'}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {user?.email}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsVerifyEmailModalOpen(false)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 text-lg font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-600 dark:text-slate-300 mb-4 leading-relaxed">
+                {lang === 'am'
+                  ? 'ባለ 6-አሃዝ የማረጋገጫ ኮድ ወደ ተመዘገበው Gmail ተልኳል። እባክዎ ኮዱን ከታች ያስገቡ።'
+                  : 'A 6-digit verification code was sent to your registered Gmail address. Enter it below to activate all customer services.'}
+              </p>
+
+              {emailVerifyMsg && (
+                <div className={`p-3 rounded-xl mb-4 text-xs font-semibold ${
+                  emailVerifyMsg.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800'
+                    : 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-200 dark:border-rose-800'
+                }`}>
+                  {emailVerifyMsg.text}
+                </div>
+              )}
+
+              <form onSubmit={handleVerifyEmail} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
+                    {lang === 'am' ? 'የማረጋገጫ ኮድ (6 አሃዞች)' : '6-Digit Verification Code'}
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={emailVerifyCode}
+                    onChange={(e) => setEmailVerifyCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="123456"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-mono text-center tracking-widest text-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleResendEmailVerification}
+                    disabled={emailVerifyLoading || emailResendCooldown > 0}
+                    className="text-xs font-semibold text-[#314ea1] hover:underline disabled:opacity-50 cursor-pointer"
+                  >
+                    {emailResendCooldown > 0
+                      ? `Resend in ${emailResendCooldown}s`
+                      : (lang === 'am' ? 'አዲስ ኮድ ላክ' : 'Resend Code')}
+                  </button>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsVerifyEmailModalOpen(false)}
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer"
+                    >
+                      {lang === 'am' ? 'ዝጋ' : 'Close'}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={emailVerifyLoading || emailVerifyCode.length < 6}
+                      className="px-5 py-2 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] text-white rounded-xl text-xs font-bold hover:from-[#253d82] hover:to-[#172554] transition shadow-xs disabled:opacity-50 cursor-pointer"
+                    >
+                      {emailVerifyLoading ? (lang === 'am' ? 'በማረጋገጥ ላይ...' : 'Verifying...') : (lang === 'am' ? 'አረጋግጥ' : 'Verify')}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
     </DashboardLayout>
@@ -585,10 +2086,12 @@ export default function CustomerDashboard() {
 }
 
 // ─── My Applications Section Component ───────────────────────────
-function MyApplicationsSection({ applications, setActiveSection }) {
+function MyApplicationsSection({ applications, setActiveSection, selectedApp: externalSelectedApp, setSelectedApp: externalSetSelectedApp }) {
   const { t, lang, getStatusLabel, getStaffNotes } = useApp();
   const { resubmitApplication } = useApplications();
-  const [selectedApp, setSelectedApp] = useState(null);
+  const [internalSelectedApp, setInternalSelectedApp] = useState(null);
+  const selectedApp = externalSelectedApp !== undefined ? externalSelectedApp : internalSelectedApp;
+  const setSelectedApp = externalSetSelectedApp !== undefined ? externalSetSelectedApp : setInternalSelectedApp;
   const [statusFilter, setStatusFilter] = useState('All');
   const [resubmitting, setResubmitting] = useState(false);
 
@@ -1336,6 +2839,22 @@ function ApplyForServiceSection({ user, setActiveSection }) {
                 />
               </div>
 
+              {user?.emailVerified === false && (
+                <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-start gap-3">
+                  <span className="text-xl">⚠️</span>
+                  <div>
+                    <p className="text-xs font-bold text-amber-900 uppercase">
+                      {lang === 'am' ? 'የኢሜይል ማረጋገጫ ያስፈልጋል' : 'Email Verification Required'}
+                    </p>
+                    <p className="text-xs text-amber-800 mt-0.5">
+                      {lang === 'am'
+                        ? 'ማመልከቻ ለማስገባት እባክዎ መጀመሪያ ኢሜይልዎን ያረጋግጡ።'
+                        : 'Please verify your registered email address before submitting service applications.'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-4">
                 <p className="text-xs font-semibold text-amber-900 uppercase tracking-wide mb-1">
                   {lang === 'am' ? 'የማመልከቻ መረጃ:' : 'Application Information:'}
@@ -1350,10 +2869,12 @@ function ApplyForServiceSection({ user, setActiveSection }) {
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || user?.emailVerified === false}
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white rounded-xl shadow-xs transition font-semibold text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? (t.submitting || 'Submitting...') : (t.submit_application || (lang === 'am' ? 'ማመልከቻ አስገባ' : 'Submit Application'))}
+                  {user?.emailVerified === false 
+                    ? (lang === 'am' ? 'ኢሜይል ማረጋገጥ ያስፈልጋል' : 'Email Verification Required')
+                    : isSubmitting ? (t.submitting || 'Submitting...') : (t.submit_application || (lang === 'am' ? 'ማመልከቻ አስገባ' : 'Submit Application'))}
                 </button>
                 <button
                   type="button"

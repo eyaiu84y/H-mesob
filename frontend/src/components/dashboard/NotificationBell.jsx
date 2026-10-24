@@ -95,7 +95,7 @@ export default function NotificationBell({ onNavigate, className = '' }) {
     const role = (user?.role || '').toLowerCase();
     const type = notification.type;
 
-    if (role === 'customer' || role === 'citizen') {
+    if (role === 'customer') {
       switch (type) {
         case 'APPLICATION_UPDATE':
           return 'applications';
@@ -278,8 +278,8 @@ export default function NotificationBell({ onNavigate, className = '' }) {
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-label={`Notifications, ${unreadCount} unread`}
-        className={`relative p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 transition-all duration-200 focus:outline-hidden focus:ring-2 focus:ring-[#314ea1]/30 ${
-          isOpen ? 'bg-slate-100 text-[#314ea1]' : ''
+        className={`relative p-2 rounded-xl text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800 transition-all duration-200 focus:outline-hidden focus:ring-2 focus:ring-[#314ea1]/30 ${
+          isOpen ? 'bg-slate-100 dark:bg-slate-800 text-[#314ea1] dark:text-blue-400' : ''
         }`}
       >
         <svg
@@ -314,14 +314,14 @@ export default function NotificationBell({ onNavigate, className = '' }) {
           ref={dropdownRef}
           role="region"
           aria-label="Notification panel"
-          className="absolute right-0 mt-2 w-80 sm:w-96 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
+          className="absolute right-0 mt-2 w-80 sm:w-96 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
         >
           {/* Header */}
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/60">
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-slate-900">Notifications</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Notifications</h2>
               {unreadCount > 0 && (
-                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">
                   {unreadCount} new
                 </span>
               )}
@@ -332,7 +332,7 @@ export default function NotificationBell({ onNavigate, className = '' }) {
                 type="button"
                 onClick={refreshNotifications}
                 title="Refresh notifications"
-                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition-colors"
+                className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700 transition-colors"
                 aria-label="Refresh notifications"
               >
                 <svg
@@ -352,7 +352,7 @@ export default function NotificationBell({ onNavigate, className = '' }) {
                   type="button"
                   onClick={handleMarkAll}
                   disabled={markingAll}
-                  className="text-xs font-medium text-[#314ea1] hover:text-[#1e3a8a] hover:underline px-2 py-1 rounded-md transition-colors disabled:opacity-50"
+                  className="text-xs font-medium text-[#314ea1] dark:text-blue-400 hover:text-[#1e3a8a] dark:hover:text-blue-300 hover:underline px-2 py-1 rounded-md transition-colors disabled:opacity-50"
                 >
                   {markingAll ? 'Marking...' : 'Mark all read'}
                 </button>
@@ -361,14 +361,14 @@ export default function NotificationBell({ onNavigate, className = '' }) {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex border-b border-slate-100 bg-white px-4 pt-2 gap-4 text-xs font-semibold">
+          <div className="flex border-b border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 pt-2 gap-4 text-xs font-semibold">
             <button
               type="button"
               onClick={() => setActiveTab('all')}
               className={`pb-2.5 transition-colors border-b-2 ${
                 activeTab === 'all'
                   ? 'border-[#314ea1] text-[#314ea1]'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               All ({notifications.length})
@@ -379,7 +379,7 @@ export default function NotificationBell({ onNavigate, className = '' }) {
               className={`pb-2.5 transition-colors border-b-2 ${
                 activeTab === 'unread'
                   ? 'border-[#314ea1] text-[#314ea1]'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               Unread ({unreadCount})
@@ -401,7 +401,7 @@ export default function NotificationBell({ onNavigate, className = '' }) {
           )}
 
           {/* Notification List */}
-          <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-100 overscroll-contain">
+          <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700 overscroll-contain">
             {loading && notifications.length === 0 ? (
               <div className="p-8 text-center text-slate-400 space-y-2">
                 <div className="w-6 h-6 border-2 border-[#314ea1] border-t-transparent rounded-full animate-spin mx-auto" />
@@ -414,10 +414,10 @@ export default function NotificationBell({ onNavigate, className = '' }) {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                   </svg>
                 </div>
-                <p className="text-sm font-semibold text-slate-800">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                   {activeTab === 'unread' ? 'All caught up!' : 'No notifications'}
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   {activeTab === 'unread'
                     ? 'You have no unread notifications right now.'
                     : 'System notifications and updates will appear here.'}
@@ -430,8 +430,8 @@ export default function NotificationBell({ onNavigate, className = '' }) {
                   onClick={() => handleNotificationClick(item)}
                   className={`p-3.5 flex items-start gap-3 cursor-pointer transition-colors relative group ${
                     item.is_read
-                      ? 'bg-white hover:bg-slate-50/80 text-slate-700'
-                      : 'bg-blue-50/40 hover:bg-blue-50/80 text-slate-900'
+                      ? 'bg-white dark:bg-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-300'
+                      : 'bg-blue-50/40 dark:bg-blue-950/40 hover:bg-blue-50/80 dark:hover:bg-blue-900/40 text-slate-900 dark:text-white'
                   }`}
                 >
                   {/* Type Icon */}
@@ -440,17 +440,53 @@ export default function NotificationBell({ onNavigate, className = '' }) {
                   {/* Body */}
                   <div className="flex-1 min-w-0 pr-4">
                     <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <p className={`text-xs truncate ${item.is_read ? 'font-medium text-slate-800' : 'font-bold text-slate-900'}`}>
+                      <p className={`text-xs truncate ${item.is_read ? 'font-medium text-slate-800 dark:text-slate-200' : 'font-bold text-slate-900 dark:text-white'}`}>
                         {item.title}
                       </p>
-                      <span className="text-[10px] text-slate-600 font-medium whitespace-nowrap shrink-0">
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap shrink-0">
                         {formatTime(item.created_at)}
                       </span>
                     </div>
 
-                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">
                       {item.message}
                     </p>
+
+                    {/* Delivery Status Tracking Badges (Email & SMS tracked independently) */}
+                    {item.metadata?.delivery_tracking && (
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        {item.metadata.delivery_tracking.email && (
+                          <span
+                            title={item.metadata.delivery_tracking.email.error || `Recipient: ${item.metadata.delivery_tracking.email.recipient || ''}`}
+                            className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md font-semibold border ${
+                              item.metadata.delivery_tracking.email.email_status === 'accepted'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                                : item.metadata.delivery_tracking.email.email_status === 'skipped'
+                                ? 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                                : 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+                            }`}
+                          >
+                            <span>✉️</span>
+                            <span>Email: {item.metadata.delivery_tracking.email.email_status}</span>
+                          </span>
+                        )}
+                        {item.metadata.delivery_tracking.sms && (
+                          <span
+                            title={item.metadata.delivery_tracking.sms.error || `Recipient: ${item.metadata.delivery_tracking.sms.recipient || ''}`}
+                            className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md font-semibold border ${
+                              item.metadata.delivery_tracking.sms.sms_status === 'accepted'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                                : item.metadata.delivery_tracking.sms.sms_status === 'skipped'
+                                ? 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                                : 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+                            }`}
+                          >
+                            <span>📱</span>
+                            <span>SMS: {item.metadata.delivery_tracking.sms.sms_status}</span>
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Read / Unread Indicator & Actions */}
@@ -475,7 +511,7 @@ export default function NotificationBell({ onNavigate, className = '' }) {
           </div>
 
           {/* Footer */}
-          <div className="p-2.5 bg-slate-50/70 border-t border-slate-100 text-center text-[11px] text-slate-600">
+          <div className="p-2.5 bg-slate-50/70 dark:bg-slate-900/70 border-t border-slate-100 dark:border-slate-700 text-center text-[11px] text-slate-500 dark:text-slate-400">
             Hawassa MESOB Notifications
           </div>
         </div>

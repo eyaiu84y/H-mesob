@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth, ROLE_LABELS, ROLE_BADGE } from '../../context/AuthContext';
+import { useAuth, ROLE_LABELS, INTERNAL_ROLE_LABELS, ROLE_BADGE } from '../../context/AuthContext';
 import { useAnnouncements } from '../../context/AnnouncementContext';
 import { useServices } from '../../context/ServiceContext';
 import { useQueue } from '../../context/QueueContext';
@@ -7,8 +7,10 @@ import { useMaintenance } from '../../context/MaintenanceContext';
 import { organizationsData } from '../../data/organizations';
 import { useApp } from '../../context/AppContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
+import ThemeToggle from '../../components/ThemeToggle';
 import NotificationBell from '../../components/dashboard/NotificationBell';
 import ApprovalsManagement from '../../components/dashboard/ApprovalsManagement';
+import SidebarNavIcon from '../../components/dashboard/SidebarNavIcon';
 import api from '../../utils/api';
 
 // ─── Navigation sections ──────────────────────────────────────────
@@ -98,49 +100,121 @@ function SectionDashboard({ setActiveSection }) {
 
   return (
     <>
+      {/* Super Admin Executive Overview Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-[#0f172a] via-[#1e3a8a] to-[#2563eb] rounded-2xl p-6 text-white mb-8 shadow-sm border border-blue-900/40">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#f4b51a] via-[#f59e0b] to-[#f4b51a]" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#f4b51a] border border-[#f4b51a]/30 text-xs font-semibold mb-2.5 backdrop-blur-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Full System Administration</span>
+              <span>•</span>
+              <span className="text-blue-100 font-normal">Hawassa MESOB</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              System Health & Administration
+            </h2>
+            <p className="text-blue-100/90 text-sm mt-1 max-w-xl">
+              Complete oversight of registered customers, administrative personnel, institutions, central approvals, security policies, and system audit logs.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 sm:self-center">
+            <button
+              onClick={() => setActiveSection(t.user_management)}
+              className="px-4 py-2.5 rounded-xl bg-[#f4b51a] hover:bg-[#e0a20e] text-slate-900 text-xs font-bold transition shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+              <span>{t.user_management}</span>
+            </button>
+            <button
+              onClick={() => setActiveSection(t.central_approvals || 'Central Approvals')}
+              className="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-semibold transition backdrop-blur-xs inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <svg className="w-4 h-4 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Approvals</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Stat cards */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-2xl border border-blue-100/90 shadow-xs p-5 relative overflow-hidden group hover:shadow-md hover:border-blue-300 transition-all">
+        <button
+          onClick={() => setActiveSection(t.user_management)}
+          className="bg-white rounded-2xl border border-blue-100/90 shadow-xs p-5 relative overflow-hidden group hover:shadow-md hover:border-blue-300 transition-all text-left cursor-pointer"
+        >
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-600" />
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t.total_users}</p>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-blue-700 transition-colors">{t.total_users}</p>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:bg-blue-100 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
             </div>
           </div>
           <p className="text-3xl font-extrabold text-[#1e3a8a]">{users.length}</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-blue-100/90 shadow-xs p-5 relative overflow-hidden group hover:shadow-md hover:border-blue-300 transition-all">
+          <p className="text-xs text-slate-500 mt-1.5 flex items-center justify-between">
+            <span>Customers & personnel</span>
+            <span>→</span>
+          </p>
+        </button>
+
+        <button
+          onClick={() => setActiveSection(t.institution_management)}
+          className="bg-white rounded-2xl border border-blue-100/90 shadow-xs p-5 relative overflow-hidden group hover:shadow-md hover:border-blue-300 transition-all text-left cursor-pointer"
+        >
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1e3a8a] to-[#314ea1]" />
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t.institutions}</p>
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-indigo-700 transition-colors">{t.institutions}</p>
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 group-hover:bg-indigo-100 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
             </div>
           </div>
           <p className="text-3xl font-extrabold text-[#1e3a8a]">{institutions.length}</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-blue-100/90 shadow-xs p-5 relative overflow-hidden group hover:shadow-md hover:border-emerald-300 transition-all">
+          <p className="text-xs text-slate-500 mt-1.5 flex items-center justify-between">
+            <span>Partner agencies</span>
+            <span>→</span>
+          </p>
+        </button>
+
+        <button
+          onClick={() => setActiveSection(t.user_management)}
+          className="bg-white rounded-2xl border border-blue-100/90 shadow-xs p-5 relative overflow-hidden group hover:shadow-md hover:border-emerald-300 transition-all text-left cursor-pointer"
+        >
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t.active_users}</p>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-emerald-700 transition-colors">{t.active_users}</p>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-100 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
           </div>
           <p className="text-3xl font-extrabold text-emerald-700">{users.filter(u => u.status === 'Active').length}</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-blue-100/90 shadow-xs p-5 relative overflow-hidden group hover:shadow-md hover:border-amber-400 transition-all">
+          <p className="text-xs text-emerald-800 font-medium mt-1.5 flex items-center justify-between">
+            <span>Authorized accounts</span>
+            <span>→</span>
+          </p>
+        </button>
+
+        <button
+          onClick={() => setActiveSection(t.announcements)}
+          className="bg-white rounded-2xl border border-blue-100/90 shadow-xs p-5 relative overflow-hidden group hover:shadow-md hover:border-amber-400 transition-all text-left cursor-pointer"
+        >
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 to-[#f4b51a]" />
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t.announcements}</p>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-amber-800 transition-colors">{t.announcements}</p>
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100 group-hover:bg-amber-100 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
             </div>
           </div>
           <p className="text-3xl font-extrabold text-amber-700">{unread}</p>
-          <p className="text-xs text-amber-800 font-medium mt-1">{t.unread}</p>
-        </div>
+          <p className="text-xs text-amber-800 font-medium mt-1.5 flex items-center justify-between">
+            <span>{t.unread} circulars</span>
+            <span>→</span>
+          </p>
+        </button>
       </div>
 
       {/* User overview */}
@@ -192,8 +266,8 @@ function SectionDashboard({ setActiveSection }) {
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6">
         <h2 className="font-bold text-slate-900 mb-4">Role Overview</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-          {Object.entries(ROLE_LABELS).map(([key, label]) => {
-            const count = users.filter(u => u.role === key || (key === 'technician' && u.role === 'ict_staff') || (key === 'customer' && u.role === 'citizen')).length;
+          {Object.entries(INTERNAL_ROLE_LABELS).map(([key, label]) => {
+            const count = users.filter(u => u.role === key || (key === 'technician' && u.role === 'ict_staff')).length;
             return (
               <div key={key} className={`p-3 rounded-xl border ${ROLE_COLORS[key] || 'bg-slate-50 text-slate-800 border-slate-200'}`}>
                 <strong className="text-slate-900">{label}</strong>
@@ -225,6 +299,8 @@ function SectionUserManagement() {
   const [editUser, setEditUser] = useState(null);
   const [showAddUser, setShowAddUser] = useState(false);
   const [editError, setEditError] = useState('');
+  const [resetResultModal, setResetResultModal] = useState(null);
+  const [copiedPassword, setCopiedPassword] = useState(false);
 
   // Refresh users list when usersLoading completes (data has been fetched)
   useEffect(() => {
@@ -315,6 +391,16 @@ function SectionUserManagement() {
     if (!newUserForm.role) {
       setEditError('Role is required.');
       return;
+    }
+
+    // Email domain validation for internal roles
+    const internalRoles = ['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'technician', 'ict_staff'];
+    if (internalRoles.includes(newUserForm.role)) {
+      const emailLower = newUserForm.email.trim().toLowerCase();
+      if (!emailLower.endsWith('@mesobcenterh.gov.et')) {
+        setEditError('Internal staff accounts must use the official email format: username@mesobcenterh.gov.et');
+        return;
+      }
     }
 
     if (institutionRequired && !newUserForm.institution) {
@@ -410,6 +496,34 @@ function SectionUserManagement() {
     setEditError('');
   }
 
+  async function handleResetPassword(userId, userName) {
+    if (!confirm(`Reset password for "${userName}"?\n\nThis will generate a new temporary password and force the user to change it on next login. Their current sessions will be invalidated.`)) {
+      return;
+    }
+    try {
+      const response = await api.post(`/users/${userId}/reset-password`);
+      
+      const isSuccess = response?.success === true || response?.data?.success === true;
+      const dataObj = response?.data?.tempPassword ? response.data : (response?.data?.data || response?.data || {});
+      const tempPassword = dataObj.tempPassword;
+      const email = dataObj.email || userName;
+
+      if (isSuccess && tempPassword) {
+        setResetResultModal({
+          userName,
+          email,
+          tempPassword
+        });
+      } else {
+        const errorMsg = response?.message || response?.data?.message || 'Failed to reset password.';
+        alert(errorMsg);
+      }
+    } catch (err) {
+      console.error('Password reset error:', err);
+      alert(err.response?.data?.message || err.message || 'Failed to reset password.');
+    }
+  }
+
   async function handleToggleStatus(userId) {
     if (userId === currentUser?.id) {
       alert("You cannot deactivate your own account.");
@@ -479,9 +593,12 @@ function SectionUserManagement() {
               type="email"
               value={newUserForm.email}
               onChange={e => setNewUserForm(f => ({ ...f, email: e.target.value }))}
-              placeholder="user@example.com"
+              placeholder="username@mesobcenterh.gov.et"
               className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
             />
+            <p className="text-xs text-blue-700 mt-1 font-medium">
+              ⚠ Internal staff must use <strong>@mesobcenterh.gov.et</strong> email only.
+            </p>
           </div>
 
           {/* Phone */}
@@ -507,7 +624,7 @@ function SectionUserManagement() {
               className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
             >
               <option value="">Select Role...</option>
-              {Object.entries(ROLE_LABELS).map(([k, v]) => (
+              {Object.entries(INTERNAL_ROLE_LABELS).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
               ))}
             </select>
@@ -641,7 +758,7 @@ function SectionUserManagement() {
               onChange={e => setEditUser(u => ({ ...u, role: e.target.value }))}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
             >
-              {Object.entries(ROLE_LABELS).map(([k, v]) => (
+              {Object.entries(INTERNAL_ROLE_LABELS).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
               ))}
             </select>
@@ -713,6 +830,58 @@ function SectionUserManagement() {
     </div>
   );
 
+  // Reset Password Modal
+  const resetPasswordModal = resetResultModal && (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+        <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-bold text-slate-900 text-center mb-1">Password Reset Successful</h3>
+        <p className="text-xs text-slate-500 text-center mb-4">
+          Temporary password issued for <strong>{resetResultModal.email}</strong>
+        </p>
+        
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 mb-4">
+          <label className="block text-xs font-semibold text-slate-600 mb-1">Temporary Password</label>
+          <div className="flex items-center justify-between gap-2">
+            <code className="text-sm font-mono font-bold text-[#1e3a8a] select-all break-all">
+              {resetResultModal.tempPassword}
+            </code>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(resetResultModal.tempPassword);
+                setCopiedPassword(true);
+                setTimeout(() => setCopiedPassword(false), 2000);
+              }}
+              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition shrink-0 cursor-pointer"
+            >
+              {copiedPassword ? '✓ Copied' : 'Copy'}
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 mb-5">
+          ⚠ Share this password securely. The user <strong>must change it on their next login</strong> before accessing system dashboard resources.
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setResetResultModal(null);
+            setCopiedPassword(false);
+          }}
+          className="w-full py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition cursor-pointer"
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <div className="mb-6 flex items-center justify-between">
@@ -733,6 +902,7 @@ function SectionUserManagement() {
 
       {addUserModal}
       {editUserModal}
+      {resetPasswordModal}
 
       {/* Filters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
@@ -755,7 +925,7 @@ function SectionUserManagement() {
           className="px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
         >
           <option value="">All Roles</option>
-          {Object.entries(ROLE_LABELS).map(([k, v]) => (
+          {Object.entries(INTERNAL_ROLE_LABELS).map(([k, v]) => (
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
@@ -822,7 +992,7 @@ function SectionUserManagement() {
                       />
                     </td>
                     <td>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <button
                           onClick={() => {
                             const fullUser = getUsers().find(user => user.id === u.id);
@@ -856,6 +1026,15 @@ function SectionUserManagement() {
                             className={`text-sm font-semibold transition ${u.status === 'Active' ? 'text-amber-700 hover:text-amber-800' : 'text-emerald-700 hover:text-emerald-800'}`}
                           >
                             {u.status === 'Active' ? 'Deactivate' : 'Activate'}
+                          </button>
+                        )}
+                        {['super_admin','mesob_manager','institution_manager','employee','technician','ict_staff'].includes(u.role) && u.id !== currentUser?.id && (
+                          <button
+                            onClick={() => handleResetPassword(u.id, u.name)}
+                            className="text-sm font-semibold text-violet-700 hover:text-violet-900 transition"
+                            title="Reset to temporary password"
+                          >
+                            Reset Pwd
                           </button>
                         )}
                       </div>
@@ -1703,7 +1882,6 @@ function SectionInstitutionManagement() {
 function SectionRolesPermissions() {
   const { getUsers } = useAuth();
   const roleDefinitions = [
-    { role: 'customer',            label: 'Customer',            color: ROLE_COLORS.customer,            perms: ['View service requirements', 'Track own applications', 'View announcements', 'Submit feedback & contact forms'] },
     { role: 'employee',            label: 'Employee',            color: ROLE_COLORS.employee,            perms: ['Process assigned queue items', 'Search applications', 'View service requirements', 'View announcements'] },
     { role: 'technician',          label: 'Technician',          color: ROLE_COLORS.technician,          perms: ['View assigned technical tasks', 'Update task status', 'Submit maintenance reports', 'View announcements'] },
     { role: 'institution_manager', label: 'Institution Manager', color: ROLE_COLORS.institution_manager, perms: ['Monitor institution queue', 'Monitor applications', 'Assign tasks to Technicians', 'View maintenance', 'View institution reports', 'View announcements'] },
@@ -2119,7 +2297,7 @@ function QueueReportTab() {
                 return (
                   <tr key={q.id}>
                     <td className="font-medium">{q.queueNumber || q.queue_number || q.token || 'N/A'}</td>
-                    <td>{q.citizenName || q.customerName || 'Customer'}</td>
+                    <td>{q.customerName || q.citizenName || 'Customer'}</td>
                     <td>{inst?.name_en || 'Unknown'}</td>
                     <td>
                       <span className={`badge ${
@@ -2231,10 +2409,10 @@ function SectionReports() {
 function SectionAnalytics() {
   const { getUsers } = useAuth();
   const users = getUsers().map(stripPassword);
-  const byRole = Object.entries(ROLE_LABELS).map(([k, v]) => ({
+  const byRole = Object.entries(INTERNAL_ROLE_LABELS).map(([k, v]) => ({
     role: k,
     label: v,
-    count: users.filter(u => u.role === k || (k === 'technician' && u.role === 'ict_staff') || (k === 'customer' && u.role === 'citizen')).length
+    count: users.filter(u => u.role === k || (k === 'technician' && u.role === 'ict_staff')).length
   }));
 
   return (
@@ -2628,6 +2806,14 @@ export default function SuperAdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedApprovalEntityId, setSelectedApprovalEntityId] = useState(null);
 
+  const initials = (user?.name || user?.full_name || 'SA')
+    .split(' ')
+    .filter(Boolean)
+    .map(n => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
   function navigate(section, notification = null) {
     setActiveSection(section);
     setSidebarOpen(false);
@@ -2667,53 +2853,66 @@ export default function SuperAdminDashboard() {
 
         {/* ── Sidebar ── */}
         <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 flex flex-col transition-transform duration-200${sidebarOpen ? ' open' : ''}`}>
-          <div className="p-5 border-b border-blue-100/70">
+          <div className="p-5 border-b border-slate-800">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-sm border border-blue-400/20">S</div>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a8a] to-[#0f172a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-sm border border-slate-700/60">S</div>
               <div>
-                <p className="font-bold text-slate-900 text-sm">MESOB Center</p>
-                <p className="text-xs text-slate-500 font-medium">Super Admin</p>
+                <p className="font-bold text-white text-sm tracking-tight">MESOB Center</p>
+                <p className="text-xs text-slate-400 font-medium">Super Admin</p>
               </div>
             </div>
           </div>
 
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {getSections(t).map((section, idx) => (
-              <button key={idx} onClick={() => navigate(section)}
-                className={`sidebar-link w-full text-left${activeSection === section ? ' active' : ''}`}>
-                {section}
-              </button>
-            ))}
+          <nav className="flex-1 p-3.5 space-y-1 overflow-y-auto">
+            {getSections(t).map((section, idx) => {
+              const isActive = activeSection === section;
+              return (
+                <button key={idx} onClick={() => navigate(section)}
+                  className={`sidebar-link w-full text-left${isActive ? ' active' : ''} cursor-pointer`}>
+                  <SidebarNavIcon section={section} className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="truncate">{section}</span>
+                </button>
+              );
+            })}
           </nav>
 
-          <div className="p-4 border-t border-blue-100/70">
+          <div className="p-3.5 border-t border-slate-800">
             <button onClick={logout}
-              className="sidebar-link w-full text-left text-rose-600 hover:bg-rose-50/80 font-medium">
-              {t.logout}
+              className="sidebar-link w-full text-left text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 font-medium transition cursor-pointer">
+              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+              </svg>
+              <span>{t.logout}</span>
             </button>
           </div>
         </aside>
 
         {/* ── Main content ── */}
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="bg-white/85 backdrop-blur-xl border-b border-blue-100/80 shadow-[0_4px_20px_-4px_rgba(30,58,138,0.04)] px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+          <header className="bg-white border-b border-slate-200/80 px-4 lg:px-8 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
             <div className="flex items-center gap-3">
-              <button className="lg:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-700" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle sidebar">
+              <button className="lg:hidden p-2 rounded-xl hover:bg-slate-100 text-slate-700 cursor-pointer" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle sidebar">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/>
                 </svg>
               </button>
-              <h1 className="text-lg font-bold text-slate-900">
+              <h1 className="text-lg font-bold text-slate-900 tracking-tight">
                 {activeSection === t.dashboard ? t.system_admin_dashboard : activeSection}
               </h1>
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
+              <ThemeToggle />
               <NotificationBell onNavigate={(section, notification) => navigate(section, notification)} />
               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-[#1e3a8a] border border-blue-200">Super Admin</span>
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-slate-900">{user?.name}</p>
-                <p className="text-xs text-slate-500">{user?.email}</p>
+              <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200 hidden sm:flex">
+                <div className="w-8 h-8 rounded-full bg-blue-100 text-[#1e3a8a] font-bold text-xs flex items-center justify-center border border-blue-200/80">
+                  {initials}
+                </div>
+                <div className="text-left hidden md:block">
+                  <p className="text-sm font-semibold text-slate-900 leading-tight">{user?.name}</p>
+                  <p className="text-xs text-slate-500 leading-tight">{user?.email}</p>
+                </div>
               </div>
             </div>
           </header>
@@ -2725,7 +2924,7 @@ export default function SuperAdminDashboard() {
       </div>
 
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
     </div>
   );

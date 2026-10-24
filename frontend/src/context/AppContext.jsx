@@ -6,21 +6,40 @@ const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
   const [isDark, setIsDark] = useState(() => {
-    try { return localStorage.getItem('theme') === 'dark'; }
-    catch { return false; }
+    try {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') return true;
+      if (savedTheme === 'light') return false;
+      return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } catch {
+      return false;
+    }
   });
 
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
+      try { localStorage.setItem('theme', 'dark'); } catch {}
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+      try { localStorage.setItem('theme', 'light'); } catch {}
     }
   }, [isDark]);
 
-  function toggleTheme() { setIsDark((p) => !p); }
+  // Synchronize theme across multiple browser tabs
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'theme') {
+        setIsDark(e.newValue === 'dark');
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  function toggleTheme() {
+    setIsDark((prev) => !prev);
+  }
 
   const [lang, setLang] = useState(() => {
     try { return localStorage.getItem('lang') || 'en'; }
@@ -119,12 +138,12 @@ export const translations = {
     about_heading1: 'Serving Our',
     about_heading2: 'Community',
     about_heading3: 'with Excellence',
-    about_body_home: 'In one Mesob Center, we bring together essential government services, resources, and information into one seamless digital platform. Whether you are applying for permits, accessing public records, or exploring social services, our citizen-first hub is designed to make your experience faster, easier, and more transparent.',
+    about_body_home: 'In one Mesob Center, we bring together essential government services, resources, and information into one seamless digital platform. Whether you are applying for permits, accessing public records, or exploring social services, our customer-first hub is designed to make your experience faster, easier, and more transparent.',
     about_btn1: 'Explore Services',
     about_btn2: 'Learn More',
     about_card1_title: 'Digital Services',
     about_card1_desc: 'Apply for permits online',
-    about_card2_title: 'Citizen Support',
+    about_card2_title: 'Customer Support',
     about_card2_desc: '24/7',
     about_card3_title: 'Quick Processing',
     about_card3_desc: 'Fast and efficient service',
@@ -157,7 +176,7 @@ export const translations = {
     vision_goal2_title: 'Digital Innovation',
     vision_goal2_desc: 'Transform service delivery through cutting-edge digital solutions',
     vision_goal3_title: 'Resident Satisfaction',
-    vision_goal3_desc: 'Achieve the highest levels of citizen satisfaction and trust',
+    vision_goal3_desc: 'Achieve the highest levels of customer satisfaction and trust',
 
     // organizations
     org_title: 'SERVICE PROVIDER ORGANIZATIONS',
@@ -185,8 +204,8 @@ export const translations = {
     news2_preview: 'HAWASSA-MESOB Service launches new leadership program...',
     news2_source: 'Government',
     news3_category: 'Government',
-    news3_title: 'HAWASSA-MESOB Service Achieves 98.7% Citizen Satisfaction',
-    news3_preview: 'Outstanding performance in citizen satisfaction survey...',
+    news3_title: 'HAWASSA-MESOB Service Achieves 98.7% Customer Satisfaction',
+    news3_preview: 'Outstanding performance in customer satisfaction survey...',
     news3_source: 'Government',
 
     // videos
@@ -220,7 +239,7 @@ export const translations = {
 
     // government services section
     gov_title: 'Government Services',
-    gov_subtitle: 'Access government services quickly through our integrated digital platform, designed for citizens, international customers, and businesses.',
+    gov_subtitle: 'Access government services quickly through our integrated digital platform, designed for customers, organizations, and businesses.',
     gov_tag: 'OUR SERVICES',
     gov_card1_title: 'Local Customers',
     gov_card1_items: [
@@ -437,7 +456,6 @@ export const translations = {
     employee: 'Employee',
     ict_staff: 'Technician',
     technician: 'Technician',
-    citizen: 'Customer',
     customer: 'Customer',
     roles_permissions: 'Roles & Permissions',
     
@@ -477,7 +495,6 @@ export const translations = {
     
     // ========== CUSTOMER DASHBOARD ==========
     my_dashboard: 'My Dashboard',
-    citizen_portal: 'Customer Portal',
     customer_portal: 'Customer Portal',
     welcome_back: 'Welcome back',
     track_applications: 'Track your applications and apply for services at MESOB Center.',
@@ -1105,7 +1122,6 @@ export const translations = {
     employee: 'ሠራተኛ',
     ict_staff: 'ቴክኒሻን',
     technician: 'ቴክኒሻን',
-    citizen: 'ደንበኛ',
     customer: 'ደንበኛ',
     roles_permissions: 'ሚናዎች እና ፈቃዶች',
     
@@ -1145,7 +1161,6 @@ export const translations = {
     
     // ========== CUSTOMER DASHBOARD ==========
     my_dashboard: 'የኔ ዳሽቦርድ',
-    citizen_portal: 'የደንበኛ መግቢያ',
     customer_portal: 'የደንበኛ መግቢያ',
     welcome_back: 'እንደገና እንኳን ደህና መጡ',
     track_applications: 'ማመልከቻዎችዎን ይከታተሉ እና በመሶብ ማዕከል አገልግሎቶችን ያመልክቱ።',

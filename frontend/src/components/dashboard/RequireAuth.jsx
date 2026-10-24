@@ -5,6 +5,7 @@ import { useAuth, ROLE_ROUTES } from '../../context/AuthContext';
  * Route guard.
  * - Loading → show loading spinner
  * - Not logged in  → redirect to /login
+ * - Must change password → redirect to /change-password
  * - Role not allowed (if allowedRoles provided) → redirect to their own dashboard
  * - Otherwise → render children
  */
@@ -24,6 +25,11 @@ export default function RequireAuth({ allowedRoles, children }) {
 
   if (!isLoggedIn) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Enforce mandatory password change before accessing any dashboard
+  if (user?.mustChangePassword) {
+    return <Navigate to="/change-password" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {

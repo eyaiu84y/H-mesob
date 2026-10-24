@@ -1,6 +1,11 @@
 import bcrypt from 'bcrypt';
 import { supabase } from '../config/supabase.js';
 import { notifyApprovalRequest, notifyApprovalDecision } from './notificationService.js';
+import { 
+  isOfficialInstitutionalEmail, 
+  generateSecureTemporaryPassword, 
+  normalizeEmail 
+} from '../utils/authSecurity.js';
 
 // Helper: Log audit trail
 const logAudit = async ({ userId, action, entityType, entityId, oldValue, newValue, details }) => {
@@ -403,13 +408,15 @@ export const submitUser = async (userData, currentUser) => {
     }
 
     const fullName = (userData.fullName || userData.name || userData.full_name || '').trim();
-    const email = (userData.email || '').toLowerCase().trim();
+    const email = normalizeEmail(userData.email);
     const phone = userData.phone ? userData.phone.replace(/[\s\-()]/g, '') : null;
     const targetRole = (userData.role || '').toUpperCase();
     const institutionId = userData.institutionId || userData.institution_id || userData.institution || null;
     const employeeId = userData.employeeId || userData.employee_id || null;
     const nationalId = userData.nationalId || userData.national_id || null;
-    const tempPassword = userData.password || `Mesob@${Math.floor(100000 + Math.random() * 900000)}`;
+    const tempPassword = userData.password && userData.password.length >= 8 
+      ? userData.password 
+      : generateSecureTemporaryPassword();
 
     if (!email || !fullName || !targetRole) {
       return { success: false, message: 'Full name, email, and role are required.' };
@@ -420,6 +427,17 @@ export const submitUser = async (userData, currentUser) => {
     const normTargetRole = targetRole.toUpperCase();
     if (!validRoles.includes(normTargetRole)) {
       return { success: false, message: 'Invalid target role specified.' };
+    }
+
+    // Official institutional email validation for internal staff (strictly @mesobcenterh.gov.et)
+    const internalRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'];
+    if (internalRoles.includes(normTargetRole)) {
+      if (!isOfficialInstitutionalEmail(email)) {
+        return {
+          success: false,
+          message: 'Internal staff accounts must strictly use the official institutional email format ending in @mesobcenterh.gov.et.'
+        };
+      }
     }
 
     // Institutional roles require valid institution
@@ -495,7 +513,11 @@ export const submitUser = async (userData, currentUser) => {
         created_by: currentUser.id,
         created_at: nowIso,
         updated_at: nowIso,
-        metadata: { approval: approvalBlock }
+        metadata: { 
+          approval: approvalBlock,
+          must_change_password: true,
+          temp_password_issued_at: nowIso
+        }
       })
       .select('id, email, full_name, role, status, institution_id, employee_id, created_at, metadata')
       .single();
@@ -524,7 +546,10 @@ export const submitUser = async (userData, currentUser) => {
     return {
       success: true,
       message: 'User account created and submitted for Mesob Manager approval. Account remains inactive until approved.',
-      data: newUser
+      data: {
+        ...newUser,
+        tempPassword
+      }
     };
 
   } catch (error) {

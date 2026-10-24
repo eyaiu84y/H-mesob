@@ -20,6 +20,7 @@ import AboutUsPage from './pages/AboutUsPage';
 // Auth pages
 import LoginPage from './pages/dashboard/LoginPage';
 import SignupPage from './pages/dashboard/SignupPage';
+import ChangePasswordPage from './pages/dashboard/ChangePasswordPage';
 
 // Dashboard pages - lazy loaded for code splitting
 const SuperAdminDashboard = lazy(() => import('./pages/dashboard/SuperAdminDashboard'));
@@ -76,12 +77,13 @@ export default function App() {
                   {/* Auth */}
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/signup" element={<SignupPage />} />
+                  <Route path="/change-password" element={<ChangePasswordPage />} />
 
                   {/* General Dashboard Route - redirects based on role */}
                   <Route
                     path="/dashboard"
                     element={
-                      <RequireAuth allowedRoles={['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'technician', 'customer', 'ict_staff', 'citizen']}>
+                      <RequireAuth allowedRoles={['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'technician', 'customer', 'ict_staff']}>
                         <DashboardRedirect />
                       </RequireAuth>
                     }
@@ -131,14 +133,14 @@ export default function App() {
                   <Route
                     path="/dashboard/customer"
                     element={
-                      <RequireAuth allowedRoles={['customer', 'citizen']}>
+                      <RequireAuth allowedRoles={['customer']}>
                         <CustomerDashboard />
                       </RequireAuth>
                     }
                   />
                   {/* Legacy route redirects */}
                   <Route path="/dashboard/ict-staff" element={<Navigate to="/dashboard/technician" replace />} />
-                  <Route path="/dashboard/citizen" element={<Navigate to="/dashboard/customer" replace />} />
+                  <Route path="/dashboard/customer-alias" element={<Navigate to="/dashboard/customer" replace />} />
                 </Routes>
                         </Suspense>
                       </ErrorBoundary>

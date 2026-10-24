@@ -1,5 +1,11 @@
 import { supabase } from '../config/supabase.js';
 import { createNotification } from './notificationService.js';
+import {
+  dispatchApplicationSubmittedNotifications,
+  dispatchApplicationActionRequiredNotifications,
+  dispatchApplicationDecisionNotifications,
+  dispatchApplicationCompletedNotifications,
+} from './customerNotificationOrchestrator.js';
 
 // Recent submission cache to protect against rapid double-clicks
 const recentSubmissions = new Map();
@@ -230,6 +236,19 @@ export const createApplication = async (applicationData, currentUser) => {
       };
     }
 
+    // Persist phone number to customer user record if not yet set
+    const enteredPhone = appData?.phone || applicationData?.phone;
+    if (enteredPhone && (!currentUser.phone || !currentUser.phone.trim())) {
+      try {
+        await supabase
+          .from('users')
+          .update({ phone: enteredPhone.trim() })
+          .eq('id', currentUser.id);
+      } catch (phoneErr) {
+        console.warn('⚠️ Could not update user phone profile:', phoneErr.message);
+      }
+    }
+
     // Notify the applicant (Customer)
     await createNotification({
       recipientId: currentUser.id,
@@ -255,6 +274,18 @@ export const createApplication = async (applicationData, currentUser) => {
 
     // Log audit
     await logAudit(currentUser.id, 'APPLICATION_CREATE', `Created application ${applicationNumber}`);
+
+    // Dispatch automated SMS & Gmail notifications to customer
+    try {
+      dispatchApplicationSubmittedNotifications({
+        application: newApplication,
+        citizenId: currentUser.id,
+        serviceName: newApplication.services?.title_en || appData?.serviceName || 'Public Service',
+        institutionName: newApplication.institutions?.name_en || appData?.institutionName || 'Hawassa MESOB Center',
+      });
+    } catch (notifErr) {
+      console.error('⚠️ Application submit notification trigger error (non-critical):', notifErr.message);
+    }
 
     return {
       success: true,
@@ -352,11 +383,28 @@ export const getApplications = async (filters, currentUser) => {
       };
     }
 
-    const enrichedData = (data || []).map(item => ({
-      ...item,
-      customer_id: item.citizen_id,
-      customer: item.users
-    }));
+    const enrichedData = (data || []).map(item => {
+      const citizenUser = item.users || {};
+      const resolvedPhone = citizenUser.phone || item.application_data?.phone || null;
+      return {
+        ...item,
+        customer_id: item.citizen_id,
+        customer: {
+          ...citizenUser,
+          phone: resolvedPhone
+        },
+        customerName: citizenUser.full_name || item.application_data?.fullName,
+        customerEmail: citizenUser.email || item.application_data?.email,
+        customerPhone: resolvedPhone,
+        citizenName: citizenUser.full_name || item.application_data?.fullName,
+        citizenEmail: citizenUser.email || item.application_data?.email,
+        citizenPhone: resolvedPhone,
+        users: {
+          ...citizenUser,
+          phone: resolvedPhone
+        }
+      };
+    });
 
     return {
       success: true,
@@ -434,12 +482,28 @@ export const getApplicationById = async (applicationId, currentUser) => {
       };
     }
 
+    const citizenUser = application.users || {};
+    const resolvedPhone = citizenUser.phone || application.application_data?.phone || null;
+
     return {
       success: true,
       data: {
         ...application,
         customer_id: application.citizen_id,
-        customer: application.users
+        customer: {
+          ...citizenUser,
+          phone: resolvedPhone
+        },
+        customerName: citizenUser.full_name || application.application_data?.fullName,
+        customerEmail: citizenUser.email || application.application_data?.email,
+        customerPhone: resolvedPhone,
+        citizenName: citizenUser.full_name || application.application_data?.fullName,
+        citizenEmail: citizenUser.email || application.application_data?.email,
+        citizenPhone: resolvedPhone,
+        users: {
+          ...citizenUser,
+          phone: resolvedPhone
+        }
       }
     };
 
@@ -480,10 +544,27 @@ export const updateApplicationStatus = async (applicationId, status, notes, curr
       };
     }
 
-    // Get application
+    // Get application with institution and service relationships
     const { data: application } = await supabase
       .from('applications')
-      .select('id, citizen_id, institution_id, application_number, status')
+      .select(`
+        id,
+        citizen_id,
+        institution_id,
+        service_id,
+        application_number,
+        status,
+        services (
+          id,
+          title_en,
+          title_am
+        ),
+        institutions (
+          id,
+          name_en,
+          name_am
+        )
+      `)
       .eq('id', applicationId)
       .single();
 
@@ -528,7 +609,19 @@ export const updateApplicationStatus = async (applicationId, status, notes, curr
       .from('applications')
       .update(updateData)
       .eq('id', applicationId)
-      .select()
+      .select(`
+        *,
+        services (
+          id,
+          title_en,
+          title_am
+        ),
+        institutions (
+          id,
+          name_en,
+          name_am
+        )
+      `)
       .single();
 
     if (error) {
@@ -564,6 +657,41 @@ export const updateApplicationStatus = async (applicationId, status, notes, curr
       relatedEntityId: applicationId,
       relatedEntityType: 'application'
     });
+
+    // Trigger automated SMS & Gmail notifications to customer based on specific status transition
+    try {
+      const serviceTitle = updatedApplication?.services?.title_en || application?.services?.title_en || 'Public Service';
+      const institutionName = updatedApplication?.institutions?.name_en || application?.institutions?.name_en || 'Hawassa MESOB Center';
+
+      if (status === 'PENDING_DOCUMENTS' || status === 'REQUIRES_DOCUMENTS') {
+        dispatchApplicationActionRequiredNotifications({
+          application: updatedApplication || application,
+          citizenId: application.citizen_id,
+          serviceName: serviceTitle,
+          institutionName,
+          notes,
+        });
+      } else if (status === 'APPROVED' || status === 'REJECTED') {
+        dispatchApplicationDecisionNotifications({
+          application: updatedApplication || application,
+          citizenId: application.citizen_id,
+          serviceName: serviceTitle,
+          institutionName,
+          decision: status,
+          notes,
+        });
+      } else if (status === 'COMPLETED') {
+        dispatchApplicationCompletedNotifications({
+          application: updatedApplication || application,
+          citizenId: application.citizen_id,
+          serviceName: serviceTitle,
+          institutionName,
+          completedAt: updatedApplication?.completed_at || new Date().toISOString(),
+        });
+      }
+    } catch (notifErr) {
+      console.error('⚠️ Application status notification trigger error (non-critical):', notifErr.message);
+    }
 
     // Log audit
     await logAudit(currentUser.id, 'APPLICATION_STATUS_UPDATE', `Updated application ${application.application_number} to ${status}`);

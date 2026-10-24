@@ -7,9 +7,11 @@ import { useQueue } from '../../context/QueueContext';
 import { useApplications } from '../../context/ApplicationContext';
 import { useApp } from '../../context/AppContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
+import ThemeToggle from '../../components/ThemeToggle';
 import MesobFeedbackOverview from '../../components/dashboard/MesobFeedbackOverview';
 import NotificationBell from '../../components/dashboard/NotificationBell';
 import ApprovalsManagement from '../../components/dashboard/ApprovalsManagement';
+import SidebarNavIcon from '../../components/dashboard/SidebarNavIcon';
 
 // ─── Navigation sections ──────────────────────────────────────────
 function getSections(t) {
@@ -78,28 +80,129 @@ function SectionDashboard({ setActiveSection }) {
 
   return (
     <>
+      {/* MESOB Manager Operations Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-[#0f172a] via-[#1e3a8a] to-[#2563eb] rounded-2xl p-6 text-white mb-8 shadow-sm border border-blue-900/40">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#f4b51a] via-[#f59e0b] to-[#f4b51a]" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#f4b51a] border border-[#f4b51a]/30 text-xs font-semibold mb-2.5 backdrop-blur-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>City-Wide Public Service Hub</span>
+              <span>•</span>
+              <span className="text-blue-100 font-normal">Hawassa MESOB</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              Service Operations Oversight
+            </h2>
+            <p className="text-blue-100/90 text-sm mt-1 max-w-xl">
+              Monitor real-time customer traffic, institutional throughput, service queues, and facility maintenance across Hawassa MESOB Center.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 sm:self-center">
+            <button
+              onClick={() => setActiveSection('Institution Monitoring')}
+              className="px-4 py-2.5 rounded-xl bg-[#f4b51a] hover:bg-[#e0a20e] text-slate-900 text-xs font-bold transition shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              <span>Institutions</span>
+            </button>
+            <button
+              onClick={() => setActiveSection('Queue Monitoring')}
+              className="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-semibold transition backdrop-blur-xs inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <svg className="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+              </svg>
+              <span>Live Queues</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Stat cards */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Institutions</p>
-          <p className="text-3xl font-extrabold text-slate-900">{totalInstitutions}</p>
-          <p className="text-xs font-medium text-slate-400 mt-1">Active under MESOB</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Queue Status</p>
-          <p className="text-3xl font-extrabold text-amber-600">{totalQueue}</p>
-          <p className="text-xs font-medium text-amber-700 mt-1">Active tickets</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Applications</p>
+        <button
+          onClick={() => setActiveSection('Institution Monitoring')}
+          className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-blue-500 shadow-xs p-5 hover:border-blue-400 hover:shadow-sm transition-all text-left cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-blue-800 transition-colors">Institutions</span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:bg-blue-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+            </div>
+          </div>
+          <p className="text-3xl font-extrabold text-[#1e3a8a]">{totalInstitutions}</p>
+          <p className="text-xs font-medium text-slate-500 mt-1.5 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              <span>Active providers</span>
+            </span>
+            <span>→</span>
+          </p>
+        </button>
+
+        <button
+          onClick={() => setActiveSection('Queue Monitoring')}
+          className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-amber-500 shadow-xs p-5 hover:border-amber-400 hover:shadow-sm transition-all text-left cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-amber-800 transition-colors">Live Queue</span>
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100 group-hover:bg-amber-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>
+            </div>
+          </div>
+          <p className="text-3xl font-extrabold text-amber-700">{totalQueue}</p>
+          <p className="text-xs font-medium text-amber-800 mt-1.5 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              <span>Active customer tickets</span>
+            </span>
+            <span>→</span>
+          </p>
+        </button>
+
+        <button
+          onClick={() => setActiveSection('Service Monitoring')}
+          className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-indigo-500 shadow-xs p-5 hover:border-indigo-400 hover:shadow-sm transition-all text-left cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-indigo-800 transition-colors">Applications</span>
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-100 group-hover:bg-indigo-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            </div>
+          </div>
           <p className="text-3xl font-extrabold text-[#1e3a8a]">{totalApps}</p>
-          <p className="text-xs font-medium text-slate-400 mt-1">MESOB-wide</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Maintenance</p>
+          <p className="text-xs font-medium text-slate-500 mt-1.5 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+              <span>Total submissions</span>
+            </span>
+            <span>→</span>
+          </p>
+        </button>
+
+        <button
+          onClick={() => setActiveSection('Maintenance')}
+          className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-purple-500 shadow-xs p-5 hover:border-purple-400 hover:shadow-sm transition-all text-left cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-purple-800 transition-colors">Maintenance</span>
+            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-100 group-hover:bg-purple-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
+            </div>
+          </div>
           <p className="text-3xl font-extrabold text-slate-900">{totalMaint}</p>
-          <p className="text-xs font-medium text-slate-400 mt-1">Open tasks</p>
-        </div>
+          <p className="text-xs font-medium text-slate-500 mt-1.5 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+              <span>Open facility tickets</span>
+            </span>
+            <span>→</span>
+          </p>
+        </button>
       </div>
 
       {/* Institution overview table */}
@@ -333,7 +436,7 @@ function SectionQueueMonitoring() {
                 {myTickets.slice(0, 20).map(ticket => (
                   <tr key={ticket.id}>
                     <td className="font-semibold text-slate-800">{ticket.ticketNumber || ticket.token || ticket.queueNumber || `#${ticket.id}`}</td>
-                    <td>{ticket.citizenName || ticket.customerName || 'N/A'}</td>
+                    <td>{ticket.customerName || ticket.citizenName || 'N/A'}</td>
                     <td>{ticket.serviceName || ticket.service || 'N/A'}</td>
                     <td><PriorityBadge priority={ticket.priority || 'Normal'} /></td>
                     <td><StatusBadge status={ticket.status} /></td>
@@ -403,7 +506,7 @@ function SectionApplicationMonitoring() {
                 {applications.slice(0, 20).map(app => (
                   <tr key={app.id}>
                     <td className="font-semibold text-slate-800">#{app.id}</td>
-                    <td>{app.applicantName || app.citizenName || 'N/A'}</td>
+                    <td>{app.applicantName || app.customerName || app.citizenName || 'N/A'}</td>
                     <td>{app.serviceName || app.service || 'N/A'}</td>
                     <td><StatusBadge status={app.status} /></td>
                     <td className="text-sm text-slate-500">{app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'N/A'}</td>
@@ -1083,7 +1186,7 @@ function SectionAnalytics() {
                           {detailView.type === 'queue' && (
                             <>
                               <td className="px-4 py-3 font-semibold text-slate-800">{item.queueNumber || item.queue_number || item.token || item.ticketNumber || 'N/A'}</td>
-                              <td className="px-4 py-3">{item.citizenName || item.customerName || item.customer?.full_name || item.users?.full_name || 'Customer'}</td>
+                              <td className="px-4 py-3">{item.customerName || item.citizenName || item.customer?.full_name || item.users?.full_name || 'Customer'}</td>
                               <td className="px-4 py-3">{item.serviceName || item.service || 'Service'}</td>
                               <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
                               <td className="px-4 py-3 text-sm text-slate-500">
@@ -1112,7 +1215,7 @@ function SectionAnalytics() {
                           {detailView.type === 'app' && (
                             <>
                               <td className="px-4 py-3 font-semibold text-slate-800">{item.applicationNumber || item.application_number || 'N/A'}</td>
-                              <td className="px-4 py-3">{item.citizenName || item.customerName || 'Customer'}</td>
+                              <td className="px-4 py-3">{item.customerName || item.citizenName || 'Customer'}</td>
                               <td className="px-4 py-3">{item.service || item.serviceName || 'Service'}</td>
                               <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
                               <td className="px-4 py-3 text-sm text-slate-500">
@@ -1502,6 +1605,14 @@ export default function MesobManagerDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedApprovalEntityId, setSelectedApprovalEntityId] = useState(null);
 
+  const initials = (user?.name || user?.full_name || 'MM')
+    .split(' ')
+    .filter(Boolean)
+    .map(n => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
   function navigate(section, notification = null) {
     setActiveSection(section);
     setSidebarOpen(false);
@@ -1542,53 +1653,66 @@ export default function MesobManagerDashboard() {
 
         {/* ── Sidebar ── */}
         <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 flex flex-col transition-transform duration-200${sidebarOpen ? ' open' : ''}`}>
-          <div className="p-5 border-b border-blue-100/70">
+          <div className="p-5 border-b border-slate-800">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-md border border-blue-400/20">M</div>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a8a] to-[#0f172a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-sm border border-slate-700/60">M</div>
               <div>
-                <p className="font-bold text-slate-900 text-sm">MESOB Center</p>
-                <p className="text-xs text-slate-500">MESOB Manager</p>
+                <p className="font-bold text-white text-sm tracking-tight">MESOB Center</p>
+                <p className="text-xs text-slate-400 font-medium">MESOB Manager</p>
               </div>
             </div>
           </div>
 
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {getSections(t).map((section, idx) => (
-              <button key={idx} onClick={() => navigate(section)}
-                className={`sidebar-link w-full text-left${activeSection === section ? ' active' : ''}`}>
-                {section}
-              </button>
-            ))}
+          <nav className="flex-1 p-3.5 space-y-1 overflow-y-auto">
+            {getSections(t).map((section, idx) => {
+              const isActive = activeSection === section;
+              return (
+                <button key={idx} onClick={() => navigate(section)}
+                  className={`sidebar-link w-full text-left${isActive ? ' active' : ''} cursor-pointer`}>
+                  <SidebarNavIcon section={section} className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="truncate">{section}</span>
+                </button>
+              );
+            })}
           </nav>
 
-          <div className="p-4 border-t border-blue-100/70">
+          <div className="p-3.5 border-t border-slate-800">
             <button onClick={logout}
-              className="sidebar-link w-full text-left text-rose-600 hover:bg-rose-50/80 font-medium">
-              {t.logout}
+              className="sidebar-link w-full text-left text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 font-medium transition cursor-pointer">
+              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+              </svg>
+              <span>{t.logout}</span>
             </button>
           </div>
         </aside>
 
         {/* ── Main content ── */}
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="bg-white/85 backdrop-blur-xl border-b border-blue-100/80 shadow-[0_4px_20px_-4px_rgba(30,58,138,0.04)] px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+          <header className="bg-white border-b border-slate-200/80 px-4 lg:px-8 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
             <div className="flex items-center gap-3">
-              <button className="lg:hidden p-2 rounded-xl hover:bg-slate-100 text-slate-700" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle sidebar">
+              <button className="lg:hidden p-2 rounded-xl hover:bg-slate-100 text-slate-700 cursor-pointer" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle sidebar">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/>
                 </svg>
               </button>
-              <h1 className="text-lg font-bold text-slate-900">
+              <h1 className="text-lg font-bold text-slate-900 tracking-tight">
                 {activeSection === t.dashboard ? t.mesob_manager_dashboard : activeSection}
               </h1>
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
+              <ThemeToggle />
               <NotificationBell onNavigate={(section, notification) => navigate(section, notification)} />
               <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold">MESOB Manager</span>
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-slate-900">{user?.name}</p>
-                <p className="text-xs text-slate-500">{user?.email}</p>
+              <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200 hidden sm:flex">
+                <div className="w-8 h-8 rounded-full bg-blue-100 text-[#1e3a8a] font-bold text-xs flex items-center justify-center border border-blue-200/80">
+                  {initials}
+                </div>
+                <div className="text-left hidden md:block">
+                  <p className="text-sm font-semibold text-slate-900 leading-tight">{user?.name}</p>
+                  <p className="text-xs text-slate-500 leading-tight">{user?.email}</p>
+                </div>
               </div>
             </div>
           </header>
@@ -1600,7 +1724,7 @@ export default function MesobManagerDashboard() {
       </div>
 
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
     </div>
   );

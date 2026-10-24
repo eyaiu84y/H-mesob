@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 
 /**
  * FeedbackRating Component
- * 5-star rating UI for citizen service feedback
+ * 5-star rating UI for customer service feedback
  */
 export default function FeedbackRating({ 
   institutionId, 

@@ -1,5 +1,5 @@
 import express from 'express';
-import { getUsers, getUser, postUser, patchUser, patchUserStatus, removeUser } from '../controllers/userController.js';
+import { getUsers, getUser, postUser, patchUser, patchUserStatus, removeUser, resetPassword } from '../controllers/userController.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -66,6 +66,17 @@ router.delete('/:id',
   authenticate,
   authorize('SUPER_ADMIN'),
   removeUser
+);
+
+/**
+ * @route   POST /api/users/:id/reset-password
+ * @desc    Reset internal user password to default temp password (SUPER_ADMIN only)
+ * @access  Private (SUPER_ADMIN only)
+ */
+router.post('/:id/reset-password',
+  authenticate,
+  authorize('SUPER_ADMIN'),
+  resetPassword
 );
 
 export default router;

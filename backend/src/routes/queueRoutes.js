@@ -1,17 +1,18 @@
 import express from 'express';
 import { postJoinQueue, getQueuesController, getQueue, postCallNext, patchQueueStatus, getQueueStatusController } from '../controllers/queueController.js';
-import { authenticate, authorize, optionalAuth } from '../middleware/auth.js';
+import { authenticate, authorize, optionalAuth, requireVerifiedCustomer } from '../middleware/auth.js';
 
 const router = express.Router();
 
 /**
  * @route   POST /api/queues/join
  * @desc    Join queue
- * @access  Private (CITIZEN)
+ * @access  Private (CUSTOMER with verified email)
  */
 router.post('/join', 
   authenticate,
   authorize('CUSTOMER', 'CITIZEN'),
+  requireVerifiedCustomer,
   postJoinQueue
 );
 

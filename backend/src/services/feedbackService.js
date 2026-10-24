@@ -47,25 +47,22 @@ export async function submitFeedback(feedbackData) {
       .from('users')
       .select('id, role, status')
       .eq('id', customerId)
-      .eq('role', 'CITIZEN')
+      .in('role', ['CUSTOMER', 'CITIZEN'])
       .maybeSingle();
 
-    const citizen = customer;
-    const citizenError = customerError;
-
-    if (citizenError) {
-      console.error('Citizen query error:', citizenError);
-      throw new Error(`Database error checking citizen: ${citizenError.message}`);
+    if (customerError) {
+      console.error('Customer query error:', customerError);
+      throw new Error(`Database error checking customer: ${customerError.message}`);
     }
 
-    if (!citizen) {
-      console.error('Citizen not found:', feedbackData.citizen_id);
-      throw new Error('Citizen not found');
+    if (!customer) {
+      console.error('Customer not found:', customerId);
+      throw new Error('Customer not found');
     }
 
-    if (citizen.status !== 'ACTIVE') {
-      console.error('Citizen not active:', citizen.status);
-      throw new Error('Citizen account is not active');
+    if (customer.status !== 'ACTIVE') {
+      console.error('Customer not active:', customer.status);
+      throw new Error('Customer account is not active');
     }
 
     console.log('Checking institution...');

@@ -1,5 +1,10 @@
 import { supabase } from '../config/supabase.js';
 import bcrypt from 'bcrypt';
+import { 
+  isOfficialInstitutionalEmail, 
+  generateSecureTemporaryPassword, 
+  normalizeEmail 
+} from '../utils/authSecurity.js';
 
 /**
  * Get all users with optional filtering
@@ -33,7 +38,7 @@ export const getAllUsers = async (filters = {}, user) => {
     if (filters.role) {
       const upperRole = String(filters.role).toUpperCase();
       if (upperRole === 'CUSTOMER' || upperRole === 'CITIZEN') {
-        query = query.eq('role', 'CITIZEN');
+        query = query.in('role', ['CUSTOMER', 'CITIZEN']);
       } else if (upperRole === 'TECHNICIAN' || upperRole === 'ICT_STAFF') {
         query = query.eq('role', 'ICT_STAFF');
       } else {
@@ -58,9 +63,14 @@ export const getAllUsers = async (filters = {}, user) => {
       };
     }
 
+    const normalizedData = (data || []).map(u => ({
+      ...u,
+      role: (u.role === 'ICT_STAFF' || u.role === 'TECHNICIAN') ? 'TECHNICIAN' : (u.role === 'CITIZEN' || u.role === 'CUSTOMER') ? 'CUSTOMER' : u.role
+    }));
+
     return {
       success: true,
-      data: data || []
+      data: normalizedData
     };
 
   } catch (error) {
@@ -118,6 +128,10 @@ export const getUserById = async (userId, currentUser) => {
       }
     }
 
+    if (user) {
+      user.role = (user.role === 'ICT_STAFF' || user.role === 'TECHNICIAN') ? 'TECHNICIAN' : (user.role === 'CITIZEN' || user.role === 'CUSTOMER') ? 'CUSTOMER' : user.role;
+    }
+
     return {
       success: true,
       data: user
@@ -140,7 +154,8 @@ export const getUserById = async (userId, currentUser) => {
  */
 export const createUser = async (userData, currentUser) => {
   try {
-    const { email, password, fullName, phone, role, institutionId, employeeId, nationalId } = userData;
+    const { fullName, phone, role, institutionId, employeeId, nationalId } = userData;
+    const email = normalizeEmail(userData.email);
 
     // Authorization: Only SUPER_ADMIN can create users
     if (currentUser.role !== 'SUPER_ADMIN') {
@@ -151,27 +166,43 @@ export const createUser = async (userData, currentUser) => {
     }
 
     // Validation
-    if (!email || !password || !fullName || !role) {
+    if (!email || !fullName || !role) {
       return {
         success: false,
-        message: 'Email, password, full name, and role are required.'
+        message: 'Email, full name, and role are required.'
       };
     }
 
-    // Role validation
-    const validRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'CUSTOMER', 'ICT_STAFF', 'CITIZEN'];
-    if (!validRoles.includes(role)) {
+    // Role validation - only internal staff accounts can be provisioned by administrators (customers self-register)
+    const validRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'];
+    const normRole = role.toUpperCase();
+    if (!validRoles.includes(normRole)) {
       return {
         success: false,
-        message: 'Invalid role specified.'
+        message: 'Invalid role specified. Customer accounts cannot be created by administrators because customers self-register.'
       };
     }
+
+    // Official institutional email validation for internal staff (strictly @mesobcenterh.gov.et)
+    const internalRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'];
+    if (internalRoles.includes(normRole)) {
+      if (!isOfficialInstitutionalEmail(email)) {
+        return {
+          success: false,
+          message: 'Internal staff accounts must strictly use the official institutional email format ending in @mesobcenterh.gov.et.'
+        };
+      }
+    }
+
+    const tempPassword = userData.password && userData.password.length >= 8 
+      ? userData.password 
+      : generateSecureTemporaryPassword();
 
     // If Super Admin creates a user or for any INSTITUTION_MANAGER accounts, route through central Mesob Manager approval workflow
     const currentRole = (currentUser?.role || '').toUpperCase();
-    if (currentRole === 'SUPER_ADMIN' || role === 'INSTITUTION_MANAGER') {
+    if (currentRole === 'SUPER_ADMIN' || normRole === 'INSTITUTION_MANAGER') {
       const { submitUser } = await import('./approvalService.js');
-      return submitUser(userData, currentUser);
+      return submitUser({ ...userData, email, password: tempPassword }, currentUser);
     }
 
     // Institution validation for institutional roles
@@ -217,7 +248,8 @@ if (institutionId && ['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAF
     }
 
     // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const nowIso = new Date().toISOString();
 
     // Create user
     let { data: newUser, error } = await supabase
@@ -233,7 +265,11 @@ if (institutionId && ['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAF
         national_id: nationalId || null,
         status: 'ACTIVE',
         created_by: currentUser.id,
-        created_at: new Date().toISOString()
+        created_at: nowIso,
+        metadata: {
+          must_change_password: true,
+          temp_password_issued_at: nowIso
+        }
       })
       .select(`
         id,
@@ -244,7 +280,8 @@ if (institutionId && ['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAF
         status,
         institution_id,
         employee_id,
-        created_at
+        created_at,
+        metadata
       `)
       .single();
 
@@ -264,7 +301,11 @@ if (institutionId && ['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAF
             national_id: nationalId || null,
             status: 'ACTIVE',
             created_by: currentUser.id,
-            created_at: new Date().toISOString()
+            created_at: nowIso,
+            metadata: {
+              must_change_password: true,
+              temp_password_issued_at: nowIso
+            }
           })
           .select(`
             id,
@@ -275,7 +316,8 @@ if (institutionId && ['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAF
             status,
             institution_id,
             employee_id,
-            created_at
+            created_at,
+            metadata
           `)
           .single();
         newUser = fallbackRes.data;
@@ -294,10 +336,19 @@ if (institutionId && ['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAF
     // Log audit
     await logAudit(currentUser.id, 'USER_CREATE', `Created user: ${newUser.email}`);
 
+    const displayRole = (normRole === 'ICT_STAFF' || normRole === 'TECHNICIAN') ? 'TECHNICIAN' : (normRole === 'CITIZEN' || normRole === 'CUSTOMER') ? 'CUSTOMER' : normRole;
+    if (newUser) {
+      newUser.role = displayRole;
+    }
+
     return {
       success: true,
       message: 'User created successfully',
-      data: newUser
+      data: {
+        ...newUser,
+        role: displayRole,
+        tempPassword
+      }
     };
 
   } catch (error) {
@@ -321,7 +372,7 @@ export const updateUser = async (userId, updates, currentUser) => {
     // Get existing user
     const { data: existingUser, error: fetchError } = await supabase
       .from('users')
-      .select('id, role, institution_id, email')
+      .select('id, role, institution_id, email, metadata')
       .eq('id', userId)
       .single();
 
@@ -358,11 +409,15 @@ export const updateUser = async (userId, updates, currentUser) => {
       updated_at: new Date().toISOString()
     };
 
-    if (updates.fullName) updateData.full_name = updates.fullName;
-    if (updates.phone) updateData.phone = updates.phone;
+    if (updates.fullName) updateData.full_name = String(updates.fullName).trim();
+    if (updates.phone !== undefined) updateData.phone = updates.phone ? String(updates.phone).trim().slice(0, 20) : null;
     if (updates.profilePhotoUrl) updateData.profile_photo_url = updates.profilePhotoUrl;
-    if (updates.nationalId) updateData.national_id = updates.nationalId;
-    if (updates.employeeId) updateData.employee_id = updates.employeeId;
+    if (updates.nationalId !== undefined) updateData.national_id = updates.nationalId ? String(updates.nationalId).trim().slice(0, 50) : null;
+    if (updates.employeeId !== undefined) updateData.employee_id = updates.employeeId ? String(updates.employeeId).trim().slice(0, 50) : null;
+    if (updates.metadata !== undefined) {
+      const currentMeta = (existingUser.metadata && typeof existingUser.metadata === 'object') ? existingUser.metadata : {};
+      updateData.metadata = { ...currentMeta, ...updates.metadata };
+    }
 
     // Only admins can change role
     if (updates.role && (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MESOB_MANAGER')) {
@@ -394,6 +449,7 @@ export const updateUser = async (userId, updates, currentUser) => {
         role,
         status,
         institution_id,
+        metadata,
         updated_at
       `)
       .single();
@@ -413,6 +469,7 @@ export const updateUser = async (userId, updates, currentUser) => {
             role,
             status,
             institution_id,
+            metadata,
             updated_at
           `)
           .single();
@@ -431,6 +488,10 @@ export const updateUser = async (userId, updates, currentUser) => {
 
     // Log audit
     await logAudit(currentUser.id, 'USER_UPDATE', `Updated user: ${existingUser.email}`);
+
+    if (updatedUser) {
+      updatedUser.role = (updatedUser.role === 'ICT_STAFF' || updatedUser.role === 'TECHNICIAN') ? 'TECHNICIAN' : (updatedUser.role === 'CITIZEN' || updatedUser.role === 'CUSTOMER') ? 'CUSTOMER' : updatedUser.role;
+    }
 
     return {
       success: true,
@@ -627,5 +688,112 @@ const logAudit = async (userId, action, details) => {
       });
   } catch (error) {
     console.error('Failed to log audit:', error);
+  }
+};
+
+/**
+ * Reset internal user password to a secure temporary password
+ * Only SUPER_ADMIN can perform this action.
+ * @param {string} userId - Target user ID to reset
+ * @param {Object} currentUser - Authenticated admin user
+ * @returns {Promise<Object>} Result with tempPassword
+ */
+export const resetUserPassword = async (userId, currentUser) => {
+  try {
+    // Authorization: Only SUPER_ADMIN can reset passwords
+    if (currentUser.role !== 'SUPER_ADMIN') {
+      return {
+        success: false,
+        message: 'Only Super Admin can reset user passwords.'
+      };
+    }
+
+    // Cannot reset your own password this way
+    if (userId === currentUser.id) {
+      return {
+        success: false,
+        message: 'You cannot reset your own password through this action. Use Change Password instead.'
+      };
+    }
+
+    // Fetch the target user
+    const { data: user, error: fetchError } = await supabase
+      .from('users')
+      .select('id, email, role, status, metadata')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError || !user) {
+      return {
+        success: false,
+        message: 'User not found.'
+      };
+    }
+
+    // Only reset passwords for internal staff (not customers/citizens)
+    const internalRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'];
+    const userRoleUpper = (user.role || '').toUpperCase();
+    if (!internalRoles.includes(userRoleUpper)) {
+      return {
+        success: false,
+        message: 'Password reset via admin is only allowed for internal staff accounts.'
+      };
+    }
+
+    // Generate a new secure temporary password
+    const tempPassword = generateSecureTemporaryPassword();
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const nowIso = new Date().toISOString();
+
+    const updatedMetadata = {
+      ...(user.metadata || {}),
+      must_change_password: true,
+      password_reset_at: nowIso,
+      password_reset_by: currentUser.id
+    };
+
+    // Update password hash and set must_change_password flag
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        password_hash: passwordHash,
+        metadata: updatedMetadata,
+        updated_at: nowIso
+      })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Reset password error:', updateError);
+      return {
+        success: false,
+        message: 'Failed to reset password. Please try again.'
+      };
+    }
+
+    // Invalidate all existing sessions for this user
+    await supabase
+      .from('user_sessions')
+      .delete()
+      .eq('user_id', userId);
+
+    // Log audit
+    await logAudit(currentUser.id, 'PASSWORD_RESET', `Admin reset password for: ${user.email}`);
+
+    return {
+      success: true,
+      message: `Password reset successfully for ${user.email}. User must change password on next login.`,
+      data: {
+        userId,
+        email: user.email,
+        tempPassword
+      }
+    };
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return {
+      success: false,
+      message: 'An error occurred while resetting password.'
+    };
   }
 };

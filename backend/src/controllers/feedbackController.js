@@ -45,7 +45,7 @@ export async function submitFeedback(req, res) {
       });
     }
 
-    // Ensure user is a customer/citizen
+    // Ensure user is a customer
     const role = (req.user.role || '').toUpperCase();
     if (role !== 'CUSTOMER' && role !== 'CITIZEN') {
       return res.status(403).json({

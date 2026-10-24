@@ -1,28 +1,30 @@
 import express from 'express';
 import { postApplication, getApplicationsController, getApplication, patchApplicationStatus, patchApplicationAssign, postResubmitApplication } from '../controllers/applicationController.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate, authorize, requireVerifiedCustomer } from '../middleware/auth.js';
 
 const router = express.Router();
 
 /**
  * @route   POST /api/applications
  * @desc    Create new application
- * @access  Private (CITIZEN, CUSTOMER)
+ * @access  Private (CUSTOMER with verified email)
  */
 router.post('/', 
   authenticate,
   authorize('CUSTOMER', 'CITIZEN'),
+  requireVerifiedCustomer,
   postApplication
 );
 
 /**
  * @route   POST /api/applications/:id/resubmit
  * @desc    Resubmit application with updated documents
- * @access  Private (CITIZEN, CUSTOMER)
+ * @access  Private (CUSTOMER with verified email)
  */
 router.post('/:id/resubmit', 
   authenticate,
   authorize('CUSTOMER', 'CITIZEN'),
+  requireVerifiedCustomer,
   postResubmitApplication
 );
 

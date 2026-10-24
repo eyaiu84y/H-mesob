@@ -1,5 +1,16 @@
 import express from 'express';
-import { login, register, getMe, logout, verifyToken } from '../controllers/authController.js';
+import { 
+  login, 
+  register, 
+  getMe, 
+  logout, 
+  verifyToken, 
+  changePassword, 
+  verifyEmail, 
+  resendVerification,
+  sendPhoneOTP,
+  verifyPhoneOTP
+} from '../controllers/authController.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -13,10 +24,47 @@ router.post('/login', login);
 
 /**
  * @route   POST /api/auth/register
- * @desc    Register new user account
+ * @desc    Register new customer account (Strictly @gmail.com)
  * @access  Public
  */
 router.post('/register', register);
+
+/**
+ * @route   POST /api/auth/change-password
+ * @desc    Change password (mandatory for new internal accounts or self-service)
+ * @access  Private (requires authentication)
+ */
+router.post('/change-password', authenticate, changePassword);
+
+/**
+ * @route   POST /api/auth/verify-email
+ * @route   GET /api/auth/verify-email
+ * @desc    Verify customer email address with 6-digit code or link token
+ * @access  Public
+ */
+router.post('/verify-email', verifyEmail);
+router.get('/verify-email', verifyEmail);
+
+/**
+ * @route   POST /api/auth/resend-verification
+ * @desc    Resend email verification code
+ * @access  Public
+ */
+router.post('/resend-verification', resendVerification);
+
+/**
+ * @route   POST /api/auth/send-phone-otp
+ * @desc    Send OTP to verify customer mobile phone
+ * @access  Private (requires authentication)
+ */
+router.post('/send-phone-otp', authenticate, sendPhoneOTP);
+
+/**
+ * @route   POST /api/auth/verify-phone-otp
+ * @desc    Verify customer phone with 6-digit OTP
+ * @access  Private (requires authentication)
+ */
+router.post('/verify-phone-otp', authenticate, verifyPhoneOTP);
 
 /**
  * @route   GET /api/auth/me

@@ -3,7 +3,9 @@ import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { useAnnouncements } from '../../context/AnnouncementContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
+import ThemeToggle from '../../components/ThemeToggle';
 import NotificationBell from '../../components/dashboard/NotificationBell';
+import SidebarNavIcon from '../../components/dashboard/SidebarNavIcon';
 
 // ─── Navigation sections ─────────────────────────────────────────
 const SECTIONS = [
@@ -41,79 +43,186 @@ function StatusBadge({ status }) {
 // ─── SECTION: Dashboard Overview ─────────────────────────────────
 function SectionDashboard({ setActiveSection, tasks }) {
   const { announcements } = useAnnouncements();
+  const { user } = useAuth();
   const pending = tasks.filter(t => t.status !== 'Completed').length;
+  const highPriority = tasks.filter(t => t.priority === 'High' && t.status !== 'Completed').length;
 
   return (
     <>
+      {/* Technician Overview Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-[#0f172a] via-[#1e3a8a] to-[#2563eb] rounded-2xl p-6 text-white mb-8 shadow-sm border border-blue-900/40">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#f4b51a] via-[#f59e0b] to-[#f4b51a]" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#f4b51a] border border-[#f4b51a]/30 text-xs font-semibold mb-2.5 backdrop-blur-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Technical Operations & Maintenance</span>
+              <span>•</span>
+              <span className="text-blue-100 font-normal">MESOB Center</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              Welcome, {user?.name || 'Technician'}
+            </h2>
+            <p className="text-blue-100/90 text-sm mt-1 max-w-xl">
+              Inspect technical systems, resolve hardware and network maintenance tickets, and keep public facilities operational.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 sm:self-center">
+            <button
+              onClick={() => setActiveSection('My Tasks')}
+              className="px-4 py-2.5 rounded-xl bg-[#f4b51a] hover:bg-[#e0a20e] text-slate-900 text-xs font-bold transition shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              <span>View My Tasks</span>
+            </button>
+            <button
+              onClick={() => setActiveSection('Report Issue')}
+              className="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-semibold transition backdrop-blur-xs inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <svg className="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>Report Issue</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Assigned Tasks</p>
-          <p className="text-2xl font-bold text-slate-900">{tasks.length}</p>
-          <p className="text-xs text-amber-700 mt-1 font-semibold">
-            {tasks.filter(t => t.priority === 'High' && t.status !== 'Completed').length} high priority
+        <button
+          onClick={() => setActiveSection('My Tasks')}
+          className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-indigo-500 shadow-xs p-5 hover:border-indigo-400 hover:shadow-sm transition-all text-left cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-indigo-800 transition-colors">Assigned Tasks</span>
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-100 group-hover:bg-indigo-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+            </div>
+          </div>
+          <p className="text-3xl font-extrabold text-[#1e3a8a]">{tasks.length}</p>
+          <p className="text-xs text-amber-700 mt-1.5 font-semibold flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              <span>{highPriority} high priority tasks</span>
+            </span>
+            <span>→</span>
           </p>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Pending Tasks</p>
-          <p className="text-2xl font-bold text-slate-900">{pending}</p>
-          <p className="text-xs text-slate-500 mt-1">Not yet completed</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Announcements</p>
-          <p className="text-2xl font-bold text-slate-900">{announcements.filter(a => !a.is_read).length}</p>
-          <p className="text-xs text-slate-500 mt-1">Unread</p>
-        </div>
+        </button>
+
+        <button
+          onClick={() => setActiveSection('My Tasks')}
+          className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-amber-500 shadow-xs p-5 hover:border-amber-400 hover:shadow-sm transition-all text-left cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-amber-800 transition-colors">Pending Tasks</span>
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100 group-hover:bg-amber-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+          </div>
+          <p className="text-3xl font-extrabold text-amber-700">{pending}</p>
+          <p className="text-xs text-amber-800 font-medium mt-1.5 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              <span>Awaiting resolution</span>
+            </span>
+            <span>→</span>
+          </p>
+        </button>
+
+        <button
+          onClick={() => setActiveSection('Announcements')}
+          className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-blue-500 shadow-xs p-5 hover:border-blue-400 hover:shadow-sm transition-all text-left cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-blue-800 transition-colors">Announcements</span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:bg-blue-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+            </div>
+          </div>
+          <p className="text-3xl font-extrabold text-[#1e3a8a]">{announcements.filter(a => !a.is_read).length}</p>
+          <p className="text-xs text-blue-700 font-medium mt-1.5 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              <span>Unread announcements</span>
+            </span>
+            <span>→</span>
+          </p>
+        </button>
       </div>
 
       {/* My Tasks preview */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="font-bold text-slate-900">My Tasks</h2>
+        <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-2.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#2563eb]" />
+            <h2 className="font-bold text-slate-900 text-base">Active Maintenance Tasks</h2>
+          </div>
           <button
             onClick={() => setActiveSection('My Tasks')}
-            className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold transition"
+            className="text-xs sm:text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8] flex items-center gap-1 group cursor-pointer"
           >
-            View all
+            <span>View all tasks</span>
+            <span className="group-hover:translate-x-0.5 transition-transform">→</span>
           </button>
         </div>
-        <div className="table-container border-0 rounded-none">
-          <table className="data-table">
+        <div className="table-container border-0 rounded-none overflow-x-auto">
+          <table className="data-table w-full">
             <thead>
-              <tr>
-                <th>Task ID</th>
-                <th>Task</th>
-                <th>Institution</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Action</th>
+              <tr className="bg-slate-50/80 text-xs font-semibold text-slate-600 uppercase tracking-wider border-b border-slate-200/80">
+                <th className="px-5 py-3 text-left">Task ID</th>
+                <th className="px-5 py-3 text-left">Task Details</th>
+                <th className="px-5 py-3 text-left">Institution</th>
+                <th className="px-5 py-3 text-left">Priority</th>
+                <th className="px-5 py-3 text-left">Status</th>
+                <th className="px-5 py-3 text-left">Action</th>
               </tr>
             </thead>
-            <tbody>
-              {tasks.filter(t => t.status !== 'Completed').slice(0, 3).map(task => (
-                <tr key={task.id}>
-                  <td className="font-medium text-slate-900">{task.id}</td>
-                  <td className="font-medium text-slate-800">{task.title}</td>
-                  <td>{task.institution}</td>
-                  <td><PriorityBadge priority={task.priority} /></td>
-                  <td><StatusBadge status={task.status} /></td>
-                  <td>
-                    <button
-                      onClick={() => setActiveSection('My Tasks')}
-                      className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold transition"
-                    >
-                      View
-                    </button>
+            <tbody className="divide-y divide-slate-100">
+              {tasks.filter(t => t.status !== 'Completed').length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center text-slate-400 py-12 px-4">
+                    <p className="font-semibold text-slate-700 text-sm">All Maintenance Tasks Completed</p>
+                    <p className="text-xs text-slate-500 mt-1">No pending repairs or technical issues assigned to you.</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                tasks.filter(t => t.status !== 'Completed').slice(0, 4).map(task => (
+                  <tr key={task.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="px-5 py-3.5 font-mono text-sm font-semibold text-slate-900">{task.id}</td>
+                    <td className="px-5 py-3.5 text-slate-800 text-sm font-medium">{task.title}</td>
+                    <td className="px-5 py-3.5 text-slate-600 text-sm">{task.institution}</td>
+                    <td className="px-5 py-3.5"><PriorityBadge priority={task.priority} /></td>
+                    <td className="px-5 py-3.5"><StatusBadge status={task.status} /></td>
+                    <td className="px-5 py-3.5">
+                      <button
+                        onClick={() => setActiveSection('My Tasks')}
+                        className="text-[#2563eb] hover:text-[#1d4ed8] text-sm font-semibold transition"
+                      >
+                        Open Task →
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-800">
-        <strong className="text-slate-900">Technician:</strong> Process assigned technical tasks, record maintenance work, and submit reports. You do not assign tasks to other staff or manage users and institutions.
+      <div className="p-4.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl flex items-start sm:items-center gap-3.5 shadow-xs">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a8a] to-[#0f172a] text-[#f4b51a] flex items-center justify-center flex-shrink-0 shadow-xs border border-blue-900/40">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div className="text-xs sm:text-sm text-blue-950 leading-relaxed">
+          <strong className="font-semibold text-[#1e3a8a]">Technician Role:</strong>{' '}
+          Resolve assigned technical and facility tickets, record maintenance actions, and keep public service hardware functioning smoothly.
+        </div>
       </div>
     </>
   );
@@ -872,52 +981,67 @@ export default function TechnicianDashboard() {
     }
   }
 
+  const initials = (user?.name || user?.full_name || 'TECH')
+    .split(' ')
+    .filter(Boolean)
+    .map(n => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
   return (
     <div className="dashboard-bg min-h-screen text-slate-900 relative">
       <div className="flex min-h-screen relative z-10">
 
         {/* ── Sidebar ── */}
         <aside className={`db-sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 flex flex-col transition-transform duration-200${sidebarOpen ? ' open' : ''}`}>
-          <div className="p-5 border-b border-blue-100/70">
+          <div className="p-5 border-b border-slate-800">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#314ea1] to-[#1e3a8a] text-[#f4b51a] flex items-center justify-center font-bold text-xs shadow-md border border-blue-400/20">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a8a] to-[#0f172a] text-[#f4b51a] flex items-center justify-center font-bold text-xs shadow-sm border border-slate-700/60">
                 TECH
               </div>
               <div>
-                <p className="font-bold text-slate-900 text-sm">MESOB Center</p>
-                <p className="text-xs text-slate-500">Technician Portal</p>
+                <p className="font-bold text-white text-sm tracking-tight">MESOB Center</p>
+                <p className="text-xs text-slate-400 font-medium">Technician Portal</p>
               </div>
             </div>
           </div>
 
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {SECTIONS.map(section => (
-              <button
-                key={section}
-                onClick={() => navigate(section)}
-                className={`sidebar-link w-full text-left${activeSection === section ? ' active' : ''}`}
-              >
-                {section}
-              </button>
-            ))}
+          <nav className="flex-1 p-3.5 space-y-1 overflow-y-auto">
+            {SECTIONS.map(section => {
+              const isActive = activeSection === section;
+              return (
+                <button
+                  key={section}
+                  onClick={() => navigate(section)}
+                  className={`sidebar-link w-full text-left${isActive ? ' active' : ''} cursor-pointer`}
+                >
+                  <SidebarNavIcon section={section} className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="truncate">{section}</span>
+                </button>
+              );
+            })}
           </nav>
 
-          <div className="p-4 border-t border-blue-100/70">
+          <div className="p-3.5 border-t border-slate-800">
             <button
               onClick={logout}
-              className="sidebar-link w-full text-left text-rose-600 hover:bg-rose-50/80 font-medium"
+              className="sidebar-link w-full text-left text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 font-medium transition cursor-pointer"
             >
-              Logout
+              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+              </svg>
+              <span>Logout</span>
             </button>
           </div>
         </aside>
 
         {/* ── Main content ── */}
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="bg-white/85 backdrop-blur-xl border-b border-blue-100/80 shadow-[0_4px_20px_-4px_rgba(30,58,138,0.04)] px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+          <header className="bg-white border-b border-slate-200/80 px-4 lg:px-8 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
             <div className="flex items-center gap-3">
               <button
-                className="lg:hidden p-2 rounded-xl hover:bg-slate-100 text-slate-700"
+                className="lg:hidden p-2 rounded-xl hover:bg-slate-100 text-slate-700 cursor-pointer"
                 onClick={() => setSidebarOpen(o => !o)}
                 aria-label="Toggle sidebar"
               >
@@ -928,17 +1052,23 @@ export default function TechnicianDashboard() {
                   <line x1="4" x2="20" y1="18" y2="18"/>
                 </svg>
               </button>
-              <h1 className="text-lg font-bold text-slate-900">
+              <h1 className="text-lg font-bold text-slate-900 tracking-tight">
                 {activeSection === 'Dashboard' ? 'Technician Dashboard' : activeSection}
               </h1>
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
+              <ThemeToggle />
               <NotificationBell onNavigate={(section) => navigate(section)} />
               <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold">Technician</span>
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-slate-900">{user?.name}</p>
-                <p className="text-xs text-slate-500">{user?.email}</p>
+              <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200 hidden sm:flex">
+                <div className="w-8 h-8 rounded-full bg-blue-100 text-[#1e3a8a] font-bold text-xs flex items-center justify-center border border-blue-200/80">
+                  {initials}
+                </div>
+                <div className="text-left hidden md:block">
+                  <p className="text-sm font-semibold text-slate-900 leading-tight">{user?.name}</p>
+                  <p className="text-xs text-slate-500 leading-tight">{user?.email}</p>
+                </div>
               </div>
             </div>
           </header>
@@ -949,10 +1079,9 @@ export default function TechnicianDashboard() {
         </div>
       </div>
 
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-30 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}

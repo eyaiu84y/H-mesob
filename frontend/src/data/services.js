@@ -19,10 +19,10 @@ export const newsContent = {
   1: {
     en: `
       <h1 class="${H}">Ethiopia Celebrates the Inauguration of the MESOB Center – A New Era of Innovation and Convenience</h1>
-      <p class="${P}">Ethiopia proudly marked a significant milestone with the official inauguration of the MESOB Center, a modern one-stop public service hub designed to transform the way citizens access government services.</p>
+      <p class="${P}">Ethiopia proudly marked a significant milestone with the official inauguration of the MESOB Center, a modern one-stop public service hub designed to transform the way customers access government services.</p>
       <p class="${P}">The inauguration ceremony brought together senior government officials, development partners, representatives from public institutions, and invited guests to celebrate the launch of a center that reflects the country's commitment to digital transformation, transparency, and efficient public service delivery.</p>
-      <p class="${P}">The MESOB Center integrates multiple government institutions under one roof, allowing citizens to access a wide range of services in a single location — from identification and documentation services to licensing, registration, and other essential government processes.</p>
-      <p class="${P}">Government leaders emphasized that the MESOB Center represents a major step toward building a more citizen-centered public administration.</p>
+      <p class="${P}">The MESOB Center integrates multiple government institutions under one roof, allowing customers to access a wide range of services in a single location — from identification and documentation services to licensing, registration, and other essential government processes.</p>
+      <p class="${P}">Government leaders emphasized that the MESOB Center represents a major step toward building a more customer-centered public administration.</p>
     `,
     am: `
       <h1 class="${H}">ኢትዮጵያ የMESOB ማዕከልን መመስረት ታከብራለች – የፈጠራ እና ምቹነት አዲስ ዘመን</h1>
@@ -50,8 +50,8 @@ export const newsContent = {
   },
   3: {
     en: `
-      <h1 class="${H}">FDRE MESOB Service Achieves 98.7% Citizen Satisfaction Rate</h1>
-      <p class="${P}">The Federal Democratic Republic of Ethiopia (FDRE) MESOB Center has announced an outstanding citizen satisfaction rate of <strong>98.7%</strong>, reflecting its continued commitment to efficient, reliable, and citizen-centered public services.</p>
+      <h1 class="${H}">FDRE MESOB Service Achieves 98.7% Customer Satisfaction Rate</h1>
+      <p class="${P}">The Federal Democratic Republic of Ethiopia (FDRE) MESOB Center has announced an outstanding customer satisfaction rate of <strong>98.7%</strong>, reflecting its continued commitment to efficient, reliable, and customer-centered public services.</p>
       <p class="${P}">Visitors highly appreciated the professionalism of customer service officers, the availability of modern digital systems, and the convenience of accessing multiple government services in one location.</p>
       <p class="${P}">MESOB Center officials emphasized that achieving 98.7% satisfaction is an important milestone — and they remain committed to continuous improvement.</p>
     `,

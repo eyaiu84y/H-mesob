@@ -76,7 +76,7 @@ export default function PopularServices() {
 
     // Check if user is a customer
     const roleUpper = user.role?.toUpperCase();
-    if (roleUpper !== 'CUSTOMER' && roleUpper !== 'CITIZEN') {
+    if (roleUpper !== 'CUSTOMER') {
       alert('Only customers can apply for online services');
       return;
     }
@@ -149,7 +149,7 @@ export default function PopularServices() {
           additionalInfo: '',
         });
         
-        // Redirect to citizen dashboard
+        // Redirect to customer dashboard
         navigate('/dashboard');
       } else {
         setSubmitError(result.message || 'Failed to submit application');
@@ -304,7 +304,7 @@ export default function PopularServices() {
                 <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                   {selectedService.id === 1 && (
                     <>
-                      National ID Registration is a crucial service for all Ethiopian citizens. 
+                      National ID Registration is a crucial service for all customers. 
                       This service allows you to register for your official National Identity Card (Fayda ID), 
                       which is required for accessing various government services, banking, and official documentation.
                     </>

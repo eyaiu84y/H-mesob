@@ -3,7 +3,7 @@ import { supabase } from '../config/supabase.js';
 
 /**
  * Authentication middleware - verifies JWT token
- * Attaches user object to req.user
+ * Attaches user object to req.user and enforces password change restriction
  */
 export const authenticate = async (req, res, next) => {
   try {
@@ -32,7 +32,8 @@ export const authenticate = async (req, res, next) => {
         role,
         status,
         institution_id,
-        created_at
+        created_at,
+        metadata
       `)
       .eq('id', decoded.userId)
       .single();
@@ -52,8 +53,39 @@ export const authenticate = async (req, res, next) => {
       });
     }
 
+    // Determine must_change_password status
+    const mustChangePassword = user.must_change_password === true || user.metadata?.must_change_password === true;
+    user.must_change_password = mustChangePassword;
+
     // Attach user to request object
     req.user = user;
+
+    // Enforce mandatory password change restriction:
+    // When must_change_password is true, only allow change-password, logout, me, and verify-token
+    if (mustChangePassword) {
+      const originalPath = (req.originalUrl || '').split('?')[0];
+      const basePath = req.baseUrl || '';
+      const subPath = req.path || '';
+      const combinedPath = basePath + (subPath === '/' ? '' : subPath);
+
+      const allowedEndpoints = [
+        '/api/auth/change-password',
+        '/api/auth/logout',
+        '/api/auth/me',
+        '/api/auth/verify-token'
+      ];
+
+      const isAllowed = allowedEndpoints.some(p => originalPath.startsWith(p) || combinedPath.startsWith(p));
+
+      if (!isAllowed) {
+        return res.status(403).json({
+          success: false,
+          code: 'MUST_CHANGE_PASSWORD',
+          message: 'Password change required before accessing system resources.',
+          mustChangePassword: true
+        });
+      }
+    }
 
     next();
   } catch (error) {
@@ -163,7 +195,8 @@ export const optionalAuth = async (req, res, next) => {
         full_name,
         role,
         status,
-        institution_id
+        institution_id,
+        metadata
       `)
       .eq('id', decoded.userId)
       .eq('status', 'ACTIVE')
@@ -178,4 +211,31 @@ export const optionalAuth = async (req, res, next) => {
     // Ignore errors for optional auth
     next();
   }
+};
+
+/**
+ * Restricts customer access to actions that require verified email.
+ * Applies strictly to CUSTOMER accounts that have not completed email verification.
+ */
+export const requireVerifiedCustomer = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required.'
+    });
+  }
+
+  const roleUpper = String(req.user.role || '').toUpperCase();
+  if (roleUpper === 'CUSTOMER' || roleUpper === 'CITIZEN') {
+    if (req.user.metadata?.email_verification?.verified === false) {
+      return res.status(403).json({
+        success: false,
+        code: 'EMAIL_VERIFICATION_REQUIRED',
+        message: 'Email verification is required before submitting applications or joining queues. Please verify your email address.',
+        emailVerified: false
+      });
+    }
+  }
+
+  next();
 };

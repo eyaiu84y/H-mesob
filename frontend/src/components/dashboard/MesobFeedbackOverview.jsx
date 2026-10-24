@@ -132,7 +132,7 @@ export default function MesobFeedbackOverview() {
       {/* Page Header */}
       <div>
         <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">Service Feedback Overview</h2>
-        <p className="text-sm text-slate-500 font-normal">Monitor citizen satisfaction across all institutions</p>
+        <p className="text-sm text-slate-500 font-normal">Monitor customer satisfaction across all institutions</p>
       </div>
 
       {/* Overall Statistics */}
@@ -296,7 +296,7 @@ export default function MesobFeedbackOverview() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
             <p className="font-semibold text-slate-600">No feedback available</p>
-            <p className="text-xs text-slate-400 mt-1">Feedback will appear here once citizens rate services</p>
+            <p className="text-xs text-slate-400 mt-1">Feedback will appear here once customers rate services</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-100">

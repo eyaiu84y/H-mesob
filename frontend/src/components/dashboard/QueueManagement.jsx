@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { useQueue } from '../../context/QueueContext';
 import { useServices } from '../../context/ServiceContext';
 import { useApp } from '../../context/AppContext';
@@ -123,6 +124,7 @@ function TicketCard({ ticket, onView, onCancel }) {
 
 // ─── Main QueueManagement component ───────────────────────────────
 export default function QueueManagement() {
+  const { user } = useAuth();
   const { t, lang } = useApp();
   const { 
     getActiveTickets, 
@@ -130,7 +132,7 @@ export default function QueueManagement() {
     registerForQueue, 
     cancelTicket, 
     myTickets,
-    isLive,
+    connectionStatus,
     connectionError,
     lastUpdated
   } = useQueue();
@@ -248,7 +250,7 @@ export default function QueueManagement() {
           </div>
 
           {activeTickets.length > 0 && historyTab === 'active' && (
-            isLive ? (
+            connectionStatus === 'connected' ? (
               <span 
                 className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200"
                 title={lastUpdated ? (lang === 'am' ? `የመጨረሻ ዝመና: ${lastUpdated.toLocaleTimeString()}` : `Last updated: ${lastUpdated.toLocaleTimeString()}`) : ''}
@@ -256,8 +258,13 @@ export default function QueueManagement() {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 {lang === 'am' ? 'የቀጥታ ዝመናዎች ነቅተዋል' : 'Live updates active'}
               </span>
+            ) : connectionStatus === 'connecting' ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />
+                {lang === 'am' ? 'በመገናኘት ላይ...' : 'Connecting...'}
+              </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200" title={connectionError || 'Connection lost'}>
+              <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200" title={connectionError || (lang === 'am' ? 'ግንኙነት ተቋርጧል' : 'Connection lost')}>
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                 {lang === 'am' ? 'ግንኙነት ተቋርጧል (እንደገና በመሞከር ላይ...)' : 'Offline (retrying...)'}
               </span>
@@ -478,6 +485,16 @@ export default function QueueManagement() {
           </div>
         )}
 
+        {user?.emailVerified === false && (
+          <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-start gap-3">
+            <span className="text-xl">⚠️</span>
+            <div>
+              <p className="font-bold">{lang === 'am' ? 'የኢሜይል ማረጋገጫ ያስፈልጋል' : 'Email Verification Required'}</p>
+              <p className="mt-0.5">{lang === 'am' ? 'ወረፋ ለመያዝ እባክዎ መጀመሪያ ኢሜይልዎን ያረጋግጡ።' : 'Please verify your email address before registering for a queue ticket.'}</p>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
           <div className="space-y-4">
             <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100">
@@ -515,9 +532,10 @@ export default function QueueManagement() {
           <div className="mt-6 flex gap-3">
             <button
               onClick={handleRegister}
-              className="flex-1 px-5 py-3 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white rounded-xl shadow-xs transition text-sm font-semibold cursor-pointer"
+              disabled={user?.emailVerified === false}
+              className="flex-1 px-5 py-3 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white rounded-xl shadow-xs transition text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {t.register_for_queue || 'Register for Queue'}
+              {user?.emailVerified === false ? (lang === 'am' ? 'ኢሜይል ማረጋገጥ ያስፈልጋል' : 'Email Verification Required') : (t.register_for_queue || 'Register for Queue')}
             </button>
             <button
               onClick={handleBack}
@@ -580,13 +598,18 @@ export default function QueueManagement() {
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <h3 className="font-bold text-slate-900 text-base">{t.queue_status || 'Queue Status'}</h3>
-            {isLive ? (
+            {connectionStatus === 'connected' ? (
               <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 {lang === 'am' ? 'የቀጥታ ክትትል ነቅቷል' : 'Live tracking active'}
               </span>
+            ) : connectionStatus === 'connecting' ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />
+                {lang === 'am' ? 'በመገናኘት ላይ...' : 'Connecting...'}
+              </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200" title={connectionError || 'Connection lost'}>
+              <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200" title={connectionError || (lang === 'am' ? 'ግንኙነት ተቋርጧል' : 'Connection lost')}>
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                 {lang === 'am' ? 'ግንኙነት ተቋርጧል (እንደገና በመሞከር ላይ...)' : 'Offline (retrying...)'}
               </span>
