@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import QueueManagement from '../../components/dashboard/QueueManagement';
 import FeedbackRating from '../../components/dashboard/FeedbackRating';
@@ -90,7 +89,7 @@ const toLocalEthiopianPhone = (phone) => {
 
 export default function CustomerDashboard() {
   const { user, updateUser, changePassword, verifyEmail, resendVerification, sendPhoneOTP, verifyPhoneOTP } = useAuth();
-  const { t, lang, getStatusLabel } = useApp();
+  const { t, lang } = useApp();
   const { getActiveTickets } = useQueue();
   const { applications, getActiveApplications, getCompletedApplications } = useApplications();
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -617,7 +616,7 @@ export default function CustomerDashboard() {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative z-10">
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#f4b51a] border border-[#f4b51a]/30 text-xs font-semibold mb-3 backdrop-blur-xs">
-                  <span>FDRE Hawassa MESOB Portal</span>
+                  <span>Hawassa MESOB Portal</span>
                   <span>•</span>
                   <span className="text-blue-100 font-normal">
                     {lang === 'am' ? 'የህዝብ አገልግሎቶች' : 'Public Services'}
@@ -1358,7 +1357,7 @@ export default function CustomerDashboard() {
                               });
                               return;
                             }
-                            val = val.replace(/[^\d+\s\-]/g, '');
+                            val = val.replace(/[^\d+\s-]/g, '');
                             setProfileForm(f => ({ ...f, phone: val }));
                             if (phoneOtpMsg?.text?.includes('email') || phoneOtpMsg?.text?.includes('ኢሜይል')) {
                               setPhoneOtpMsg(null);

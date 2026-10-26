@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth, ROLE_ROUTES, ROLE_LABELS } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import PasswordInput from '../../components/PasswordInput';
@@ -7,7 +7,7 @@ import LanguageSwitcher from '../../components/LanguageSwitcher';
 
 export default function ChangePasswordPage() {
   const { user, changePassword, logout } = useAuth();
-  const { t, lang } = useApp();
+  const { lang } = useApp();
   const navigate = useNavigate();
 
   const [currentPassword, setCurrentPassword] = useState('');

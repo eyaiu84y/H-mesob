@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * SidebarNavIcon
  * Enterprise SVG icons for dashboard sidebar navigation items.

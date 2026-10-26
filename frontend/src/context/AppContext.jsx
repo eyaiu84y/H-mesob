@@ -19,10 +19,10 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark');
-      try { localStorage.setItem('theme', 'dark'); } catch {}
+      try { localStorage.setItem('theme', 'dark'); } catch { /* ignore storage error */ }
     } else {
       document.documentElement.classList.remove('dark');
-      try { localStorage.setItem('theme', 'light'); } catch {}
+      try { localStorage.setItem('theme', 'light'); } catch { /* ignore storage error */ }
     }
   }, [isDark]);
 
