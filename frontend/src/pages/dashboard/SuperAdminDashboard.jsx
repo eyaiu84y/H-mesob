@@ -111,10 +111,10 @@ function SectionDashboard({ setActiveSection }) {
               <span>•</span>
               <span className="text-blue-100 font-normal">Hawassa MESOB</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
               System Health & Administration
             </h2>
-            <p className="text-blue-100/90 text-sm mt-1 max-w-xl">
+            <p className="text-blue-100 text-sm mt-1 max-w-xl">
               Complete oversight of registered customers, administrative personnel, institutions, central approvals, security policies, and system audit logs.
             </p>
           </div>

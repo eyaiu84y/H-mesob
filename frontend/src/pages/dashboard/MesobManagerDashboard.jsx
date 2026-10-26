@@ -91,10 +91,10 @@ function SectionDashboard({ setActiveSection }) {
               <span>•</span>
               <span className="text-blue-100 font-normal">Hawassa MESOB</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
               Service Operations Oversight
             </h2>
-            <p className="text-blue-100/90 text-sm mt-1 max-w-xl">
+            <p className="text-blue-100 text-sm mt-1 max-w-xl">
               Monitor real-time customer traffic, institutional throughput, service queues, and facility maintenance across Hawassa MESOB Center.
             </p>
           </div>

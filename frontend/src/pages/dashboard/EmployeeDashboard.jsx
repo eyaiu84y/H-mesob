@@ -72,10 +72,10 @@ function SectionDashboard({ setActiveSection }) {
               <span>•</span>
               <span className="text-blue-100 font-normal">{user?.institution || 'MESOB Service Desk'}</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
               Welcome, {user?.name || 'Staff Member'}
             </h2>
-            <p className="text-blue-100/90 text-sm mt-1 max-w-xl">
+            <p className="text-blue-100 text-sm mt-1 max-w-xl">
               Process customer service requests, serve live queue tickets, and record verified application actions.
             </p>
           </div>

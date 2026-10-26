@@ -1395,12 +1395,12 @@ html.dark .dashboard-bg .bg-gray-200 {
 
 /* ===== Typography Hierarchy & Contrast Standards ===== */
 /* Light Mode Typography */
-html:not(.dark) .dashboard-bg h1,
-html:not(.dark) .dashboard-bg h2,
-html:not(.dark) .dashboard-bg h3,
-html:not(.dark) .dashboard-bg h4,
-html:not(.dark) .dashboard-bg h5,
-html:not(.dark) .dashboard-bg h6 {
+html:not(.dark) .dashboard-bg h1:not(.text-white):not([class*="text-white"]):not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-green-"]):not([class*="text-amber-"]):not([class*="text-rose-"]):not([class*="text-red-"]):not([class*="text-yellow-"]):not([class*="text-cyan-"]):not([class*="text-teal-"]):not([class*="text-indigo-"]):not([class*="text-violet-"]):not([class*="text-purple-"]),
+html:not(.dark) .dashboard-bg h2:not(.text-white):not([class*="text-white"]):not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-green-"]):not([class*="text-amber-"]):not([class*="text-rose-"]):not([class*="text-red-"]):not([class*="text-yellow-"]):not([class*="text-cyan-"]):not([class*="text-teal-"]):not([class*="text-indigo-"]):not([class*="text-violet-"]):not([class*="text-purple-"]),
+html:not(.dark) .dashboard-bg h3:not(.text-white):not([class*="text-white"]):not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-green-"]):not([class*="text-amber-"]):not([class*="text-rose-"]):not([class*="text-red-"]):not([class*="text-yellow-"]):not([class*="text-cyan-"]):not([class*="text-teal-"]):not([class*="text-indigo-"]):not([class*="text-violet-"]):not([class*="text-purple-"]),
+html:not(.dark) .dashboard-bg h4:not(.text-white):not([class*="text-white"]):not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-green-"]):not([class*="text-amber-"]):not([class*="text-rose-"]):not([class*="text-red-"]):not([class*="text-yellow-"]):not([class*="text-cyan-"]):not([class*="text-teal-"]):not([class*="text-indigo-"]):not([class*="text-violet-"]):not([class*="text-purple-"]),
+html:not(.dark) .dashboard-bg h5:not(.text-white):not([class*="text-white"]):not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-green-"]):not([class*="text-amber-"]):not([class*="text-rose-"]):not([class*="text-red-"]):not([class*="text-yellow-"]):not([class*="text-cyan-"]):not([class*="text-teal-"]):not([class*="text-indigo-"]):not([class*="text-violet-"]):not([class*="text-purple-"]),
+html:not(.dark) .dashboard-bg h6:not(.text-white):not([class*="text-white"]):not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-green-"]):not([class*="text-amber-"]):not([class*="text-rose-"]):not([class*="text-red-"]):not([class*="text-yellow-"]):not([class*="text-cyan-"]):not([class*="text-teal-"]):not([class*="text-indigo-"]):not([class*="text-violet-"]):not([class*="text-purple-"]) {
   color: #0f172a !important;
   letter-spacing: -0.015em;
 }
@@ -1427,14 +1427,35 @@ html.dark .dashboard-bg .text-slate-800,
 html.dark .dashboard-bg .text-gray-900,
 html.dark .dashboard-bg .text-gray-800,
 html.dark .dashboard-bg .text-black,
-html.dark .dashboard-bg h1:not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-amber-"]):not([class*="text-rose-"]),
-html.dark .dashboard-bg h2:not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-amber-"]):not([class*="text-rose-"]),
-html.dark .dashboard-bg h3:not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-amber-"]):not([class*="text-rose-"]),
-html.dark .dashboard-bg h4:not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-amber-"]):not([class*="text-rose-"]),
-html.dark .dashboard-bg h5:not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-amber-"]):not([class*="text-rose-"]),
-html.dark .dashboard-bg h6:not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-amber-"]):not([class*="text-rose-"]),
+html.dark .dashboard-bg h1:not(.text-white):not([class*="text-white"]):not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-green-"]):not([class*="text-amber-"]):not([class*="text-rose-"]):not([class*="text-red-"]):not([class*="text-yellow-"]),
+html.dark .dashboard-bg h2:not(.text-white):not([class*="text-white"]):not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-green-"]):not([class*="text-amber-"]):not([class*="text-rose-"]):not([class*="text-red-"]):not([class*="text-yellow-"]),
+html.dark .dashboard-bg h3:not(.text-white):not([class*="text-white"]):not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-green-"]):not([class*="text-amber-"]):not([class*="text-rose-"]):not([class*="text-red-"]):not([class*="text-yellow-"]),
+html.dark .dashboard-bg h4:not(.text-white):not([class*="text-white"]):not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-green-"]):not([class*="text-amber-"]):not([class*="text-rose-"]):not([class*="text-red-"]):not([class*="text-yellow-"]),
+html.dark .dashboard-bg h5:not(.text-white):not([class*="text-white"]):not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-green-"]):not([class*="text-amber-"]):not([class*="text-rose-"]):not([class*="text-red-"]):not([class*="text-yellow-"]),
+html.dark .dashboard-bg h6:not(.text-white):not([class*="text-white"]):not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-green-"]):not([class*="text-amber-"]):not([class*="text-rose-"]):not([class*="text-red-"]):not([class*="text-yellow-"]),
 html.dark .dashboard-bg strong:not([class*="text-amber-"]):not([class*="text-emerald-"]):not([class*="text-rose-"]) {
   color: #f8fafc !important;
+}
+
+/* Explicit White Text & Dark Hero Banner Typography */
+.dashboard-bg .text-white,
+.dashboard-bg [class*="text-white"]:not([class*="hover:"]):not([class*="dark:"]),
+.dashboard-bg .text-white h1,
+.dashboard-bg .text-white h2,
+.dashboard-bg .text-white h3,
+.dashboard-bg .text-white h4,
+.dashboard-bg .text-white h5,
+.dashboard-bg .text-white h6,
+.dashboard-bg [class*="bg-gradient-to-r from-[#0f172a]"] h1,
+.dashboard-bg [class*="bg-gradient-to-r from-[#0f172a]"] h2,
+.dashboard-bg [class*="bg-gradient-to-r from-[#0f172a]"] h3,
+.dashboard-bg [class*="bg-gradient-to-br from-[#172554]"] h1,
+.dashboard-bg [class*="bg-gradient-to-br from-[#172554]"] h2,
+.dashboard-bg [class*="bg-gradient-to-br from-[#172554]"] h3,
+.dashboard-bg [class*="bg-gradient-to-r from-emerald-600"] h1,
+.dashboard-bg [class*="bg-gradient-to-r from-emerald-600"] h2,
+.dashboard-bg [class*="bg-gradient-to-r from-emerald-600"] h3 {
+  color: #ffffff !important;
 }
 html.dark .dashboard-bg .text-slate-700,
 html.dark .dashboard-bg .text-gray-700 {

@@ -47,7 +47,6 @@ export async function submitFeedback(feedbackData) {
       .from('users')
       .select('id, role, status')
       .eq('id', customerId)
-      .in('role', ['CUSTOMER', 'CITIZEN'])
       .maybeSingle();
 
     if (customerError) {
@@ -58,6 +57,12 @@ export async function submitFeedback(feedbackData) {
     if (!customer) {
       console.error('Customer not found:', customerId);
       throw new Error('Customer not found');
+    }
+
+    const customerRole = (customer.role || '').toUpperCase();
+    if (customerRole !== 'CITIZEN' && customerRole !== 'CUSTOMER') {
+      console.error('User is not authorized as a customer:', customer.role);
+      throw new Error('User is not authorized as a customer');
     }
 
     if (customer.status !== 'ACTIVE') {
@@ -114,7 +119,7 @@ export async function submitFeedback(feedbackData) {
     let duplicateQuery = supabase
       .from('service_feedback')
       .select('id')
-      .eq('citizen_id', feedbackData.citizen_id)
+      .eq('citizen_id', customerId)
       .eq('service_id', feedbackData.service_id);
 
     if (feedbackData.application_id) {
@@ -127,7 +132,7 @@ export async function submitFeedback(feedbackData) {
       const { data: generalFeedback, error: generalError } = await supabase
         .from('service_feedback')
         .select('id')
-        .eq('citizen_id', feedbackData.citizen_id)
+        .eq('citizen_id', customerId)
         .eq('service_id', feedbackData.service_id)
         .is('application_id', null)
         .is('queue_entry_id', null)

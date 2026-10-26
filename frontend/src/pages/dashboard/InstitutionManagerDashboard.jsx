@@ -123,10 +123,10 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
               <span>•</span>
               <span className="text-blue-100 font-normal">MESOB Partner Agency</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
               {userInstitution || 'Institutional Operations'}
             </h2>
-            <p className="text-blue-100/90 text-sm mt-1 max-w-xl">
+            <p className="text-blue-100 text-sm mt-1 max-w-xl">
               Oversee departmental queues, review customer service applications, approve documents, and coordinate staff operations.
             </p>
           </div>

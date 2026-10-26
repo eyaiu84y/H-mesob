@@ -623,10 +623,10 @@ export default function CustomerDashboard() {
                     {lang === 'am' ? 'የህዝብ አገልግሎቶች' : 'Public Services'}
                   </span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
                   {t.welcome_back}, {firstName}!
                 </h2>
-                <p className="text-blue-100/90 text-sm sm:text-base mt-1.5 max-w-xl leading-relaxed">
+                <p className="text-blue-100 text-sm sm:text-base mt-1.5 max-w-xl leading-relaxed">
                   {lang === 'am' 
                     ? 'አገልግሎቶችን ያመልክቱ፣ ማመልከቻዎችን ይከታተሉ እና የወረፋ ሁኔታዎን በአንድ ቦታ ያረጋግጡ።' 
                     : 'Apply for public services, track your applications, and check your queue status in one place.'}
@@ -653,7 +653,7 @@ export default function CustomerDashboard() {
                   <span>•</span>
                   <span>{lang === 'am' ? 'ሃዋሳ፣ ሲዳማ' : 'Hawassa, Sidama'}</span>
                 </div>
-                <p className="text-xs text-blue-200/80">
+                <p className="text-xs text-blue-100 font-medium">
                   {lang === 'am' ? 'በቀላሉ ከታች ያሉትን ዋና ተግባራት ይምረጡ' : 'Select an action below to get started'}
                 </p>
               </div>
@@ -709,7 +709,7 @@ export default function CustomerDashboard() {
                           Ticket #{currentTicket.token}
                         </span>
                       </div>
-                      <h3 className="text-lg sm:text-xl font-extrabold mt-1">
+                      <h3 className="text-lg sm:text-xl font-extrabold mt-1 text-white">
                         {lang === 'am'
                           ? `እባክዎ ወዲያውኑ ወደ መስኮት ${currentTicket.counterNumber || currentTicket.counter || '1'} ይሂዱ`
                           : `Please go to Counter #${currentTicket.counterNumber || currentTicket.counter || '1'}`}
@@ -1659,7 +1659,7 @@ export default function CustomerDashboard() {
                     <p className="text-xs text-blue-200 uppercase tracking-wide">
                       {lang === 'am' ? 'የመለያ ሁኔታ' : 'Account Status'}
                     </p>
-                    <p className="text-lg font-bold">
+                    <p className="text-lg font-bold text-white">
                       {t.active_customer_account || (lang === 'am' ? 'ንቁ የደንበኛ መለያ' : 'Active Customer Account')}
                     </p>
                   </div>

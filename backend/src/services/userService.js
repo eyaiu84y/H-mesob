@@ -38,7 +38,7 @@ export const getAllUsers = async (filters = {}, user) => {
     if (filters.role) {
       const upperRole = String(filters.role).toUpperCase();
       if (upperRole === 'CUSTOMER' || upperRole === 'CITIZEN') {
-        query = query.in('role', ['CUSTOMER', 'CITIZEN']);
+        query = query.eq('role', 'CITIZEN');
       } else if (upperRole === 'TECHNICIAN' || upperRole === 'ICT_STAFF') {
         query = query.eq('role', 'ICT_STAFF');
       } else {

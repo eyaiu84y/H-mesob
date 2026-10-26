@@ -60,10 +60,10 @@ function SectionDashboard({ setActiveSection, tasks }) {
               <span>•</span>
               <span className="text-blue-100 font-normal">MESOB Center</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
               Welcome, {user?.name || 'Technician'}
             </h2>
-            <p className="text-blue-100/90 text-sm mt-1 max-w-xl">
+            <p className="text-blue-100 text-sm mt-1 max-w-xl">
               Inspect technical systems, resolve hardware and network maintenance tickets, and keep public facilities operational.
             </p>
           </div>
