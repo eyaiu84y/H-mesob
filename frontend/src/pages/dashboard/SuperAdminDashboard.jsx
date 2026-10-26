@@ -2471,6 +2471,7 @@ function SectionAnalytics() {
 function SectionAnnouncements() {
   const { user } = useAuth();
   const { announcements, createAnnouncement: createAnnouncementAPI, updateAnnouncement, deleteAnnouncement, loading, error } = useAnnouncements();
+  const { institutions = [] } = useServices?.() || {};
   const [selected, setSelected] = useState(null);
   const [view, setView] = useState('list'); // 'list' | 'new' | 'edit'
   const [form, setForm] = useState({ title: '', body: '', scope: 'INTERNAL', targetRoles: [], institutionId: '' });
@@ -2500,17 +2501,10 @@ function SectionAnnouncements() {
     const announcementData = {
       title: form.title.trim(),
       content: form.body.trim(),
-      scope: form.scope
+      scope: form.scope,
+      targetRoles: form.scope === 'ROLE' ? form.targetRoles : [],
+      institutionId: form.scope === 'INSTITUTION' ? form.institutionId : null
     };
-    
-    // Add optional fields based on scope
-    if (form.scope === 'ROLE' && form.targetRoles.length > 0) {
-      announcementData.targetRoles = form.targetRoles;
-    }
-    
-    if (form.scope === 'INSTITUTION' && form.institutionId) {
-      announcementData.institutionId = form.institutionId;
-    }
     
     let result;
     if (view === 'edit' && selected) {
@@ -2533,14 +2527,15 @@ function SectionAnnouncements() {
 
   function handleEdit(ann) {
     setForm({
-      title: ann.title,
-      body: ann.content,
-      scope: ann.scope,
-      targetRoles: ann.target_roles || [],
-      institutionId: ann.institution_id || ''
+      title: ann.title || '',
+      body: ann.content || '',
+      scope: ann.scope || 'INTERNAL',
+      targetRoles: ann.target_roles || ann.targetRoles || [],
+      institutionId: ann.institution_id || ann.institutionId || ''
     });
     setSelected(ann.id);
     setView('edit');
+    setFormError('');
   }
 
   async function handleDelete(annId, annTitle) {
@@ -2575,65 +2570,12 @@ function SectionAnnouncements() {
     return isOwner;
   }
 
-  // Announcement detail view
-  if (selected) {
-    const ann = announcements.find(a => a.id === selected);
-    if (!ann) return null;
-
-    const canEdit = canModify(ann);
-    
-    return (
-      <>
-        <div className="mb-6">
-          <button onClick={() => setSelected(null)} className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-medium flex items-center gap-1 transition">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
-            Back to Announcements
-          </button>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <h2 className="text-lg font-bold text-slate-900">{ann.title}</h2>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {ann.is_active && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">Active</span>}
-              {canEdit && (
-                <>
-                  <button 
-                    onClick={() => handleEdit(ann)}
-                    className="px-3 py-1.5 text-sm text-[#314ea1] hover:bg-blue-50/80 rounded-xl font-medium transition"
-                    title="Edit announcement"
-                  >
-                    Edit
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(ann.id, ann.title)}
-                    className="px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-50/80 rounded-xl font-medium transition"
-                    title="Delete announcement"
-                  >
-                    Delete
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-          <p className="text-xs text-slate-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} · {ann.creator?.full_name || 'System'}</p>
-          <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{ann.content}</div>
-          <div className="mt-4 pt-4 border-t border-slate-100">
-            <p className="text-xs text-slate-500">
-              <strong className="text-slate-700">Scope:</strong> {ann.scope} 
-              {ann.target_roles && ann.target_roles.length > 0 && <span> ({ann.target_roles.join(', ')})</span>}
-            </p>
-          </div>
-        </div>
-      </>
-    );
-  }
-
   // New/Edit announcement form
   if (view === 'new' || view === 'edit') {
     return (
       <>
         <div className="mb-6">
-          <button onClick={() => { setView('list'); setSelected(null); setFormError(''); }} className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-medium flex items-center gap-1 transition">
+          <button onClick={() => { setView('list'); if (view === 'new') setSelected(null); setFormError(''); }} className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-medium flex items-center gap-1 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
             Cancel
           </button>
@@ -2692,10 +2634,25 @@ function SectionAnnouncements() {
             {form.scope === 'INSTITUTION' && (
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Institution <span className="text-rose-500">*</span></label>
-                <input type="text" value={form.institutionId} onChange={e => setForm(f => ({ ...f, institutionId: e.target.value }))}
-                  placeholder="Enter institution ID"
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white" />
-                <p className="text-xs text-slate-500 mt-1">Enter the UUID of the target institution</p>
+                {institutions && institutions.length > 0 ? (
+                  <select 
+                    value={form.institutionId} 
+                    onChange={e => setForm(f => ({ ...f, institutionId: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
+                  >
+                    <option value="">Select an institution...</option>
+                    {institutions.map(inst => (
+                      <option key={inst.id} value={inst.id}>
+                        {inst.name_en || inst.name || inst.name_am}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input type="text" value={form.institutionId} onChange={e => setForm(f => ({ ...f, institutionId: e.target.value }))}
+                    placeholder="Enter institution ID"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white" />
+                )}
+                <p className="text-xs text-slate-500 mt-1">Select or enter the target institution</p>
               </div>
             )}
             
@@ -2714,6 +2671,59 @@ function SectionAnnouncements() {
               {loading ? (view === 'edit' ? 'Updating...' : 'Publishing...') : (view === 'edit' ? 'Update Announcement' : 'Publish Announcement')}
             </button>
           </form>
+        </div>
+      </>
+    );
+  }
+
+  // Announcement detail view
+  if (selected) {
+    const ann = announcements.find(a => a.id === selected);
+    if (!ann) return null;
+
+    const canEdit = canModify(ann);
+    
+    return (
+      <>
+        <div className="mb-6">
+          <button onClick={() => setSelected(null)} className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-medium flex items-center gap-1 transition">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
+            Back to Announcements
+          </button>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <h2 className="text-lg font-bold text-slate-900">{ann.title}</h2>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {ann.is_active && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">Active</span>}
+              {canEdit && (
+                <>
+                  <button 
+                    onClick={() => handleEdit(ann)}
+                    className="px-3 py-1.5 text-sm text-[#314ea1] hover:bg-blue-50/80 rounded-xl font-medium transition"
+                    title="Edit announcement"
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(ann.id, ann.title)}
+                    className="px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-50/80 rounded-xl font-medium transition"
+                    title="Delete announcement"
+                  >
+                    Delete
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} · {ann.creator?.full_name || 'System'}</p>
+          <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{ann.content}</div>
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <p className="text-xs text-slate-500">
+              <strong className="text-slate-700">Scope:</strong> {ann.scope} 
+              {ann.target_roles && ann.target_roles.length > 0 && <span> ({ann.target_roles.join(', ')})</span>}
+            </p>
+          </div>
         </div>
       </>
     );

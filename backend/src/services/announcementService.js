@@ -80,7 +80,7 @@ export const getAnnouncements = async (filters, currentUser) => {
         
         // SYSTEM - visible to admins only
         if (announcement.scope === 'SYSTEM') {
-          return ['SUPER_ADMIN', 'MESOB_MANAGER'].includes(currentUser.role);
+          return ['SUPER_ADMIN', 'MESOB_MANAGER'].includes((currentUser.role || '').toUpperCase());
         }
         
         // INSTITUTION - visible if user belongs to the institution
@@ -264,9 +264,10 @@ export const updateAnnouncement = async (announcementId, updates, currentUser) =
     }
 
     // Authorization checks
+    const userRole = (currentUser.role || '').toUpperCase();
     const isCreator = existing.published_by === currentUser.id;
-    const isSuperAdmin = ['SUPER_ADMIN', 'MESOB_MANAGER'].includes(currentUser.role);
-    const isInstitutionManager = currentUser.role === 'INSTITUTION_MANAGER';
+    const isSuperAdmin = ['SUPER_ADMIN', 'MESOB_MANAGER'].includes(userRole);
+    const isInstitutionManager = userRole === 'INSTITUTION_MANAGER';
     const isOwnInstitution = existing.institution_id === currentUser.institution_id;
     const isInstitutionScoped = existing.scope === 'INSTITUTION';
     const isInternalScoped = existing.scope === 'INTERNAL';
@@ -289,9 +290,9 @@ export const updateAnnouncement = async (announcementId, updates, currentUser) =
     if (updates.title) updateData.title = updates.title;
     if (updates.content) updateData.content = updates.content;
     if (updates.scope) updateData.scope = updates.scope;
-    if (updates.targetRoles) updateData.target_roles = updates.targetRoles;
-    if (updates.institutionId !== undefined) updateData.institution_id = updates.institutionId;
-    if (updates.expiresAt !== undefined) updateData.expires_at = updates.expiresAt;
+    if (updates.targetRoles !== undefined) updateData.target_roles = Array.isArray(updates.targetRoles) ? updates.targetRoles : [];
+    if (updates.institutionId !== undefined) updateData.institution_id = updates.institutionId || null;
+    if (updates.expiresAt !== undefined) updateData.expires_at = updates.expiresAt || null;
 
     // Update announcement
     const { data: updatedAnnouncement, error } = await supabase
@@ -413,9 +414,10 @@ export const deleteAnnouncement = async (announcementId, currentUser) => {
     }
 
     // Authorization checks
+    const userRole = (currentUser.role || '').toUpperCase();
     const isCreator = announcement.published_by === currentUser.id;
-    const isSuperAdmin = ['SUPER_ADMIN', 'MESOB_MANAGER'].includes(currentUser.role);
-    const isInstitutionManager = currentUser.role === 'INSTITUTION_MANAGER';
+    const isSuperAdmin = ['SUPER_ADMIN', 'MESOB_MANAGER'].includes(userRole);
+    const isInstitutionManager = userRole === 'INSTITUTION_MANAGER';
     const isOwnInstitution = announcement.institution_id === currentUser.institution_id;
     const isInstitutionScoped = announcement.scope === 'INSTITUTION';
     const isInternalScoped = announcement.scope === 'INTERNAL';
