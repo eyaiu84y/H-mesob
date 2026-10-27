@@ -1,7 +1,7 @@
 import { useApp } from '../context/AppContext';
 
 export default function Address() {
-  const { t } = useApp();
+  const { t, lang } = useApp();
 
   return (
     <section id="Address" className="Address" style={{ padding: '5rem 0' }}>
@@ -28,8 +28,10 @@ export default function Address() {
                 <div className="text-2xl">📞</div>
                 <div>
                   <p className="font-semibold text-gray-900 dark:text-white">{t.addr_phone_label}</p>
-                  <p className="text-gray-700 dark:text-gray-300">+251928003080</p>
-                  <p className="text-gray-700 dark:text-gray-300">+251-xx-xxx-xxxx (Fax)</p>
+                  <a href="tel:+251928003080" className="text-blue-600 dark:text-blue-400 hover:underline font-medium block">
+                    +251 928 003 080
+                  </a>
+                  <p className="text-gray-700 dark:text-gray-300 text-sm mt-0.5">+251 46 220 0000 {lang === 'am' ? '(ፋክስ)' : '(Fax)'}</p>
                 </div>
               </div>
 
@@ -44,7 +46,9 @@ export default function Address() {
             </div>
 
             <a
-              href="#"
+              href="https://www.google.com/maps/dir/?api=1&destination=7.047339,38.482469"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-3 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-semibold transition"
             >
               {t.addr_directions}
@@ -61,7 +65,7 @@ export default function Address() {
               allowFullScreen=""
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
-              title="Hawassa MESOB Location"
+              title={lang === 'am' ? 'የሃዋሳ መሶብ አድራሻ ካርታ' : 'Hawassa MESOB Location'}
             />
           </div>
 

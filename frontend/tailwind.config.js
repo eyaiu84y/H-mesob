@@ -8,7 +8,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'Noto Sans Ethiopic', 'sans-serif'],
+        sans: ['Inter', 'Noto Sans Ethiopic', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        ethiopic: ['"Noto Sans Ethiopic"', 'Inter', 'sans-serif'],
       },
       colors: {
         mesob: {

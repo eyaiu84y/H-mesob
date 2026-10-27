@@ -12,6 +12,7 @@ import MesobFeedbackOverview from '../../components/dashboard/MesobFeedbackOverv
 import NotificationBell from '../../components/dashboard/NotificationBell';
 import ApprovalsManagement from '../../components/dashboard/ApprovalsManagement';
 import SidebarNavIcon from '../../components/dashboard/SidebarNavIcon';
+import { getYouTubeVideoId } from '../../utils/formatters';
 
 // ─── Navigation sections ──────────────────────────────────────────
 function getSections(t) {
@@ -1294,7 +1295,15 @@ function SectionAnnouncements() {
   const { announcements, createAnnouncement: createAnnouncementAPI, updateAnnouncement, deleteAnnouncement, loading, error } = useAnnouncements();
   const [selected, setSelected] = useState(null);
   const [view, setView] = useState('list'); // 'list' | 'new' | 'edit'
-  const [form, setForm] = useState({ title: '', body: '', scope: 'INTERNAL', targetRoles: [] });
+  const [form, setForm] = useState({
+    title: '',
+    title_am: '',
+    body: '',
+    content_am: '',
+    video_url: '',
+    scope: 'INTERNAL',
+    targetRoles: []
+  });
   const [formError, setFormError] = useState('');
 
   async function submitAnnouncement(e) {
@@ -1312,9 +1321,15 @@ function SectionAnnouncements() {
 
     setFormError('');
 
+    const trimmedVideo = form.video_url.trim();
+
     const announcementData = {
       title: form.title.trim(),
       content: form.body.trim(),
+      title_am: form.title_am.trim() || undefined,
+      content_am: form.content_am.trim() || undefined,
+      video_url: trimmedVideo || undefined,
+      metadata: trimmedVideo ? { video_url: trimmedVideo } : undefined,
       scope: form.scope
     };
 
@@ -1333,7 +1348,7 @@ function SectionAnnouncements() {
     }
 
     if (result.success) {
-      setForm({ title: '', body: '', scope: 'INTERNAL', targetRoles: [] });
+      setForm({ title: '', title_am: '', body: '', content_am: '', video_url: '', scope: 'INTERNAL', targetRoles: [] });
       setView('list');
       setSelected(null);
       alert(view === 'edit' ? 'Announcement updated successfully!' : 'Announcement published successfully!');
@@ -1343,10 +1358,14 @@ function SectionAnnouncements() {
   }
 
   function handleEdit(ann) {
+    const videoUrl = ann.metadata?.video_url || ann.video_url || '';
     setForm({
-      title: ann.title,
-      body: ann.content,
-      scope: ann.scope,
+      title: ann.title || '',
+      title_am: ann.title_am || '',
+      body: ann.content || '',
+      content_am: ann.content_am || '',
+      video_url: videoUrl,
+      scope: ann.scope || 'INTERNAL',
       targetRoles: ann.target_roles || []
     });
     setSelected(ann.id);
@@ -1389,6 +1408,8 @@ function SectionAnnouncements() {
 
   // New/Edit announcement form
   if (view === 'new' || view === 'edit') {
+    const videoPreviewId = form.video_url.trim() ? getYouTubeVideoId(form.video_url) : null;
+
     return (
       <>
         <div className="mb-6">
@@ -1397,27 +1418,92 @@ function SectionAnnouncements() {
             Cancel
           </button>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 max-w-2xl">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 max-w-3xl">
           <h2 className="text-lg font-bold text-slate-900 mb-6">{view === 'edit' ? 'Edit Announcement' : 'New Announcement'}</h2>
           <form onSubmit={submitAnnouncement} className="space-y-5">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Title <span className="text-rose-500">*</span></label>
-              <input type="text" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                placeholder="Brief announcement title"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Title (English) <span className="text-rose-500">*</span></label>
+                <input type="text" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                  placeholder="Brief announcement title"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">ርዕስ በአማርኛ (Title in Amharic)</label>
+                <input type="text" value={form.title_am} onChange={e => setForm(f => ({ ...f, title_am: e.target.value }))}
+                  placeholder="የማስታወቂያው ርዕስ በአማርኛ"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white" />
+              </div>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Content (English) <span className="text-rose-500">*</span></label>
+                <textarea rows={5} value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
+                  placeholder="Announcement content..."
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm resize-y bg-white" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">ዝርዝር መረጃ በአማርኛ (Content in Amharic)</label>
+                <textarea rows={5} value={form.content_am} onChange={e => setForm(f => ({ ...f, content_am: e.target.value }))}
+                  placeholder="የማስታወቂያው ዝርዝር መረጃ በአማርኛ..."
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm resize-y bg-white" />
+              </div>
+            </div>
+
+            {/* Video URL for dynamic video news */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Content <span className="text-rose-500">*</span></label>
-              <textarea rows={5} value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
-                placeholder="Announcement content"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm resize-y bg-white" />
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                <span>Video URL (YouTube) / የቪዲዮ ሊንክ</span>
+                <span className="text-xs font-normal text-slate-400">Optional</span>
+              </label>
+              <input
+                type="url"
+                value={form.video_url}
+                onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))}
+                placeholder="e.g. https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Attach a YouTube link to broadcast this announcement as a video news report. With <strong>Public</strong> scope, it will automatically show on the Homepage Featured Video &amp; Playlist!
+              </p>
+
+              {/* Live Preview */}
+              {form.video_url.trim() && (
+                videoPreviewId ? (
+                  <div className="mt-3 p-3.5 bg-blue-50/60 border border-blue-200/80 rounded-xl">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-[#1e3a8a] flex items-center gap-1.5">
+                        <svg className="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        YouTube Video Found (ID: {videoPreviewId})
+                      </span>
+                      <span className="text-xs text-slate-500">Live Player Preview</span>
+                    </div>
+                    <div className="relative aspect-video max-w-md rounded-lg overflow-hidden bg-black shadow-sm">
+                      <iframe
+                        src={`https://www.youtube.com/embed/${videoPreviewId}`}
+                        title="Video Preview"
+                        className="w-full h-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-amber-600">
+                    ⚠️ Please provide a valid YouTube URL (e.g., https://www.youtube.com/watch?v=... or https://youtu.be/...)
+                  </p>
+                )
+              )}
             </div>
             
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Audience <span className="text-rose-500">*</span></label>
               <select value={form.scope} onChange={e => setForm(f => ({ ...f, scope: e.target.value, targetRoles: [] }))}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white">
-                <option value="PUBLIC">Public - Visible to everyone including customers</option>
+                <option value="PUBLIC">Public - Visible to everyone including customers (Shows on Homepage)</option>
                 <option value="INTERNAL">Internal - Staff only (employees, managers, admins)</option>
                 <option value="ROLE">Role - Specific role(s)</option>
               </select>
@@ -1448,7 +1534,7 @@ function SectionAnnouncements() {
             
             <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-800">
               <strong className="text-slate-900">Scope: {form.scope}</strong>
-              {form.scope === 'PUBLIC' && <p className="mt-1 text-slate-600">This announcement will be visible to all users including customers.</p>}
+              {form.scope === 'PUBLIC' && <p className="mt-1 text-slate-600">This announcement will be visible to all users including customers and displayed on the homepage.</p>}
               {form.scope === 'INTERNAL' && <p className="mt-1 text-slate-600">This announcement will be visible only to staff (not customers).</p>}
               {form.scope === 'ROLE' && <p className="mt-1 text-slate-600">This announcement will be visible only to the selected role(s).</p>}
             </div>
@@ -1470,6 +1556,8 @@ function SectionAnnouncements() {
     if (!ann) return null;
 
     const canEdit = canModify(ann);
+    const videoUrl = ann.metadata?.video_url || ann.video_url;
+    const videoId = getYouTubeVideoId(videoUrl);
 
     return (
       <>
@@ -1479,11 +1567,20 @@ function SectionAnnouncements() {
             Back to Announcements
           </button>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 max-w-3xl">
           <div className="flex items-start justify-between gap-4 mb-4">
-            <h2 className="text-lg font-bold text-slate-900">{ann.title}</h2>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">{ann.title}</h2>
+              {ann.title_am && <p className="text-sm text-slate-600 font-medium mt-0.5">{ann.title_am}</p>}
+            </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {ann.is_active && <span className="badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold">Active</span>}
+              {videoId && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+                  <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  Video
+                </span>
+              )}
               {canEdit && (
                 <>
                   <button 
@@ -1505,7 +1602,30 @@ function SectionAnnouncements() {
             </div>
           </div>
           <p className="text-xs text-slate-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
+          
+          {/* Video Player in Detail View */}
+          {videoId && (
+            <div className="mb-5">
+              <div className="aspect-video w-full rounded-xl overflow-hidden bg-black shadow-sm">
+                <iframe
+                  src={`https://www.youtube.com/embed/${videoId}`}
+                  title={ann.title}
+                  className="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          )}
+
           <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{ann.content}</div>
+          {ann.content_am && (
+            <div className="mt-4 pt-4 border-t border-slate-100 text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+              <strong className="text-slate-800 block mb-1">አማርኛ ትርጉም:</strong>
+              {ann.content_am}
+            </div>
+          )}
+
           <div className="mt-4 pt-4 border-t border-slate-100">
             <p className="text-xs text-slate-500">
               <strong className="text-slate-700">Scope:</strong> {ann.scope} 
@@ -1537,28 +1657,38 @@ function SectionAnnouncements() {
       <div className="space-y-3">
         {announcements.length === 0 ? (
           <div className="text-center text-slate-400 py-12">No announcements available.</div>
-        ) : announcements.map(ann => (
-          <div key={ann.id} onClick={() => setSelected(ann.id)}
-            className={`bg-white rounded-2xl border shadow-xs p-5 cursor-pointer hover:border-slate-300 transition-all duration-200 ${ann.is_active ? 'border-slate-200/90' : 'border-slate-200 bg-slate-50/70'}`}>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  {ann.is_active && <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />}
-                  <h3 className="font-semibold text-sm text-slate-900 leading-snug">{ann.title}</h3>
-                  {ann.scope === 'PUBLIC' && <span className="badge bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold">Public</span>}
-                  {ann.scope === 'INTERNAL' && <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 text-xs font-semibold">Internal</span>}
-                  {ann.scope === 'SYSTEM' && <span className="badge bg-purple-50 text-purple-800 border border-purple-200 text-xs font-semibold">System</span>}
-                  {ann.scope === 'ROLE' && <span className="badge bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold">Role</span>}
-                  {ann.scope === 'INSTITUTION' && <span className="badge bg-indigo-50 text-indigo-800 border border-indigo-200 text-xs font-semibold">Institution</span>}
+        ) : announcements.map(ann => {
+          const hasVideo = Boolean(ann.metadata?.video_url || ann.video_url);
+          return (
+            <div key={ann.id} onClick={() => setSelected(ann.id)}
+              className={`bg-white rounded-2xl border shadow-xs p-5 cursor-pointer hover:border-slate-300 transition-all duration-200 ${ann.is_active ? 'border-slate-200/90' : 'border-slate-200 bg-slate-50/70'}`}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center flex-wrap gap-2 mb-1">
+                    {ann.is_active && <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />}
+                    <h3 className="font-semibold text-sm text-slate-900 leading-snug">{ann.title}</h3>
+                    {hasVideo && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+                        <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        Video
+                      </span>
+                    )}
+                    {ann.scope === 'PUBLIC' && <span className="badge bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold">Public</span>}
+                    {ann.scope === 'INTERNAL' && <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 text-xs font-semibold">Internal</span>}
+                    {ann.scope === 'SYSTEM' && <span className="badge bg-purple-50 text-purple-800 border border-purple-200 text-xs font-semibold">System</span>}
+                    {ann.scope === 'ROLE' && <span className="badge bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold">Role</span>}
+                    {ann.scope === 'INSTITUTION' && <span className="badge bg-indigo-50 text-indigo-800 border border-indigo-200 text-xs font-semibold">Institution</span>}
+                  </div>
+                  {ann.title_am && <p className="text-xs text-slate-500 mb-1 line-clamp-1">{ann.title_am}</p>}
+                  <p className="text-xs text-slate-500">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
                 </div>
-                <p className="text-xs text-slate-500">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
+                <svg className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
+                </svg>
               </div>
-              <svg className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
-              </svg>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </>
   );

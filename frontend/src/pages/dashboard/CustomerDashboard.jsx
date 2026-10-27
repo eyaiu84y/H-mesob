@@ -9,6 +9,7 @@ import { useAnnouncements } from '../../context/AnnouncementContext';
 import { useFeedback } from '../../context/FeedbackContext';
 import { useServices } from '../../context/ServiceContext';
 import { useApp } from '../../context/AppContext';
+import { formatDisplayDate } from '../../utils/formatters';
 
 
 // ─── Plain Language Status Helper for Customers ─────────────────────
@@ -3258,7 +3259,7 @@ function MyFeedbackSection() {
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
                   {t.submitted || (lang === 'am' ? 'የቀረበበት ቀን' : 'Submitted')}
                 </p>
-                <p className="font-medium text-slate-800 text-sm">{new Date(feedback.created_at).toLocaleDateString(lang === 'am' ? 'am-ET' : 'en-US')}</p>
+                <p className="font-medium text-slate-800 text-sm">{formatDisplayDate(feedback.created_at, lang)}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
@@ -3340,7 +3341,7 @@ function MyFeedbackSection() {
                     <span className="text-sm">{getRatingStars(feedback.rating)}</span>
                     <span className="text-xs font-semibold text-amber-900">{feedback.rating}/5 — {getRatingMeaning(feedback.rating)}</span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">{new Date(feedback.created_at).toLocaleDateString(lang === 'am' ? 'am-ET' : 'en-US')}</p>
+                  <p className="text-xs text-slate-400 mt-1">{formatDisplayDate(feedback.created_at, lang)}</p>
                 </div>
                 <svg className="w-5 h-5 text-slate-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
@@ -3387,7 +3388,7 @@ function CustomerAnnouncements() {
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString(lang === 'am' ? 'am-ET' : 'en-US')} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
+          <p className="text-xs text-slate-500 mb-4">{formatDisplayDate(ann.published_at || ann.created_at, lang)} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
           <p className="text-sm text-slate-700 leading-relaxed">{ann.content}</p>
         </div>
       </>
@@ -3440,7 +3441,7 @@ function CustomerAnnouncements() {
                     {ann.is_active && <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />}
                     <h3 className="font-bold text-sm text-slate-900 group-hover:text-[#314ea1] transition-colors leading-snug">{ann.title}</h3>
                   </div>
-                  <p className="text-xs text-slate-500">{new Date(ann.published_at || ann.created_at).toLocaleDateString(lang === 'am' ? 'am-ET' : 'en-US')} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
+                  <p className="text-xs text-slate-500">{formatDisplayDate(ann.published_at || ann.created_at, lang)} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
                 </div>
                 <svg className="w-5 h-5 text-slate-400 group-hover:text-[#314ea1] group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />

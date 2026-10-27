@@ -53,7 +53,7 @@ const SOCIAL_LINKS = [
 ];
 
 export default function Footer() {
-  const { t } = useApp();
+  const { t, lang } = useApp();
 
   return (
     <footer style={{ background: '#0d1a3a' }} className="text-white">
@@ -61,8 +61,8 @@ export default function Footer() {
 
         {/* Logo */}
         <div
-          className="w-20 h-20 overflow-hidden flex items-center justify-center"
-          style={{ transform: 'rotate(157.05deg)' }}
+          className="w-16 h-16 overflow-hidden flex items-center justify-center"
+
         >
           <img
             src="https://mesobcenter.et/Companies/Logo.png"
@@ -80,7 +80,7 @@ export default function Footer() {
 
         {/* Main title */}
         <h2 className="text-2xl sm:text-3xl font-bold tracking-wide text-white">
-          HAWASSA MESOB SERVICE
+          {lang === 'am' ? 'የሃዋሳ መሶብ አገልግሎት' : 'HAWASSA MESOB SERVICE'}
         </h2>
 
         {/* Tagline */}

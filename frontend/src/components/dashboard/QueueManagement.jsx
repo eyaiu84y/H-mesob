@@ -4,6 +4,7 @@ import { useQueue } from '../../context/QueueContext';
 import { useServices } from '../../context/ServiceContext';
 import { useApp } from '../../context/AppContext';
 import FeedbackRating from './FeedbackRating';
+import { formatDisplayDate } from '../../utils/formatters';
 
 // ─── Status badge styles ──────────────────────────────────────────
 const STATUS_STYLES = {
@@ -97,7 +98,7 @@ function TicketCard({ ticket, onView, onCancel }) {
 
       <div className="flex items-center justify-between pt-2 border-t border-slate-100">
         <p className="text-xs text-slate-400">
-          {new Date(ticket.createdAt).toLocaleDateString(lang === 'am' ? 'am-ET' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          {formatDisplayDate(ticket.createdAt, lang)}
           {' · '}
           {new Date(ticket.createdAt).toLocaleTimeString(lang === 'am' ? 'am-ET' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
         </p>
@@ -645,7 +646,7 @@ export default function QueueManagement() {
             <div>
               <p className="text-xs text-slate-500">{t.registered || 'Registered'}</p>
               <p className="font-medium text-slate-800">
-                {new Date(liveTicket.createdAt).toLocaleDateString(lang === 'am' ? 'am-ET' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                {formatDisplayDate(liveTicket.createdAt, lang)}
                 {' '}
                 {new Date(liveTicket.createdAt).toLocaleTimeString(lang === 'am' ? 'am-ET' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
               </p>

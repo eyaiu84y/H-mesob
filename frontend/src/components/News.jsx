@@ -1,11 +1,63 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useAnnouncements } from '../context/AnnouncementContext';
+import { formatDisplayDate } from '../utils/formatters';
+
+const ANNOUNCEMENT_AM_FALLBACKS = {
+  'New Online Services Launched': {
+    title: 'አዳዲስ የመስመር ላይ አገልግሎቶች ተጀምረዋል',
+    content: 'የሃዋሳ መሶብ ዲጂታል አገልግሎት አሁን በይፋ ተጀምሯል። ዜጎች ከመኖሪያ ቤታቸው ሆነው የተለያዩ የመንግስት አገልግሎቶችን በቀላሉ ማግኘት ይችላሉ።',
+  },
+  'Service Hours Update': {
+    title: 'የአገልግሎት ሰዓት ማሻሻያ',
+    content: 'የሃዋሳ መሶብ ማዕከል የህዝብ አገልግሎት ሰዓት ከሰኞ እስከ አርብ ከጠዋቱ 2:30 እስከ 11:30፣ እንዲሁም ቅዳሜ ከጠዋቱ 2:30 እስከ 6:30 ክፍት መሆኑን እናሳውቃለን።',
+  },
+  'System Maintenance Notice': {
+    title: 'የሲስተም ጥገና ማስታወቂያ',
+    content: 'የአገልግሎት ጥራትን ለማሻሻል በሚደረገው የሲስተም ጥገና ምክንያት አገልግሎቱ በከፊል ሊቋረጥ ስለሚችል አስቀድመን ይቅርታ እንጠይቃለን።',
+  },
+  'MESOB Center Establishment 2025': {
+    title: 'የመሶብ ማዕከል መመስረቻ 2025',
+    content: 'ኢትዮጵያ የመሶብ ማዕከልን መመስረት ታከብራለች። የተቀናጀና ዘመናዊ አገልግሎት ለሁሉም ዜጎች ተደራሽ ለማድረግ በትኩረት እየተሰራ ነው።',
+  },
+  'Leadership Training Program 2026': {
+    title: 'የአመራር ስልጠና ፕሮግራም 2026',
+    content: 'የመሶብ አመራርና ሰራተኞች የአገልግሎት አሰጣጥ ጥራትን ለማሳደግ ያለመ አዲስ የአቅም ግንባታ ስልጠና ጀምረዋል።',
+  },
+  'FDRE MESOB Achieves 98.7% Citizen Satisfaction': {
+    title: 'FDRE MESOB 98.7% የዜጎች እርካታ አሳካ',
+    content: 'በተካሄደው የዜጎች እርካታ ዳሰሳ ጥናት መሠረት የሃዋሳ መሶብ ማዕከል 98.7% ከፍተኛ እርካታ አስመዝግቧል።',
+  }
+};
+
+function getAnnouncementTitle(announcement, lang) {
+  if (!announcement) return '';
+  if (lang === 'am') {
+    if (announcement.title_am && announcement.title_am.trim()) return announcement.title_am;
+    if (announcement.title && ANNOUNCEMENT_AM_FALLBACKS[announcement.title.trim()]) {
+      return ANNOUNCEMENT_AM_FALLBACKS[announcement.title.trim()].title;
+    }
+    return announcement.title_am || announcement.title || '';
+  }
+  return announcement.title_en || announcement.title || '';
+}
+
+function getAnnouncementContent(announcement, lang) {
+  if (!announcement) return '';
+  if (lang === 'am') {
+    if (announcement.content_am && announcement.content_am.trim()) return announcement.content_am;
+    if (announcement.title && ANNOUNCEMENT_AM_FALLBACKS[announcement.title.trim()]) {
+      return ANNOUNCEMENT_AM_FALLBACKS[announcement.title.trim()].content;
+    }
+    return announcement.content_am || announcement.content || '';
+  }
+  return announcement.content_en || announcement.content || '';
+}
 
 export default function News() {
   const { t, lang } = useApp();
   const { announcements, fetchAnnouncements, loading } = useAnnouncements();
-  const [selectedNews, setSelectedNews] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
   const [showAll, setShowAll] = useState(false);
   const INITIAL_LIMIT = 3;
 
@@ -18,16 +70,11 @@ export default function News() {
   const publicAnnouncements = announcements.filter(a => a.scope === 'PUBLIC');
   const displayedAnnouncements = showAll ? publicAnnouncements : publicAnnouncements.slice(0, INITIAL_LIMIT);
 
-  // Format date helper
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString(lang === 'am' ? 'am-ET' : 'en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  // Active news item: the selected one, or default to the latest (first) announcement!
+  const activeNews = publicAnnouncements.find(a => a.id === selectedId) || publicAnnouncements[0] || null;
+
+  // Format date helper with proper Amharic month names
+  const formatDate = (dateString) => formatDisplayDate(dateString, lang);
 
   return (
     <section id="news" className="news" style={{ padding: '5rem 0' }}>
@@ -37,47 +84,62 @@ export default function News() {
           <p className="text-lg text-gray-700 dark:text-gray-300 mt-3 font-medium">{t.news_subtitle}</p>
         </div>
 
-        {loading ? (
+        {loading && publicAnnouncements.length === 0 ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading news...</p>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">{lang === 'am' ? 'ዜናዎችን በመጫን ላይ...' : 'Loading news...'}</p>
           </div>
         ) : publicAnnouncements.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400 text-lg">No news available at this time.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-lg">{lang === 'am' ? 'በአሁኑ ጊዜ ምንም ዜና የለም።' : 'No news available at this time.'}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-            {/* Left: News List */}
-            <div className="lg:col-span-5 space-y-6">
-              {displayedAnnouncements.map((announcement) => (
-                <div
-                  key={announcement.id}
-                  onClick={() => setSelectedNews(announcement)}
-                  className={`news-card bg-white dark:bg-gray-800 p-6 rounded-2xl shadow hover:shadow-xl cursor-pointer transition border ${
-                    selectedNews?.id === announcement.id 
-                      ? 'border-blue-500' 
-                      : 'border-transparent hover:border-blue-200'
-                  }`}
-                >
-                  <span className="text-xs font-medium text-blue-600">
-                    {lang === 'am' 
-                      ? (announcement.institutions?.name_am || 'መሶብ ማዕከል')
-                      : (announcement.institutions?.name_en || 'MESOB Center')
-                    }
-                  </span>
-                  <h3 className="font-semibold text-xl mt-2 leading-tight text-gray-900 dark:text-white">
-                    {lang === 'am' ? (announcement.title_am || announcement.title) : announcement.title}
-                  </h3>
-                  <p className="text-base text-gray-700 dark:text-gray-300 mt-3 line-clamp-2">
-                    {lang === 'am' ? (announcement.content_am || announcement.content) : announcement.content}
-                  </p>
-                  <div className="flex justify-between items-center text-sm text-gray-600 dark:text-gray-400 mt-4">
-                    <span>{formatDate(announcement.published_at)}</span>
+            {/* Left: News List (Pure text cards) */}
+            <div className="lg:col-span-5 space-y-4">
+              {displayedAnnouncements.map((announcement) => {
+                const isActive = activeNews?.id === announcement.id;
+
+                return (
+                  <div
+                    key={announcement.id}
+                    onClick={() => {
+                      setSelectedId(announcement.id);
+                      if (window.innerWidth < 1024) {
+                        document.getElementById('news-article-view')?.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                    className={`news-card bg-white dark:bg-gray-800 p-5 rounded-2xl shadow transition-all duration-200 cursor-pointer border ${
+                      isActive 
+                        ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md bg-blue-50/20 dark:bg-blue-900/10' 
+                        : 'border-slate-200/90 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md'
+                    }`}
+                  >
+                    <div className="mb-1.5">
+                      <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                        {lang === 'am' 
+                          ? (announcement.institutions?.name_am || 'መሶብ ማዕከል')
+                          : (announcement.institutions?.name_en || 'MESOB Center')
+                        }
+                      </span>
+                    </div>
+
+                    <h3 className="font-bold text-lg leading-snug text-gray-900 dark:text-white">
+                      {getAnnouncementTitle(announcement, lang)}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 line-clamp-2 leading-relaxed">
+                      {getAnnouncementContent(announcement, lang)}
+                    </p>
+                    <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mt-3 pt-2 border-t border-slate-100 dark:border-gray-700/60">
+                      <span>{formatDate(announcement.published_at)}</span>
+                      <span className="text-blue-600 dark:text-blue-400 font-semibold text-xs flex items-center gap-1">
+                        {lang === 'am' ? 'ሙሉውን አንብብ' : 'Read more'} →
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               {/* Show More / Show Less Button if announcements count > INITIAL_LIMIT */}
               {publicAnnouncements.length > INITIAL_LIMIT && (
@@ -118,40 +180,53 @@ export default function News() {
               )}
             </div>
 
-            {/* Right: Article Content */}
-            <div className="lg:col-span-7">
-              {selectedNews ? (
-                <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 lg:p-12 shadow-xl min-h-[500px]">
-                  <div className="mb-6">
-                    <span className="text-sm font-medium text-blue-600">
+            {/* Right: Article Content (Pure text display) */}
+            <div id="news-article-view" className="lg:col-span-7 sticky top-24">
+              {activeNews ? (
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 lg:p-9 shadow-xl border border-slate-200/80 dark:border-gray-700">
+                  <div className="mb-5">
+                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
                       {lang === 'am' 
-                        ? (selectedNews.institutions?.name_am || 'መሶብ ማዕከል')
-                        : (selectedNews.institutions?.name_en || 'MESOB Center')
+                        ? (activeNews.institutions?.name_am || 'መሶብ ማዕከል')
+                        : (activeNews.institutions?.name_en || 'MESOB Center')
                       }
                     </span>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-2 mb-4">
-                      {lang === 'am' ? (selectedNews.title_am || selectedNews.title) : selectedNews.title}
+                    
+                    <h1 className="text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-white mt-3 mb-2 leading-tight">
+                      {getAnnouncementTitle(activeNews, lang)}
                     </h1>
-                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                      <span>{formatDate(selectedNews.published_at)}</span>
+
+                    <div className="flex items-center gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">
+                      <span>{formatDate(activeNews.published_at)}</span>
+                      {activeNews.creator?.full_name && (
+                        <span>• {activeNews.creator.full_name}</span>
+                      )}
                     </div>
                   </div>
                   
+                  {/* Article Text Content - Clear, prominent pure text display */}
                   <div className="prose dark:prose-invert max-w-none">
-                    <div className="text-lg leading-8 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                      {lang === 'am' ? (selectedNews.content_am || selectedNews.content) : selectedNews.content}
+                    <div className="text-base lg:text-lg leading-relaxed text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-normal">
+                      {getAnnouncementContent(activeNews, lang)}
                     </div>
                   </div>
-                  
-                  <button
-                    onClick={() => setSelectedNews(null)}
-                    className="mt-8 text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2"
-                  >
-                    {t.news_back}
-                  </button>
+
+                  {/* Mobile Back-to-Top Button */}
+                  <div className="lg:hidden mt-8 pt-4 border-t border-slate-100 dark:border-gray-700">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const el = document.getElementById('news');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className="text-blue-600 hover:text-blue-700 dark:text-blue-400 text-sm font-semibold flex items-center gap-1.5 cursor-pointer"
+                    >
+                      ↑ {lang === 'am' ? 'ወደ ዜናዎች ዝርዝር ተመለስ' : 'Back to News List'}
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <div className="bg-white dark:bg-gray-800 rounded-3xl p-12 text-center h-full flex items-center justify-center min-h-[500px]">
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-12 text-center h-full flex items-center justify-center min-h-[400px]">
                   <p className="text-gray-400 text-xl">{t.news_placeholder}</p>
                 </div>
               )}

@@ -5,9 +5,46 @@ import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { useServices } from '../context/ServiceContext';
 import { useApplications } from '../context/ApplicationContext';
+import { formatServiceTime, formatServiceFee } from '../utils/formatters';
+
+const SERVICE_DESCRIPTIONS = {
+  1: {
+    en: 'National ID Registration is a crucial service for all customers. This service allows you to register for your official National Identity Card (Fayda ID), which is required for accessing various government services, banking, and official documentation.',
+    am: 'የብሔራዊ መታወቂያ ምዝገባ ለሁሉም ዜጎች ወሳኝ አገልግሎት ነው። ይህ አገልግሎት የተለያዩ የመንግስት አገልግሎቶችን፣ የባንክ አገልግሎቶችን እና ህጋዊ ሰነዶችን ለማግኘት አስፈላጊ የሆነውን ኦፊሴላዊ የፋይዳ ብሔራዊ መታወቂያ ካርድ ለመመዝገብ ያስችሎታል።'
+  },
+  2: {
+    en: 'Business License service enables entrepreneurs and businesses to obtain official permits to operate legally in Ethiopia. This service is essential for starting or expanding your business operations.',
+    am: 'የንግድ ፈቃድ አገልግሎት ነጋዴዎችና የንግድ ድርጅቶች በኢትዮጵያ ውስጥ በህጋዊ መንገድ እንዲሰሩ ፈቃድ ለመስጠት ያስችላል። ይህ አገልግሎት የንግድ ስራዎን ለመጀመር ወይም ለማስፋፋት አስፈላጊ ነው።'
+  },
+  3: {
+    en: 'Tax Clearance certificate confirms that your tax obligations are up to date. This document is often required for business transactions, loan applications, and government contracts.',
+    am: 'የግብር ክሊራንስ የምስክር ወረቀት የግብር ግዴታዎችዎ የተከፈሉ መሆናቸውን ያረጋግጣል። ይህ ሰነድ ለንግድ እንቅስቃሴዎች፣ ለብድር ጥያቄዎች እና ለመንግስት ጨረታዎች ተፈላጊ ነው።'
+  },
+  4: {
+    en: 'SIM Card Registration service allows you to register your mobile number with Ethio Telecom. This is a mandatory requirement for all mobile users in Ethiopia to ensure security and accountability.',
+    am: 'የሲም ካርድ ምዝገባ አገልግሎት ስልክ ቁጥርዎን ከኢትዮ ቴሌኮም ጋር በስምዎ ለማስመዝገብ ያስችላል። ይህ ደህንነትንና ተጠያቂነትን ለማረጋገጥ በኢትዮጵያ ውስጥ ለሚገኙ ሁሉም የሞባይል ተጠቃሚዎች ግዴታ ነው።'
+  }
+};
+
+const SERVICE_REQUIRED_DOCS = {
+  1: {
+    en: [
+      'Birth Certificate or Hospital Birth Record',
+      'Two recent passport-size photos',
+      'Proof of residence (Kebele ID or utility bill)',
+      "Parent's ID (for minors)"
+    ],
+    am: [
+      'የልደት ምስክር ወረቀት ወይም የሆስፒታል ልደት ማስረጃ',
+      'ሁለት የቅርብ ጊዜ ፓስፖርት መጠን ፎቶግራፎች',
+      'የመኖሪያ አድራሻ ማረጋገጫ (የቀበሌ መታወቂያ ወይም የፍጆታ ሂሳብ)',
+      'የወላጅ/አሳዳጊ መታወቂያ (ለአካለ መጠን ላልደረሱ)'
+    ]
+  }
+};
 
 export default function PopularServices() {
-  const { t } = useApp();
+  const { t, lang } = useApp();
   const { user } = useAuth();
   const { services } = useServices();
   const { createApplication } = useApplications();
@@ -69,7 +106,7 @@ export default function PopularServices() {
   const handleApplyService = () => {
     // Check if user is logged in
     if (!user) {
-      alert('Please login to apply for services');
+      alert(lang === 'am' ? 'ለአገልግሎት ለማመልከት እባክዎ መጀመሪያ ይግቡ' : 'Please login to apply for services');
       navigate('/login');
       return;
     }
@@ -77,7 +114,7 @@ export default function PopularServices() {
     // Check if user is a customer
     const roleUpper = user.role?.toUpperCase();
     if (roleUpper !== 'CUSTOMER') {
-      alert('Only customers can apply for online services');
+      alert(lang === 'am' ? 'የኦንላይን አገልግሎቶችን ማመልከት የሚችሉት ደንበኞች ብቻ ናቸው' : 'Only customers can apply for online services');
       return;
     }
 
@@ -103,7 +140,7 @@ export default function PopularServices() {
     
     // Validate form
     if (!applicationData.fullName || !applicationData.email || !applicationData.phone) {
-      setSubmitError('Please fill in all required fields');
+      setSubmitError(lang === 'am' ? 'እባክዎ ሁሉንም አስፈላጊ መስኮች ይሙሉ' : 'Please fill in all required fields');
       return;
     }
 
@@ -111,12 +148,12 @@ export default function PopularServices() {
     const backendService = mapServiceToBackend(selectedService.id);
     
     if (!backendService) {
-      setSubmitError('Service not found in the system. Please contact support.');
+      setSubmitError(lang === 'am' ? 'አገልግሎቱ በሲስተሙ ውስጥ አልተገኘም። እባክዎ ድጋፍ ሰጪዎችን ያነጋግሩ።' : 'Service not found in the system. Please contact support.');
       return;
     }
 
     if (!backendService.institution_id) {
-      setSubmitError('Service institution not configured. Please contact support.');
+      setSubmitError(lang === 'am' ? 'የአገልግሎት ሰጪ ተቋም አልተዋቀረም። እባክዎ ድጋፍ ሰጪዎችን ያነጋግሩ።' : 'Service institution not configured. Please contact support.');
       return;
     }
 
@@ -136,7 +173,10 @@ export default function PopularServices() {
       );
 
       if (result.success) {
-        alert(`Application submitted successfully!\n\nApplication Number: ${result.application.applicationNumber}\n\nYou can track your application in your dashboard.`);
+        const msg = lang === 'am'
+          ? `ማመልከቻዎ በተሳካ ሁኔታ ቀርቧል!\n\nየማመልከቻ ቁጥር፡ ${result.application.applicationNumber}\n\nማመልከቻዎን በዳሽቦርድዎ ውስጥ መከታተል ይችላሉ።`
+          : `Application submitted successfully!\n\nApplication Number: ${result.application.applicationNumber}\n\nYou can track your application in your dashboard.`;
+        alert(msg);
         
         // Close modal and reset form
         setShowApplicationForm(false);
@@ -152,11 +192,11 @@ export default function PopularServices() {
         // Redirect to customer dashboard
         navigate('/dashboard');
       } else {
-        setSubmitError(result.message || 'Failed to submit application');
+        setSubmitError(result.message || (lang === 'am' ? 'ማመልከቻውን ማስገባት አልተሳካም' : 'Failed to submit application'));
       }
     } catch (error) {
       console.error('Application submission error:', error);
-      setSubmitError(error.message || 'An error occurred while submitting your application');
+      setSubmitError(error.message || (lang === 'am' ? 'ማመልከቻዎን በማስገባት ላይ ሳለ ስህተት ተከስቷል' : 'An error occurred while submitting your application'));
     } finally {
       setSubmitting(false);
     }
@@ -197,11 +237,11 @@ export default function PopularServices() {
               <div className="flex justify-between text-sm mb-6">
                 <div>
                   <span className="text-gray-500 block">{t.pop_time}</span>
-                  <span className="font-medium">{service.time}</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">{formatServiceTime(service.time, lang)}</span>
                 </div>
                 <div className="text-right">
                   <span className="text-gray-500 block">{t.pop_fee}</span>
-                  <span className="font-medium">{service.fee}</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">{formatServiceFee(service.fee, lang)}</span>
                 </div>
               </div>
 
@@ -222,11 +262,11 @@ export default function PopularServices() {
             className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
           >
             <i className="fas fa-th-large"></i>
-            {t.language === 'am' ? 'ሁሉንም አገልግሎቶች ይመልከቱ' : 'View All Services'}
+            {lang === 'am' ? 'ሁሉንም አገልግሎቶች ይመልከቱ' : 'View All Services'}
             <i className="fas fa-arrow-right"></i>
           </button>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
-            {t.language === 'am' 
+            {lang === 'am' 
               ? 'ለሁሉም የመስመር ላይ አገልግሎቶች ይመልከቱ እና ማመልከቻዎችን ይከታተሉ' 
               : 'Browse all online services and track your applications'}
           </p>
@@ -269,7 +309,7 @@ export default function PopularServices() {
               {/* Service Organization */}
               <div className="mb-6">
                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
-                  {t.org_modal_suffix.replace('–', '').trim()}
+                  {lang === 'am' ? 'አገልግሎት ሰጪ ተቋም' : 'Providing Organization'}
                 </h3>
                 <p className="text-lg font-medium text-gray-900 dark:text-white">
                   {t[selectedService.orgKey]}
@@ -283,7 +323,7 @@ export default function PopularServices() {
                     {t.pop_time}
                   </span>
                   <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {selectedService.time}
+                    {formatServiceTime(selectedService.time, lang)}
                   </span>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
@@ -291,7 +331,7 @@ export default function PopularServices() {
                     {t.pop_fee}
                   </span>
                   <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {selectedService.fee}
+                    {formatServiceFee(selectedService.fee, lang)}
                   </span>
                 </div>
               </div>
@@ -299,37 +339,10 @@ export default function PopularServices() {
               {/* Service Description */}
               <div className="mb-6">
                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
-                  About This Service
+                  {lang === 'am' ? 'ስለዚህ አገልግሎት' : 'About This Service'}
                 </h3>
                 <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                  {selectedService.id === 1 && (
-                    <>
-                      National ID Registration is a crucial service for all customers. 
-                      This service allows you to register for your official National Identity Card (Fayda ID), 
-                      which is required for accessing various government services, banking, and official documentation.
-                    </>
-                  )}
-                  {selectedService.id === 2 && (
-                    <>
-                      Business License service enables entrepreneurs and businesses to obtain official 
-                      permits to operate legally in Ethiopia. This service is essential for starting 
-                      or expanding your business operations.
-                    </>
-                  )}
-                  {selectedService.id === 3 && (
-                    <>
-                      Tax Clearance certificate confirms that your tax obligations are up to date. 
-                      This document is often required for business transactions, loan applications, 
-                      and government contracts.
-                    </>
-                  )}
-                  {selectedService.id === 4 && (
-                    <>
-                      SIM Card Registration service allows you to register your mobile number with 
-                      Ethio Telecom. This is a mandatory requirement for all mobile users in Ethiopia 
-                      to ensure security and accountability.
-                    </>
-                  )}
+                  {SERVICE_DESCRIPTIONS[selectedService.id]?.[lang] || SERVICE_DESCRIPTIONS[selectedService.id]?.en || ''}
                 </p>
               </div>
 
@@ -337,13 +350,12 @@ export default function PopularServices() {
               {selectedService.id === 1 && (
                 <div className="mb-6">
                   <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
-                    Required Documents
+                    {lang === 'am' ? 'አስፈላጊ ሰነዶች' : 'Required Documents'}
                   </h3>
                   <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-1">
-                    <li>Birth Certificate or Hospital Birth Record</li>
-                    <li>Two recent passport-size photos</li>
-                    <li>Proof of residence (Kebele ID or utility bill)</li>
-                    <li>Parent's ID (for minors)</li>
+                    {(SERVICE_REQUIRED_DOCS[1]?.[lang] || SERVICE_REQUIRED_DOCS[1]?.en || []).map((doc, idx) => (
+                      <li key={idx}>{doc}</li>
+                    ))}
                   </ul>
                 </div>
               )}
@@ -355,13 +367,13 @@ export default function PopularServices() {
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   <i className="fas fa-paper-plane"></i>
-                  {user ? 'Apply Now' : 'Login to Apply'}
+                  {user ? (lang === 'am' ? 'አሁን ያመልክቱ' : 'Apply Now') : (lang === 'am' ? 'ለማመልከት ይግቡ' : 'Login to Apply')}
                 </button>
                 <button
                   onClick={handleCloseModal}
                   className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  Close
+                  {lang === 'am' ? 'ዝጋ' : 'Close'}
                 </button>
               </div>
             </div>
@@ -380,7 +392,7 @@ export default function PopularServices() {
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 p-6 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Apply for Service
+                  {lang === 'am' ? 'ለአገልግሎት ማመልከቻ' : 'Apply for Service'}
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   {t[selectedService.titleKey]}
@@ -409,7 +421,7 @@ export default function PopularServices() {
                 {/* Full Name */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Full Name <span className="text-red-500">*</span>
+                    {lang === 'am' ? 'ሙሉ ስም' : 'Full Name'} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -417,14 +429,14 @@ export default function PopularServices() {
                     value={applicationData.fullName}
                     onChange={(e) => setApplicationData(prev => ({ ...prev, fullName: e.target.value }))}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter your full name"
+                    placeholder={lang === 'am' ? 'ሙሉ ስምዎን ያስገቡ' : 'Enter your full name'}
                   />
                 </div>
 
                 {/* Email */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Email Address <span className="text-red-500">*</span>
+                    {lang === 'am' ? 'የኢሜይል አድራሻ' : 'Email Address'} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
@@ -439,7 +451,7 @@ export default function PopularServices() {
                 {/* Phone */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Phone Number <span className="text-red-500">*</span>
+                    {lang === 'am' ? 'ስልክ ቁጥር' : 'Phone Number'} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="tel"
@@ -454,28 +466,28 @@ export default function PopularServices() {
                 {/* Address */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Address
+                    {lang === 'am' ? 'አድራሻ' : 'Address'}
                   </label>
                   <input
                     type="text"
                     value={applicationData.address}
                     onChange={(e) => setApplicationData(prev => ({ ...prev, address: e.target.value }))}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="City, Subcity, Woreda"
+                    placeholder={lang === 'am' ? 'ከተማ፣ ክፍለ ከተማ፣ ወረዳ' : 'City, Subcity, Woreda'}
                   />
                 </div>
 
                 {/* Additional Information */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Additional Information
+                    {lang === 'am' ? 'ተጨማሪ መረጃ' : 'Additional Information'}
                   </label>
                   <textarea
                     rows={4}
                     value={applicationData.additionalInfo}
                     onChange={(e) => setApplicationData(prev => ({ ...prev, additionalInfo: e.target.value }))}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Any additional details or special requests..."
+                    placeholder={lang === 'am' ? 'ማንኛውም ተጨማሪ ዝርዝር ወይም ልዩ ጥያቄ...' : 'Any additional details or special requests...'}
                   />
                 </div>
               </div>
@@ -485,12 +497,12 @@ export default function PopularServices() {
                 <div className="flex items-start gap-3">
                   <i className="fas fa-info-circle text-blue-600 dark:text-blue-400 mt-1"></i>
                   <div className="text-sm text-blue-900 dark:text-blue-300">
-                    <p className="font-semibold mb-1">Application Details:</p>
+                    <p className="font-semibold mb-1">{lang === 'am' ? 'የማመልከቻ ዝርዝር፡' : 'Application Details:'}</p>
                     <ul className="list-disc list-inside space-y-1">
-                      <li><strong>Service:</strong> {t[selectedService.titleKey]}</li>
-                      <li><strong>Organization:</strong> {t[selectedService.orgKey]}</li>
-                      <li><strong>Processing Time:</strong> {selectedService.time}</li>
-                      <li><strong>Fee:</strong> {selectedService.fee}</li>
+                      <li><strong>{lang === 'am' ? 'አገልግሎት፡' : 'Service:'}</strong> {t[selectedService.titleKey]}</li>
+                      <li><strong>{lang === 'am' ? 'ተቋም፡' : 'Organization:'}</strong> {t[selectedService.orgKey]}</li>
+                      <li><strong>{lang === 'am' ? 'የሂደት ጊዜ፡' : 'Processing Time:'}</strong> {formatServiceTime(selectedService.time, lang)}</li>
+                      <li><strong>{lang === 'am' ? 'ክፍያ፡' : 'Fee:'}</strong> {formatServiceFee(selectedService.fee, lang)}</li>
                     </ul>
                   </div>
                 </div>
@@ -506,12 +518,12 @@ export default function PopularServices() {
                   {submitting ? (
                     <>
                       <i className="fas fa-spinner fa-spin"></i>
-                      Submitting...
+                      {lang === 'am' ? 'በማስገባት ላይ...' : 'Submitting...'}
                     </>
                   ) : (
                     <>
                       <i className="fas fa-check"></i>
-                      Submit Application
+                      {lang === 'am' ? 'ማመልከቻውን አስገባ' : 'Submit Application'}
                     </>
                   )}
                 </button>
@@ -521,7 +533,7 @@ export default function PopularServices() {
                   disabled={submitting}
                   className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
                 >
-                  Cancel
+                  {lang === 'am' ? 'ሰርዝ' : 'Cancel'}
                 </button>
               </div>
             </form>

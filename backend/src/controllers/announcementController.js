@@ -35,10 +35,13 @@ export const postAnnouncement = async (req, res) => {
     const announcementData = {
       title: req.body.title,
       content: req.body.content,
+      title_am: req.body.title_am || req.body.titleAm,
+      content_am: req.body.content_am || req.body.contentAm,
       scope: req.body.scope,
       targetRoles: req.body.targetRoles,
       institutionId: req.body.institutionId,
-      expiresAt: req.body.expiresAt
+      expiresAt: req.body.expiresAt,
+      metadata: req.body.metadata || (req.body.video_url ? { video_url: req.body.video_url } : {})
     };
 
     const result = await createAnnouncement(announcementData, req.user);
@@ -55,10 +58,13 @@ export const patchAnnouncement = async (req, res) => {
     const updates = {
       title: req.body.title,
       content: req.body.content,
+      title_am: req.body.title_am || req.body.titleAm,
+      content_am: req.body.content_am || req.body.contentAm,
       scope: req.body.scope,
       targetRoles: req.body.targetRoles,
       institutionId: req.body.institutionId,
-      expiresAt: req.body.expiresAt
+      expiresAt: req.body.expiresAt,
+      metadata: req.body.metadata !== undefined ? req.body.metadata : (req.body.video_url !== undefined ? { video_url: req.body.video_url } : undefined)
     };
 
     const result = await updateAnnouncement(req.params.id, updates, req.user);

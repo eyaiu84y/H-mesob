@@ -23,6 +23,7 @@ export const getAnnouncements = async (filters, currentUser) => {
         published_at,
         expires_at,
         created_at,
+        metadata,
         institutions (
           id,
           name_en,
@@ -199,6 +200,8 @@ export const createAnnouncement = async (announcementData, currentUser) => {
       .insert({
         title,
         content,
+        title_am: announcementData.title_am || announcementData.titleAm || null,
+        content_am: announcementData.content_am || announcementData.contentAm || null,
         scope,
         target_roles: targetRoles || [],
         institution_id: scope === 'INSTITUTION' ? institutionId : null,
@@ -206,6 +209,7 @@ export const createAnnouncement = async (announcementData, currentUser) => {
         is_active: true, // Auto-publish on creation
         published_at: new Date().toISOString(), // Set publish time
         expires_at: expiresAt || null,
+        metadata: announcementData.metadata || (announcementData.video_url ? { video_url: announcementData.video_url } : {}),
         created_at: new Date().toISOString()
       })
       .select()
@@ -289,10 +293,14 @@ export const updateAnnouncement = async (announcementId, updates, currentUser) =
     
     if (updates.title) updateData.title = updates.title;
     if (updates.content) updateData.content = updates.content;
+    if (updates.title_am !== undefined) updateData.title_am = updates.title_am;
+    if (updates.content_am !== undefined) updateData.content_am = updates.content_am;
     if (updates.scope) updateData.scope = updates.scope;
     if (updates.targetRoles !== undefined) updateData.target_roles = Array.isArray(updates.targetRoles) ? updates.targetRoles : [];
     if (updates.institutionId !== undefined) updateData.institution_id = updates.institutionId || null;
     if (updates.expiresAt !== undefined) updateData.expires_at = updates.expiresAt || null;
+    if (updates.metadata !== undefined) updateData.metadata = updates.metadata;
+    else if (updates.video_url !== undefined) updateData.metadata = { video_url: updates.video_url };
 
     // Update announcement
     const { data: updatedAnnouncement, error } = await supabase

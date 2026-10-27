@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 const slides = [
   { src: '/image/sidasumuda.jpg', alt: 'Hawassa Background', duration: 5000 },
   { src: '/image/hm.mngr.jpg', alt: 'Banner 1', duration: 5000 },
-  { src: '/image/hm.ab.jpg', alt: 'Banner 2 (Office)', duration: 40000 },
+  { src: '/image/hm.ab.jpg', alt: 'Banner 2 (Office)', duration: 5000 },
   { src: '/image/hm.slf.jpg', alt: 'Banner 3', duration: 5000 },
 ];
 

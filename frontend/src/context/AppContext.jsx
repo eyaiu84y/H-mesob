@@ -53,6 +53,10 @@ export function AppProvider({ children }) {
     }
   }
 
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   const t = translations[lang] || translations.en;
   const getStatusLabel = (status) => getApplicationStatusLabel(status, lang);
   const getStaffNotes = (notes) => formatStaffNotes(notes, lang);
@@ -144,7 +148,7 @@ export const translations = {
     about_card1_title: 'Digital Services',
     about_card1_desc: 'Apply for permits online',
     about_card2_title: 'Customer Support',
-    about_card2_desc: '24/7',
+    about_card2_desc: '24/7 Dedicated Assistance',
     about_card3_title: 'Quick Processing',
     about_card3_desc: 'Fast and efficient service',
 
@@ -798,7 +802,7 @@ export const translations = {
     // hero
     hero_title: 'የሃዋሳ መሶብ አገልግሎት',
     hero_subtitle: 'ዘመናዊ የኢትዮጵያ አገልግሎቶች ለተደራጀ ጥቅም።',
-    hero_desc: '12+ የመንግሥት አገልግሎቶች በአንድ መሶብ ህይወትዎን ቀለል ለማድረግ።',
+    hero_desc: '47+ የመንግሥት አገልግሎቶች በአንድ መሶብ ህይወትዎን ቀለል ለማድረግ።',
     hero_search: 'አገልግሎቶችን እና ድርጅቶችን ይፈልጉ',
 
     // about
@@ -811,7 +815,7 @@ export const translations = {
     about_card1_title: 'ዲጂታል አገልግሎቶች',
     about_card1_desc: 'ፈቃዶችን በኦንላይን ያመልክቱ',
     about_card2_title: 'የዜጎች ድጋፍ',
-    about_card2_desc: '24/7',
+    about_card2_desc: '24/7 ተከታታይ ድጋፍ',
     about_card3_title: 'ፈጣን ሂደት',
     about_card3_desc: 'ፈጣን እና ቀልጣፋ አገልግሎት',
 
@@ -981,7 +985,7 @@ export const translations = {
     contact_success: '✅ አመሰግናለሁ! መልዕክትዎ በተሳካ ሁኔታ ተልኳል።\n\nብዙም ሳይቆይ ምላሽ እንሰጥዎታለን።',
 
     // footer
-    footer_tagline: 'The New Horizon of Service!',
+    footer_tagline: 'የአገልግሎት አዲስ አድማስ!',
     footer_bilingual: 'የሃዋሳ መሶብ አገልግሎት  |  Hawassa Mesob Service',
     footer_desc: 'የመንግሥት አገልግሎቶችን ወደ እርስዎ ያቀርባል።',
     footer_quick: 'ፈጣን ማስፈንጠሪያዎች',

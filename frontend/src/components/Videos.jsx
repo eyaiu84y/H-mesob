@@ -1,10 +1,47 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { videosData } from '../data/services';
 import { useApp } from '../context/AppContext';
+import { useAnnouncements } from '../context/AnnouncementContext';
+import { getYouTubeVideoId } from '../utils/formatters';
 
 export default function Videos() {
-  const { t } = useApp();
-  const [activeVideo, setActiveVideo] = useState(videosData[0]);
+  const { t, lang } = useApp();
+  const { announcements } = useAnnouncements();
+
+  // Combine dynamic manager news videos with default MESOB videos
+  const videoList = useMemo(() => {
+    const dynamicVideos = (announcements || [])
+      .filter(a => a.scope === 'PUBLIC' && (a.metadata?.video_url || a.video_url))
+      .map(a => {
+        const url = a.metadata?.video_url || a.video_url;
+        const ytId = getYouTubeVideoId(url);
+        if (!ytId) return null;
+        return {
+          id: ytId,
+          title: lang === 'am' ? (a.title_am || a.title) : a.title,
+          desc: lang === 'am' ? (a.content_am || a.content) : a.content,
+          org: lang === 'am' ? (a.institutions?.name_am || 'መሶብ ማዕከል') : (a.institutions?.name_en || 'MESOB Center'),
+          isDynamic: true
+        };
+      })
+      .filter(Boolean);
+
+    const defaultList = videosData.map(v => ({
+      id: v.id,
+      title: t[v.titleKey],
+      desc: t[v.descKey],
+      org: lang === 'am' ? 'የመሶብ አገልግሎቶች' : 'MESOB Services',
+      isDynamic: false
+    }));
+
+    if (dynamicVideos.length === 0) return defaultList;
+    // Dynamic news videos come first!
+    const existingIds = new Set(dynamicVideos.map(v => v.id));
+    return [...dynamicVideos, ...defaultList.filter(d => !existingIds.has(d.id))];
+  }, [announcements, lang, t]);
+
+  const [selectedVideoId, setSelectedVideoId] = useState(null);
+  const activeVideo = videoList.find(v => v.id === selectedVideoId) || videoList[0];
 
   return (
     <section className="video-section bg-gray-50 dark:bg-gray-900" id="videos" style={{ padding: '5rem 0' }}>
@@ -21,7 +58,7 @@ export default function Videos() {
               key={activeVideo.id}
               className="absolute inset-0 w-full h-full"
               src={`https://www.youtube.com/embed/${activeVideo.id}`}
-              title={t[activeVideo.titleKey]}
+              title={activeVideo.title}
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               referrerPolicy="strict-origin-when-cross-origin"
@@ -31,18 +68,18 @@ export default function Videos() {
           
           {/* Video Title Bar - FDRE style */}
           <div className="mt-4 bg-gradient-to-r from-blue-900 to-blue-800 text-white px-6 py-4 rounded-xl">
-            <h3 className="text-xl font-bold">{t[activeVideo.titleKey]}</h3>
-            <p className="text-blue-100 text-sm mt-1">{t[activeVideo.descKey]}</p>
+            <h3 className="text-xl font-bold">{activeVideo.title}</h3>
+            <p className="text-blue-100 text-sm mt-1">{activeVideo.desc}</p>
           </div>
         </div>
 
         {/* Video Playlist Thumbnails - Horizontal Scroll */}
         <div className="relative">
           <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-            {videosData.map((video) => (
+            {videoList.map((video) => (
               <div
                 key={video.id}
-                onClick={() => setActiveVideo(video)}
+                onClick={() => setSelectedVideoId(video.id)}
                 className={`flex-shrink-0 w-64 cursor-pointer transition-all duration-300 hover:scale-105 ${
                   activeVideo.id === video.id ? 'ring-4 ring-blue-500 rounded-xl' : ''
                 }`}
@@ -53,7 +90,7 @@ export default function Videos() {
                     <img
                       src={`https://img.youtube.com/vi/${video.id}/hqdefault.jpg`}
                       className="w-full h-36 object-cover"
-                      alt={t[video.titleKey]}
+                      alt={video.title}
                     />
                     {/* Play Icon Overlay */}
                     <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition">
@@ -66,7 +103,7 @@ export default function Videos() {
                     {/* Active Indicator */}
                     {activeVideo.id === video.id && (
                       <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-bold">
-                        NOW PLAYING
+                        {lang === 'am' ? 'በመጫወት ላይ' : 'NOW PLAYING'}
                       </div>
                     )}
                   </div>
@@ -74,10 +111,10 @@ export default function Videos() {
                   {/* Video Info */}
                   <div className="p-3">
                     <p className="font-semibold text-sm leading-tight dark:text-white line-clamp-2">
-                      {t[video.titleKey]}
+                      {video.title}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
-                      MESOB Services
+                      {video.org}
                     </p>
                   </div>
                 </div>
