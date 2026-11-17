@@ -28,7 +28,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Editor / IDE
+# Temporary files & runtime data
+tmp/
+temp/
+backend/data/
+*.pid
+
 .vscode/
 .idea/
 *.swp

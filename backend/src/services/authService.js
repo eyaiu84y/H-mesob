@@ -10,6 +10,7 @@ import {
   generateVerificationCode
 } from '../utils/authSecurity.js';
 import { sendCustomerVerificationEmail, maskEmail } from './emailService.js';
+import { enqueueEmail, hashVerificationSecret } from './emailOutboxService.js';
 import {
   sendSMS,
   maskPhone,
@@ -75,7 +76,7 @@ export const loginUser = async (email, password) => {
     console.log('[AUTH] User found:', user.email, 'Role:', user.role);
 
     // Cross-check: Ensure internal staff role matches @mesobcenterh.gov.et and customer matches @gmail.com
-    const isInternalUser = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'].includes((user.role || '').toUpperCase());
+    const isInternalUser = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN'].includes((user.role || '').toUpperCase());
     if (isInternalUser && !isInternalDomain) {
       return {
         success: false,
@@ -147,12 +148,12 @@ export const loginUser = async (email, password) => {
 
     // Step 7: Determine email_verified and phone_verified status
     // Internal staff or legacy users without verification block are deemed verified
-    const isInternalRole = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'].includes((user.role || '').toUpperCase());
+    const isInternalRole = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN'].includes((user.role || '').toUpperCase());
     const isEmailVerified = isInternalRole || user.email_verified === true || user.metadata?.email_verification?.verified === true || !user.metadata?.email_verification;
     const isPhoneVerified = Boolean(user.phone_verified === true || user.metadata?.phone_verification?.verified === true);
 
     // Step 8: Generate tokens
-    const normalizedRole = (user.role === 'ICT_STAFF' || user.role === 'TECHNICIAN') ? 'TECHNICIAN' : (user.role === 'CITIZEN' || user.role === 'CUSTOMER') ? 'CUSTOMER' : user.role;
+    const normalizedRole = user.role;
     user.role = normalizedRole;
 
     const tokenPayload = {
@@ -257,15 +258,18 @@ export const registerUser = async (userData) => {
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
     // Step 5: Generate email verification code and secure URL token (15-min expiration)
+    // SECURITY: Store ONLY hashed verification tokens and codes (SHA-256)
     const verificationCode = generateVerificationCode();
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const nowIso = new Date().toISOString();
     const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    const codeHash = hashVerificationSecret(verificationCode);
+    const tokenHash = hashVerificationSecret(verificationToken);
 
     const verificationBlock = {
       verified: false,
-      code: verificationCode,
-      token: verificationToken,
+      code_hash: codeHash,
+      token_hash: tokenHash,
       code_expires_at: codeExpiresAt,
       created_at: nowIso,
       sent_at: nowIso,
@@ -274,16 +278,16 @@ export const registerUser = async (userData) => {
       last_resend_at: nowIso
     };
 
-    // Step 6: Create user with role CUSTOMER (or CITIZEN fallback if postgres enum)
+    // Step 6: Create user with role CUSTOMER
     const fullName = `${firstName || ''} ${lastName || ''}`.trim();
-    let { data: newUser, error: createError } = await supabase
+    const { data: newUser, error: createError } = await supabase
       .from('users')
       .insert({
         email: normalizedEmail,
         password_hash: passwordHash,
         full_name: fullName,
         phone: phone || null,
-        role,
+        role: 'CUSTOMER',
         institution_id: institutionId || null,
         status: 'ACTIVE',
         created_at: new Date().toISOString(),
@@ -305,39 +309,6 @@ export const registerUser = async (userData) => {
       `)
       .single();
 
-    if (createError && createError.code === '22P02' && role === 'CUSTOMER') {
-      const fallback = await supabase
-        .from('users')
-        .insert({
-          email: normalizedEmail,
-          password_hash: passwordHash,
-          full_name: fullName,
-          phone: phone || null,
-          role: 'CITIZEN',
-          institution_id: institutionId || null,
-          status: 'ACTIVE',
-          created_at: new Date().toISOString(),
-          metadata: {
-            email_verification: verificationBlock,
-            must_change_password: false
-          }
-        })
-        .select(`
-          id,
-          email,
-          full_name,
-          phone,
-          role,
-          status,
-          institution_id,
-          created_at,
-          metadata
-        `)
-        .single();
-      newUser = fallback.data;
-      createError = fallback.error;
-    }
-
     if (createError || !newUser) {
       console.error('User creation error:', createError);
       return {
@@ -348,18 +319,37 @@ export const registerUser = async (userData) => {
 
     console.log(`[AUTH] New customer registered: ${normalizedEmail}`);
 
-    // Step 7: Dispatch verification email using Gmail service (non-blocking)
+    // Step 7: Dispatch verification email using reliable outbox worker (non-blocking)
     try {
-      sendCustomerVerificationEmail({
+      const portalUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const verificationLink = `${portalUrl}/signup?verify=true&email=${encodeURIComponent(normalizedEmail)}&token=${encodeURIComponent(verificationToken)}`;
+
+      await enqueueEmail({
         to: normalizedEmail,
-        recipientUser: newUser,
-        code: verificationCode,
-        token: verificationToken
-      }).catch(err => {
-        console.error('[AUTH] ⚠️ Failed to dispatch registration verification email:', err.message);
+        recipientId: newUser.id,
+        subject: `Hawassa MESOB — Verify your customer email address (${verificationCode})`,
+        templateName: 'REGISTRATION_VERIFY',
+        payload: {
+          name: fullName,
+          email: normalizedEmail,
+          code: verificationCode,
+          token: verificationToken,
+          verificationLink
+        },
+        idempotencyKey: `REGISTRATION_VERIFY:${newUser.id}:${tokenHash}`
       });
+
+      try {
+        await supabase.from('email_verification_tokens').insert({
+          user_id: newUser.id,
+          token_hash: tokenHash,
+          code_hash: codeHash,
+          expires_at: codeExpiresAt,
+          verified: false
+        });
+      } catch {}
     } catch (sendErr) {
-      console.error('[AUTH] ⚠️ Verification email trigger error:', sendErr.message);
+      console.error('[AUTH] ⚠️ Verification email outbox enqueue error:', sendErr.message);
     }
 
     // Step 8: Log audit
@@ -518,7 +508,7 @@ export const changePassword = async (userId, currentPassword, newPassword, confi
       .eq('user_id', userId);
 
     // Issue fresh active session and tokens
-    const normalizedRole = (updatedUser.role === 'ICT_STAFF' || updatedUser.role === 'TECHNICIAN') ? 'TECHNICIAN' : (updatedUser.role === 'CITIZEN' || updatedUser.role === 'CUSTOMER') ? 'CUSTOMER' : updatedUser.role;
+    const normalizedRole = updatedUser.role;
     updatedUser.role = normalizedRole;
 
     const tokenPayload = {
@@ -624,9 +614,14 @@ export const verifyEmail = async (email, code, token = null) => {
       };
     }
 
-    // Match code or token
-    const codeMatches = code && verification.code && String(verification.code).trim() === String(code).trim();
-    const tokenMatches = token && verification.token && verification.token === token;
+    // Match code or token using SHA-256 hash comparison (or fallback for plain text)
+    const suppliedCodeHash = code ? hashVerificationSecret(code) : null;
+    const suppliedTokenHash = token ? hashVerificationSecret(token) : null;
+
+    const codeMatches = (suppliedCodeHash && verification.code_hash && verification.code_hash === suppliedCodeHash) ||
+                        (code && verification.code && String(verification.code).trim() === String(code).trim());
+    const tokenMatches = (suppliedTokenHash && verification.token_hash && verification.token_hash === suppliedTokenHash) ||
+                         (token && verification.token && verification.token === token);
 
     if (!codeMatches && !tokenMatches) {
       const newAttempts = (verification.attempts || 0) + 1;
@@ -651,11 +646,13 @@ export const verifyEmail = async (email, code, token = null) => {
       };
     }
 
-    // Successful Verification: Single-use protection (clear code and token so they cannot be reused)
+    // Successful Verification: Single-use protection (clear secrets so they cannot be reused)
     const updatedMetadata = {
       ...(user.metadata || {}),
       email_verification: {
         verified: true,
+        code_hash: null,
+        token_hash: null,
         code: null,
         token: null,
         verified_at: new Date().toISOString(),
@@ -670,6 +667,13 @@ export const verifyEmail = async (email, code, token = null) => {
         updated_at: new Date().toISOString()
       })
       .eq('id', user.id);
+
+    try {
+      await supabase
+        .from('email_verification_tokens')
+        .update({ verified: true, verified_at: new Date().toISOString() })
+        .eq('user_id', user.id);
+    } catch {}
 
     await logAudit(user.id, 'EMAIL_VERIFIED', 'Customer verified their email address.');
 
@@ -749,18 +753,22 @@ export const resendVerification = async (email) => {
       };
     }
 
-    // 3. Issue fresh 15-minute single-use code & token
+    // 3. Issue fresh 15-minute single-use code & token with SHA-256 hashes
     const newCode = generateVerificationCode();
     const newToken = crypto.randomBytes(32).toString('hex');
     const nowIso = new Date().toISOString();
     const expiryIso = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    const newCodeHash = hashVerificationSecret(newCode);
+    const newTokenHash = hashVerificationSecret(newToken);
 
     const updatedMetadata = {
       ...(user.metadata || {}),
       email_verification: {
         verified: false,
-        code: newCode,
-        token: newToken,
+        code_hash: newCodeHash,
+        token_hash: newTokenHash,
+        code: null,
+        token: null,
         code_expires_at: expiryIso,
         sent_at: nowIso,
         attempts: 0,
@@ -779,16 +787,39 @@ export const resendVerification = async (email) => {
 
     console.log(`[AUTH] Resending verification email to: ${maskEmail(normalizedEmail)}`);
 
-    // 4. Send email via Gmail service
+    // 4. Enqueue verification email via reliable outbox worker
     try {
-      await sendCustomerVerificationEmail({
+      const portalUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const verificationLink = `${portalUrl}/signup?verify=true&email=${encodeURIComponent(normalizedEmail)}&token=${encodeURIComponent(newToken)}`;
+
+      await enqueueEmail({
         to: normalizedEmail,
-        recipientUser: user,
-        code: newCode,
-        token: newToken
+        recipientId: user.id,
+        subject: `Hawassa MESOB — Verify your customer email address (${newCode})`,
+        templateName: 'REGISTRATION_VERIFY',
+        payload: {
+          name: user.full_name || 'Customer',
+          email: normalizedEmail,
+          code: newCode,
+          token: newToken,
+          verificationLink
+        },
+        idempotencyKey: `REGISTRATION_VERIFY:${user.id}:${newTokenHash}`
       });
+
+      try {
+        await supabase.from('email_verification_tokens').insert({
+          user_id: user.id,
+          token_hash: newTokenHash,
+          code_hash: newCodeHash,
+          expires_at: expiryIso,
+          verified: false,
+          resend_count: currentResendCount + 1,
+          last_resend_at: nowIso
+        });
+      } catch {}
     } catch (sendErr) {
-      console.error('[AUTH] Failed to send verification email:', sendErr.message);
+      console.error('[AUTH] Failed to enqueue resend verification email:', sendErr.message);
     }
 
     return {
@@ -1085,11 +1116,10 @@ export const getUserProfile = async (userId) => {
     }
 
     const mustChangePassword = user.must_change_password === true || user.metadata?.must_change_password === true || false;
-    const isInternalRole = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'].includes((user.role || '').toUpperCase());
+    const isInternalRole = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN'].includes((user.role || '').toUpperCase());
     const isEmailVerified = isInternalRole || user.email_verified === true || user.metadata?.email_verification?.verified === true || !user.metadata?.email_verification;
     const isPhoneVerified = Boolean(user.phone_verified === true || user.metadata?.phone_verification?.verified === true);
 
-    user.role = (user.role === 'ICT_STAFF' || user.role === 'TECHNICIAN') ? 'TECHNICIAN' : (user.role === 'CITIZEN' || user.role === 'CUSTOMER') ? 'CUSTOMER' : user.role;
     user.must_change_password = mustChangePassword;
     user.email_verified = isEmailVerified;
     user.phone_verified = isPhoneVerified;

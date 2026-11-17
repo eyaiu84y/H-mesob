@@ -60,7 +60,7 @@ export async function submitFeedback(feedbackData) {
     }
 
     const customerRole = (customer.role || '').toUpperCase();
-    if (customerRole !== 'CITIZEN' && customerRole !== 'CUSTOMER') {
+    if (customerRole !== 'CUSTOMER') {
       console.error('User is not authorized as a customer:', customer.role);
       throw new Error('User is not authorized as a customer');
     }
@@ -204,12 +204,12 @@ export async function submitFeedback(feedbackData) {
 }
 
 /**
- * Get feedback for a citizen
- * @param {string} citizenId - Citizen user ID
+ * Get feedback for a customer
+ * @param {string} customerId - Customer user ID
  * @param {Object} [filters] - Optional filters
  * @returns {Promise<Array>} List of feedback
  */
-export async function getCitizenFeedback(citizenId, filters = {}) {
+export async function getCustomerFeedback(customerId, filters = {}) {
   try {
     let query = supabase
       .from('service_feedback')
@@ -224,7 +224,7 @@ export async function getCitizenFeedback(citizenId, filters = {}) {
         applications:application_id(id, application_number),
         queue_entries:queue_entry_id(id, queue_number)
       `)
-      .eq('citizen_id', citizenId)
+      .eq('citizen_id', customerId)
       .order('created_at', { ascending: false });
 
     // Apply filters
@@ -241,16 +241,18 @@ export async function getCitizenFeedback(citizenId, filters = {}) {
     const { data, error } = await query;
 
     if (error) {
-      console.error('Error fetching citizen feedback:', error);
+      console.error('Error fetching customer feedback:', error);
       throw new Error('Failed to fetch feedback');
     }
 
     return data || [];
   } catch (error) {
-    console.error('Error in getCitizenFeedback:', error);
+    console.error('Error in getCustomerFeedback:', error);
     throw error;
   }
 }
+
+export const getCitizenFeedback = getCustomerFeedback;
 
 /**
  * Get feedback for an institution
@@ -511,6 +513,7 @@ export async function canSubmitFeedback(citizenId, applicationId = null, queueEn
 
 export default {
   submitFeedback,
+  getCustomerFeedback,
   getCitizenFeedback,
   getInstitutionFeedback,
   getAllFeedback,

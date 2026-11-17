@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth, ROLE_ROUTES, ROLE_LABELS } from '../../context/AuthContext';
-import { useApp } from '../../context/AppContext';
 import PasswordInput from '../../components/PasswordInput';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 
 export default function ChangePasswordPage() {
   const { user, changePassword, logout } = useAuth();
-  const { lang } = useApp();
+  const { t: i18nT } = useTranslation();
   const navigate = useNavigate();
 
   const [currentPassword, setCurrentPassword] = useState('');
@@ -32,17 +32,17 @@ export default function ChangePasswordPage() {
     setSuccess('');
 
     if (!currentPassword) {
-      setError(lang === 'am' ? 'የአሁኑ የይለፍ ቃል ያስፈልጋል' : 'Current temporary password is required.');
+      setError(i18nT('auth.currentTempPasswordRequired', 'Current temporary password is required.'));
       return;
     }
 
     if (!isPolicySatisfied) {
-      setError(lang === 'am' ? 'እባክዎ ሁሉንም የይለፍ ቃል መስፈርቶች ያሟሉ' : 'Please satisfy all password security requirements.');
+      setError(i18nT('auth.satisfyPasswordPolicy', 'Please satisfy all password security requirements.'));
       return;
     }
 
     if (newPassword === currentPassword) {
-      setError(lang === 'am' ? 'አዲሱ የይለፍ ቃል ከአሁኑ ጊዜያዊ የይለፍ ቃል ጋር መመሳሰል የለበትም' : 'New password cannot be the same as your current temporary password.');
+      setError(i18nT('auth.newPasswordSameAsTemp', 'New password cannot be the same as your current temporary password.'));
       return;
     }
 
@@ -56,14 +56,14 @@ export default function ChangePasswordPage() {
         return;
       }
 
-      setSuccess(lang === 'am' ? 'የይለፍ ቃል በተሳካ ሁኔታ ተቀይሯል! ወደ ዳሽቦርድ በመግባት ላይ...' : 'Password updated successfully! Redirecting to your dashboard...');
+      setSuccess(i18nT('auth.passwordUpdatedRedirect', 'Password updated successfully! Redirecting to your dashboard...'));
       setTimeout(() => {
         const targetRoute = (user && ROLE_ROUTES[user.role]) || '/dashboard';
         navigate(targetRoute, { replace: true });
       }, 1500);
     } catch (err) {
       console.error('Password change error:', err);
-      setError(err.message || 'An error occurred while changing password.');
+      setError(err.message || i18nT('auth.passwordChangeError', 'An error occurred while changing password.'));
       setIsSubmitting(false);
     }
   }
@@ -87,7 +87,7 @@ export default function ChangePasswordPage() {
             onClick={logout}
             className="text-xs text-rose-600 hover:text-rose-800 font-medium transition cursor-pointer"
           >
-            {lang === 'am' ? 'ውጣ' : 'Sign Out'}
+            {i18nT('auth.signOut', 'Sign Out')}
           </button>
           <LanguageSwitcher />
         </div>
@@ -102,12 +102,10 @@ export default function ChangePasswordPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            {lang === 'am' ? 'አስገዳጅ የይለፍ ቃል ለውጥ' : 'Mandatory Password Change'}
+            {i18nT('auth.mandatoryPasswordChange', 'Mandatory Password Change')}
           </h1>
           <p className="text-gray-600 text-sm mt-1">
-            {lang === 'am' 
-              ? 'መለያዎ በጊዜያዊ የይለፍ ቃል የተፈጠረ ነው። ዳሽቦርዱን ለመድረስ አዲስ ቋሚ የይለፍ ቃል መፍጠር አለብዎት።' 
-              : 'Your account was issued with temporary credentials. You must set a permanent password before proceeding.'}
+            {i18nT('auth.mandatoryPasswordChangeDesc', 'Your account was issued with temporary credentials. You must set a permanent password before proceeding.')}
           </p>
         </div>
 
@@ -121,14 +119,14 @@ export default function ChangePasswordPage() {
           <div className="p-6 sm:p-8">
             {user && (
               <div className="mb-5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
-                <span className="font-semibold">{user.name}</span> • <span className="font-mono">{user.email}</span> ({ROLE_LABELS[user.role] || user.role})
+                <span className="font-semibold">{user.name}</span> • <span className="font-mono">{user.email}</span> ({i18nT(`roles.${user.role}`, { defaultValue: ROLE_LABELS[user.role] || user.role })})
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  {lang === 'am' ? 'የአሁኑ ጊዜያዊ የይለፍ ቃል' : 'Current Temporary Password'}
+                  {i18nT('auth.currentTemporaryPassword', 'Current Temporary Password')}
                 </label>
                 <PasswordInput
                   id="current-password"
@@ -142,7 +140,7 @@ export default function ChangePasswordPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  {lang === 'am' ? 'አዲስ ቋሚ የይለፍ ቃል' : 'New Permanent Password'}
+                  {i18nT('auth.newPermanentPassword', 'New Permanent Password')}
                 </label>
                 <PasswordInput
                   id="new-password"
@@ -156,7 +154,7 @@ export default function ChangePasswordPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  {lang === 'am' ? 'አዲሱን የይለፍ ቃል አረጋግጥ' : 'Confirm New Password'}
+                  {i18nT('auth.confirmNewPassword', 'Confirm New Password')}
                 </label>
                 <PasswordInput
                   id="confirm-password"
@@ -171,32 +169,32 @@ export default function ChangePasswordPage() {
               {/* Password Requirements Checklist */}
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5">
                 <p className="font-semibold text-slate-700 mb-1">
-                  {lang === 'am' ? 'የይለፍ ቃል መስፈርቶች:' : 'Security Policy Checklist:'}
+                  {i18nT('auth.passwordChecklist', 'Security Policy Checklist:')}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   <div className={`flex items-center gap-1.5 ${hasLength ? 'text-emerald-700 font-medium' : 'text-slate-500'}`}>
                     <span>{hasLength ? '✓' : '•'}</span>
-                    <span>{lang === 'am' ? 'ቢያንስ 8 ቁምፊዎች' : 'Minimum 8 characters'}</span>
+                    <span>{i18nT('auth.min8Chars', 'Minimum 8 characters')}</span>
                   </div>
                   <div className={`flex items-center gap-1.5 ${hasUpper ? 'text-emerald-700 font-medium' : 'text-slate-500'}`}>
                     <span>{hasUpper ? '✓' : '•'}</span>
-                    <span>{lang === 'am' ? 'ቢያንስ 1 አቢይ ፊደል (A-Z)' : 'One uppercase letter (A-Z)'}</span>
+                    <span>{i18nT('auth.oneUppercase', 'One uppercase letter (A-Z)')}</span>
                   </div>
                   <div className={`flex items-center gap-1.5 ${hasLower ? 'text-emerald-700 font-medium' : 'text-slate-500'}`}>
                     <span>{hasLower ? '✓' : '•'}</span>
-                    <span>{lang === 'am' ? 'ቢያንስ 1 ንዑስ ፊደል (a-z)' : 'One lowercase letter (a-z)'}</span>
+                    <span>{i18nT('auth.oneLowercase', 'One lowercase letter (a-z)')}</span>
                   </div>
                   <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-emerald-700 font-medium' : 'text-slate-500'}`}>
                     <span>{hasNumber ? '✓' : '•'}</span>
-                    <span>{lang === 'am' ? 'ቢያንስ 1 ቁጥር (0-9)' : 'One number (0-9)'}</span>
+                    <span>{i18nT('auth.oneNumber', 'One number (0-9)')}</span>
                   </div>
                   <div className={`flex items-center gap-1.5 ${hasSpecial ? 'text-emerald-700 font-medium' : 'text-slate-500'}`}>
                     <span>{hasSpecial ? '✓' : '•'}</span>
-                    <span>{lang === 'am' ? 'ቢያንስ 1 ልዩ ምልክት (!@#$)' : 'One special character (!@#$)'}</span>
+                    <span>{i18nT('auth.oneSpecialChar', 'One special character (!@#$)')}</span>
                   </div>
                   <div className={`flex items-center gap-1.5 ${passwordsMatch ? 'text-emerald-700 font-medium' : 'text-slate-500'}`}>
                     <span>{passwordsMatch ? '✓' : '•'}</span>
-                    <span>{lang === 'am' ? 'የይለፍ ቃላት ይዛመዳሉ' : 'Passwords match'}</span>
+                    <span>{i18nT('auth.passwordsMatch', 'Passwords match')}</span>
                   </div>
                 </div>
               </div>
@@ -219,8 +217,8 @@ export default function ChangePasswordPage() {
                 className="w-full bg-[#314ea1] hover:bg-[#1e3a8a] text-white font-semibold py-2.5 rounded-xl transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed text-sm cursor-pointer"
               >
                 {isSubmitting 
-                  ? (lang === 'am' ? 'በማስቀመጥ ላይ...' : 'Updating Password...') 
-                  : (lang === 'am' ? 'የይለፍ ቃል ቀይር እና ቀጥል' : 'Set New Password & Proceed')}
+                  ? i18nT('auth.updatingPassword', 'Updating Password...') 
+                  : i18nT('auth.setNewPasswordAndProceed', 'Set New Password & Proceed')}
               </button>
             </form>
           </div>
@@ -228,7 +226,7 @@ export default function ChangePasswordPage() {
       </div>
 
       <div className="text-center text-xs text-gray-400 py-2">
-        {lang === 'am' ? 'የኢፌዴሪ የሃዋሳ መሶብ ማዕከል • ደህንነቱ የተጠበቀ መግቢያ' : 'FDRE Hawassa MESOB Center • Secure Credential Management'}
+        {i18nT('auth.credentialManagementFooter', 'FDRE Hawassa MESOB Center • Secure Credential Management')}
       </div>
     </div>
   );

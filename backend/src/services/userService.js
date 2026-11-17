@@ -30,20 +30,14 @@ export const getAllUsers = async (filters = {}, user) => {
       .order('created_at', { ascending: false });
 
     // Institution-scoped filtering
-    if (user.role === 'INSTITUTION_MANAGER' || user.role === 'EMPLOYEE' || user.role === 'TECHNICIAN' || user.role === 'ICT_STAFF') {
+    if (user.role === 'INSTITUTION_MANAGER' || user.role === 'EMPLOYEE' || user.role === 'TECHNICIAN') {
       query = query.eq('institution_id', user.institution_id);
     }
 
     // Apply filters
     if (filters.role) {
       const upperRole = String(filters.role).toUpperCase();
-      if (upperRole === 'CUSTOMER' || upperRole === 'CITIZEN') {
-        query = query.eq('role', 'CITIZEN');
-      } else if (upperRole === 'TECHNICIAN' || upperRole === 'ICT_STAFF') {
-        query = query.eq('role', 'ICT_STAFF');
-      } else {
-        query = query.eq('role', upperRole);
-      }
+      query = query.eq('role', upperRole);
     }
     if (filters.status) {
       const upperStatus = String(filters.status).toUpperCase();
@@ -63,14 +57,9 @@ export const getAllUsers = async (filters = {}, user) => {
       };
     }
 
-    const normalizedData = (data || []).map(u => ({
-      ...u,
-      role: (u.role === 'ICT_STAFF' || u.role === 'TECHNICIAN') ? 'TECHNICIAN' : (u.role === 'CITIZEN' || u.role === 'CUSTOMER') ? 'CUSTOMER' : u.role
-    }));
-
     return {
       success: true,
-      data: normalizedData
+      data: data || []
     };
 
   } catch (error) {
@@ -128,10 +117,6 @@ export const getUserById = async (userId, currentUser) => {
       }
     }
 
-    if (user) {
-      user.role = (user.role === 'ICT_STAFF' || user.role === 'TECHNICIAN') ? 'TECHNICIAN' : (user.role === 'CITIZEN' || user.role === 'CUSTOMER') ? 'CUSTOMER' : user.role;
-    }
-
     return {
       success: true,
       data: user
@@ -174,7 +159,7 @@ export const createUser = async (userData, currentUser) => {
     }
 
     // Role validation - only internal staff accounts can be provisioned by administrators (customers self-register)
-    const validRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'];
+    const validRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN'];
     const normRole = role.toUpperCase();
     if (!validRoles.includes(normRole)) {
       return {
@@ -184,7 +169,7 @@ export const createUser = async (userData, currentUser) => {
     }
 
     // Official institutional email validation for internal staff (strictly @mesobcenterh.gov.et)
-    const internalRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'];
+    const internalRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN'];
     if (internalRoles.includes(normRole)) {
       if (!isOfficialInstitutionalEmail(email)) {
         return {
@@ -206,7 +191,7 @@ export const createUser = async (userData, currentUser) => {
     }
 
     // Institution validation for institutional roles
-    if (['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'].includes(role) && !institutionId) {
+    if (['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN'].includes(role) && !institutionId) {
       return {
         success: false,
         message: 'Institution ID is required for this role.'
@@ -216,7 +201,7 @@ export const createUser = async (userData, currentUser) => {
     // Resolve institution ID to UUID for institutional roles
 let institutionUuid = null;
 
-if (institutionId && ['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'].includes(role)) {
+if (institutionId && ['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN'].includes(role)) {
   const { data: institution, error: instError } = await supabase
     .from('institutions')
     .select('id')
@@ -285,46 +270,6 @@ if (institutionId && ['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAF
       `)
       .single();
 
-    if (error && error.code === '22P02') {
-      const fallbackRole = role === 'CUSTOMER' ? 'CITIZEN' : role === 'TECHNICIAN' ? 'ICT_STAFF' : null;
-      if (fallbackRole) {
-        const fallbackRes = await supabase
-          .from('users')
-          .insert({
-            email: email.toLowerCase(),
-            password_hash: passwordHash,
-            full_name: fullName,
-            phone,
-            role: fallbackRole,
-            institution_id: institutionUuid || null,
-            employee_id: employeeId || null,
-            national_id: nationalId || null,
-            status: 'ACTIVE',
-            created_by: currentUser.id,
-            created_at: nowIso,
-            metadata: {
-              must_change_password: true,
-              temp_password_issued_at: nowIso
-            }
-          })
-          .select(`
-            id,
-            email,
-            full_name,
-            phone,
-            role,
-            status,
-            institution_id,
-            employee_id,
-            created_at,
-            metadata
-          `)
-          .single();
-        newUser = fallbackRes.data;
-        error = fallbackRes.error;
-      }
-    }
-
     if (error) {
       console.error('Create user error:', error);
       return {
@@ -336,17 +281,11 @@ if (institutionId && ['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAF
     // Log audit
     await logAudit(currentUser.id, 'USER_CREATE', `Created user: ${newUser.email}`);
 
-    const displayRole = (normRole === 'ICT_STAFF' || normRole === 'TECHNICIAN') ? 'TECHNICIAN' : (normRole === 'CITIZEN' || normRole === 'CUSTOMER') ? 'CUSTOMER' : normRole;
-    if (newUser) {
-      newUser.role = displayRole;
-    }
-
     return {
       success: true,
       message: 'User created successfully',
       data: {
         ...newUser,
-        role: displayRole,
         tempPassword
       }
     };
@@ -421,8 +360,7 @@ export const updateUser = async (userId, updates, currentUser) => {
 
     // Only admins can change role
     if (updates.role && (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MESOB_MANAGER')) {
-      const r = String(updates.role).toUpperCase();
-      updateData.role = r === 'CUSTOMER' ? 'CITIZEN' : r === 'TECHNICIAN' ? 'ICT_STAFF' : r;
+      updateData.role = String(updates.role).toUpperCase();
     }
 
     // Only admins can change institution
@@ -454,30 +392,6 @@ export const updateUser = async (userId, updates, currentUser) => {
       `)
       .single();
 
-    if (error && error.code === '22P02' && updateData.role) {
-      const fallbackRole = updateData.role === 'CUSTOMER' ? 'CITIZEN' : updateData.role === 'TECHNICIAN' ? 'ICT_STAFF' : null;
-      if (fallbackRole) {
-        const fallbackRes = await supabase
-          .from('users')
-          .update({ ...updateData, role: fallbackRole })
-          .eq('id', userId)
-          .select(`
-            id,
-            email,
-            full_name,
-            phone,
-            role,
-            status,
-            institution_id,
-            metadata,
-            updated_at
-          `)
-          .single();
-        updatedUser = fallbackRes.data;
-        error = fallbackRes.error;
-      }
-    }
-
     if (error) {
       console.error('Update user error:', error);
       return {
@@ -488,10 +402,6 @@ export const updateUser = async (userId, updates, currentUser) => {
 
     // Log audit
     await logAudit(currentUser.id, 'USER_UPDATE', `Updated user: ${existingUser.email}`);
-
-    if (updatedUser) {
-      updatedUser.role = (updatedUser.role === 'ICT_STAFF' || updatedUser.role === 'TECHNICIAN') ? 'TECHNICIAN' : (updatedUser.role === 'CITIZEN' || updatedUser.role === 'CUSTOMER') ? 'CUSTOMER' : updatedUser.role;
-    }
 
     return {
       success: true,
@@ -641,21 +551,36 @@ export const deleteUser = async (userId, currentUser) => {
       };
     }
 
-    // Soft delete (set status to INACTIVE)
-    const { error } = await supabase
+    // Clean up dependent child records to allow clean deletion
+    try { await supabase.from('sessions').delete().eq('user_id', userId); } catch {}
+    try { await supabase.from('audit_logs').delete().eq('user_id', userId); } catch {}
+    try { await supabase.from('notifications').delete().eq('user_id', userId); } catch {}
+    try { await supabase.from('email_verification_tokens').delete().eq('user_id', userId); } catch {}
+    try { await supabase.from('email_outbox').delete().eq('recipient_id', userId); } catch {}
+
+    // Attempt hard deletion from users table
+    const { error: deleteError } = await supabase
       .from('users')
-      .update({
-        status: 'INACTIVE',
-        updated_at: new Date().toISOString()
-      })
+      .delete()
       .eq('id', userId);
 
-    if (error) {
-      console.error('Delete user error:', error);
-      return {
-        success: false,
-        message: 'Failed to delete user.'
-      };
+    if (deleteError) {
+      console.warn('[USER] Hard delete failed, setting status to INACTIVE:', deleteError.message);
+      const { error: softError } = await supabase
+        .from('users')
+        .update({
+          status: 'INACTIVE',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (softError) {
+        console.error('Delete user error:', softError);
+        return {
+          success: false,
+          message: 'Failed to delete user.'
+        };
+      }
     }
 
     // Log audit
@@ -730,8 +655,8 @@ export const resetUserPassword = async (userId, currentUser) => {
       };
     }
 
-    // Only reset passwords for internal staff (not customers/citizens)
-    const internalRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'];
+    // Only reset passwords for internal staff (not customers)
+    const internalRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN'];
     const userRoleUpper = (user.role || '').toUpperCase();
     if (!internalRoles.includes(userRoleUpper)) {
       return {

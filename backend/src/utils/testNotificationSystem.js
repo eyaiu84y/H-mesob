@@ -39,7 +39,7 @@ import {
   dispatchApplicationActionRequiredNotifications,
   dispatchApplicationDecisionNotifications,
   dispatchApplicationCompletedNotifications,
-  getCitizenContactProfile
+  getCustomerContactProfile
 } from '../services/customerNotificationOrchestrator.js';
 import { getNotifications } from '../services/notificationService.js';
 
@@ -76,7 +76,7 @@ async function runTests() {
   const invalidEthio = isValidEthiopianPhone('12345');
   assert(invalidEthio === false, 'Rejects invalid short phone numbers');
 
-  const validMail = isValidEmail('citizen.test@gmail.com');
+  const validMail = isValidEmail('customer.test@gmail.com');
   assert(validMail === true, 'Validates standard customer email');
 
   const invalidMail = isValidEmail('not-an-email');
@@ -86,31 +86,31 @@ async function runTests() {
   console.log('\n📋 Test Group 2: Contact Privacy & Masking in Logs');
   
   const maskedPhone = maskPhone('251912345678');
-  assert(maskedPhone === '2519***78', 'Masks phone numbers to protect citizen privacy', `Got: ${maskedPhone}`);
+  assert(maskedPhone === '2519***78', 'Masks phone numbers to protect customer privacy', `Got: ${maskedPhone}`);
 
   const maskedEmail = maskEmail('eyasu.mesob@gmail.com');
-  assert(maskedEmail === 'e***b@gmail.com', 'Masks email addresses to protect citizen privacy', `Got: ${maskedEmail}`);
+  assert(maskedEmail === 'e***b@gmail.com', 'Masks email addresses to protect customer privacy', `Got: ${maskedEmail}`);
 
   // ── TEST GROUP 3: Contact Verification Enforcement ──
   console.log('\n📋 Test Group 3: Email Verification Requirement');
 
-  const unverifiedCitizen = {
-    id: 'test-citizen-1',
-    role: 'CITIZEN',
+  const unverifiedCustomer = {
+    id: 'test-customer-1',
+    role: 'CUSTOMER',
     email: 'unverified@gmail.com',
     email_verified: false,
     metadata: { email_verification: { verified: false } }
   };
-  assert(isUserEmailVerified(unverifiedCitizen) === false, 'Identifies unverified citizen account');
+  assert(isUserEmailVerified(unverifiedCustomer) === false, 'Identifies unverified customer account');
 
-  const verifiedCitizen = {
-    id: 'test-citizen-2',
-    role: 'CITIZEN',
+  const verifiedCustomer = {
+    id: 'test-customer-2',
+    role: 'CUSTOMER',
     email: 'verified@gmail.com',
     email_verified: true,
     metadata: { email_verification: { verified: true } }
   };
-  assert(isUserEmailVerified(verifiedCitizen) === true, 'Identifies verified citizen account');
+  assert(isUserEmailVerified(verifiedCustomer) === true, 'Identifies verified customer account');
 
   const internalStaff = {
     id: 'test-staff-1',
@@ -119,12 +119,12 @@ async function runTests() {
   };
   assert(isUserEmailVerified(internalStaff) === true, 'Internal staff pre-verified by official institutional account');
 
-  // Test unverified email safety: sendEmail must refuse dispatch to unverified citizen
+  // Test unverified email safety: sendEmail must refuse dispatch to unverified customer
   const unverifiedSendResult = await sendEmail({
     to: 'unverified@gmail.com',
     subject: 'Test Subject',
     html: '<p>Test</p>',
-    recipientUser: unverifiedCitizen
+    recipientUser: unverifiedCustomer
   });
   assert(unverifiedSendResult.skipped === true && unverifiedSendResult.reason === 'UNVERIFIED_EMAIL',
     'sendEmail safely skips unverified email addresses');
@@ -138,7 +138,7 @@ async function runTests() {
     subject: 'Idempotency Test 1',
     html: '<p>Test</p>',
     idempotencyKey: testKey,
-    recipientUser: verifiedCitizen
+    recipientUser: verifiedCustomer
   });
   assert(firstSend.success === true, 'First event dispatch is accepted');
 
@@ -147,7 +147,7 @@ async function runTests() {
     subject: 'Idempotency Test 2',
     html: '<p>Test</p>',
     idempotencyKey: testKey,
-    recipientUser: verifiedCitizen
+    recipientUser: verifiedCustomer
   });
   assert(secondSend.deduplicated === true, 'Second event with identical key within TTL is deduplicated');
 
@@ -168,7 +168,7 @@ async function runTests() {
   // 2.A Queue Join Email format
   const queueJoinEmail = await sendQueueJoinEmail({
     to: 'verified@gmail.com',
-    recipientUser: verifiedCitizen,
+    recipientUser: verifiedCustomer,
     queueNumber: 'Q-2026-0017',
     serviceName: 'Business Licensing',
     institutionName: 'Hawassa MESOB Center',
@@ -185,7 +185,7 @@ async function runTests() {
   // 2.B Queue Call Email format
   const queueCallEmail = await sendQueueCallEmail({
     to: 'verified@gmail.com',
-    recipientUser: verifiedCitizen,
+    recipientUser: verifiedCustomer,
     queueNumber: 'Q-2026-0017',
     serviceName: 'Business Licensing',
     institutionName: 'Hawassa MESOB Center',
@@ -203,7 +203,7 @@ async function runTests() {
 
   const appSubmitEmail = await sendApplicationSubmittedEmail({
     to: 'verified@gmail.com',
-    recipientUser: verifiedCitizen,
+    recipientUser: verifiedCustomer,
     applicationNumber: 'APP-2026-0089',
     serviceName: 'Civil Registry Renewal',
     submittedAt: new Date().toISOString(),
@@ -217,7 +217,7 @@ async function runTests() {
 
   const appActionEmail = await sendApplicationActionRequiredEmail({
     to: 'verified@gmail.com',
-    recipientUser: verifiedCitizen,
+    recipientUser: verifiedCustomer,
     applicationNumber: 'APP-2026-0089',
     serviceName: 'Civil Registry Renewal',
     notes: 'Please upload a clear copy of your Kebele Identification card.',
@@ -228,7 +228,7 @@ async function runTests() {
   // 3.C Decision: Approved & Rejected
   const appApprovedEmail = await sendApplicationDecisionEmail({
     to: 'verified@gmail.com',
-    recipientUser: verifiedCitizen,
+    recipientUser: verifiedCustomer,
     applicationNumber: 'APP-2026-0089',
     serviceName: 'Civil Registry Renewal',
     decision: 'APPROVED',
@@ -238,7 +238,7 @@ async function runTests() {
 
   const appRejectedEmail = await sendApplicationDecisionEmail({
     to: 'verified@gmail.com',
-    recipientUser: verifiedCitizen,
+    recipientUser: verifiedCustomer,
     applicationNumber: 'APP-2026-0089',
     serviceName: 'Civil Registry Renewal',
     decision: 'REJECTED',
@@ -253,7 +253,7 @@ async function runTests() {
 
   const appCompletedEmail = await sendApplicationCompletedEmail({
     to: 'verified@gmail.com',
-    recipientUser: verifiedCitizen,
+    recipientUser: verifiedCustomer,
     applicationNumber: 'APP-2026-0089',
     serviceName: 'Civil Registry Renewal',
     completedAt: new Date().toISOString(),
@@ -268,7 +268,7 @@ async function runTests() {
   const { data: testUsers } = await supabase
     .from('users')
     .select('id, email, role')
-    .eq('role', 'CITIZEN')
+    .eq('role', 'CUSTOMER')
     .limit(2);
 
   if (testUsers && testUsers.length >= 2) {
@@ -295,7 +295,7 @@ async function runTests() {
   try {
     await dispatchQueueJoinNotifications({
       queueEntry: { id: 'invalid-uuid', queue_number: 'Q-001' },
-      citizenId: 'non-existent-citizen',
+      customerId: 'non-existent-customer',
       serviceName: 'Test Service'
     });
   } catch (err) {

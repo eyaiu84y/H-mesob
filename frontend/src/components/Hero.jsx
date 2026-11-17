@@ -10,7 +10,7 @@ const slides = [
 ];
 
 export default function Hero() {
-  const { t } = useApp();
+  const { t, lang } = useApp();
   const navigate = useNavigate();
   const [current, setCurrent] = useState(0);
 
@@ -39,15 +39,15 @@ export default function Hero() {
       className="relative w-full min-h-screen overflow-hidden"
       style={{ backgroundColor: '#1e3a8a' }}
     >
-      {/* Banner Slider - Enhanced with better opacity and quality */}
+      {/* Banner Slider - High quality Hawassa photography with clean cinematic overlay */}
       <div className="absolute inset-0 w-full h-full">
         {slides.map((slide, i) => (
           <div
             key={i}
-            className={`banner-slide absolute inset-0 w-full h-full transition-opacity duration-1000 ${i === current ? 'opacity-100' : 'opacity-0'
-              }`}
+            className={`banner-slide absolute inset-0 w-full h-full transition-opacity duration-1000 ${
+              i === current ? 'opacity-100' : 'opacity-0'
+            }`}
           >
-            {/* High-quality image rendering with optimized settings */}
             <img
               src={slide.src}
               alt={slide.alt}
@@ -59,10 +59,9 @@ export default function Hero() {
               }}
               loading="eager"
             />
-            {/* Lighter overlay for better image visibility */}
-            <div className="absolute inset-0 bg-black/35"></div>
-            {/* Enhanced gradient overlay with smoother transitions */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-black/20 to-black/70"></div>
+            {/* Clean, professional overlay matching FDRE Mesob standard */}
+            <div className="absolute inset-0 bg-black/45"></div>
+            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/25 to-black/80"></div>
           </div>
         ))}
       </div>
@@ -71,40 +70,43 @@ export default function Hero() {
       <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto w-full flex flex-col items-center justify-center py-10 sm:py-12 md:py-14 min-h-full">
 
-          {/* Titles with staggered animation */}
-          <div className="relative isolate w-full max-w-5xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl xl:text-5xl font-bold text-white mb-3 sm:mb-4 leading-tight px-2 break-words animate-slide-up drop-shadow-lg">
+          {/* Titles with clean typography */}
+          <div className="relative isolate w-full max-w-5xl mx-auto px-2 sm:px-4 md:px-6 py-2">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl xl:text-6xl font-extrabold text-white mb-3 sm:mb-4 leading-tight tracking-tight px-2 break-words drop-shadow-sm">
               {t.hero_title}
             </h1>
-            <p className="text-base sm:text-lg md:text-xl xl:text-2xl text-white/95 mb-5 sm:mb-6 md:mb-7 max-w-sm sm:max-w-xl md:max-w-2xl xl:max-w-4xl mx-auto font-medium px-3 sm:px-4 break-words animate-slide-up-delay-1 drop-shadow-md">
+            <p className="text-base sm:text-lg md:text-xl text-white/95 mb-4 sm:mb-5 max-w-sm sm:max-w-xl md:max-w-2xl xl:max-w-3xl mx-auto font-medium px-3 break-words">
               {t.hero_subtitle}
             </p>
-            <p className="text-sm sm:text-base md:text-lg xl:text-xl text-white/90 mb-7 sm:mb-8 md:mb-9 max-w-md md:max-w-2xl xl:max-w-3xl mx-auto px-3 sm:px-4 hidden sm:block break-words animate-slide-up-delay-2 drop-shadow-md">
-              {t.hero_desc}
-            </p>
-            <p className="text-base text-white/90 mb-7 max-w-sm mx-auto px-2 sm:hidden break-words leading-relaxed drop-shadow-md">
+            <p className="text-sm sm:text-base md:text-lg text-white/85 mb-8 max-w-md md:max-w-2xl xl:max-w-3xl mx-auto px-3 hidden sm:block break-words leading-relaxed">
               {t.hero_desc}
             </p>
           </div>
 
-          {/* Enhanced Search Bar */}
-          <div className="w-full max-w-sm sm:max-w-md md:max-w-xl xl:max-w-2xl mx-auto px-2 animate-slide-up-delay-3">
-            <form className="relative group" onSubmit={handleSearch}>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
-              <input
-                type="text"
-                placeholder={t.hero_search}
-                className="relative w-full px-4 sm:px-5 py-3 md:px-6 md:py-4 text-sm sm:text-base md:text-lg bg-white/90 hover:bg-white border-2 border-white/30 rounded-full text-gray-800 placeholder-gray-500 focus:outline-none focus:border-blue-400 focus:bg-white transition-all duration-300 shadow-2xl backdrop-blur-sm"
-              />
-              <button
-                type="submit"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2.5 sm:p-3 text-white bg-blue-600 hover:bg-blue-700 transition-all duration-300 rounded-full shadow-lg hover:shadow-xl hover:scale-110 cursor-pointer"
-              >
-                <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </button>
+          {/* Clean Search Bar */}
+          <div className="w-full max-w-xl xl:max-w-2xl mx-auto px-2">
+            <form className="relative" onSubmit={handleSearch}>
+              <div className="relative w-full flex items-center bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-white/40 dark:border-gray-700 rounded-full shadow-2xl p-1.5 sm:p-2 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#314ea1]">
+                <div className="pl-3 sm:pl-4 text-gray-400">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder={t.hero_search}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 bg-transparent focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  className="bg-[#314ea1] hover:bg-[#1e3a8a] text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 shadow-md cursor-pointer shrink-0 flex items-center gap-1.5"
+                >
+                  <span>{t['common.search'] || 'Search'}</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </button>
+              </div>
             </form>
           </div>
 

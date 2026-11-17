@@ -19,14 +19,9 @@ export default function HomePage() {
       <main className="overflow-hidden">
         <Hero />
         
-        {/* Subtle decorative separator */}
-        <div className="h-px w-full bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
-        
         <div className="scroll-reveal">
           <About />
         </div>
-
-        <div className="h-px w-full bg-gradient-to-r from-transparent via-blue-200/60 dark:via-blue-900/40 to-transparent" />
 
         <div className="scroll-reveal">
           <Organizations />
@@ -39,8 +34,6 @@ export default function HomePage() {
         <div className="scroll-reveal">
           <Videos />
         </div>
-
-        <div className="h-px w-full bg-gradient-to-r from-transparent via-purple-200/60 dark:via-purple-900/40 to-transparent" />
 
         <div className="scroll-reveal">
           <PopularServices />

@@ -21,27 +21,28 @@ import {
   isUserEmailVerified,
   maskEmail
 } from './emailService.js';
+import { enqueueEmail } from './emailOutboxService.js';
 
 /**
  * Fetch and return customer record with contact and verification attributes
- * @param {string} citizenId 
+ * @param {string} customerId 
  * @returns {Promise<Object|null>}
  */
-export const getCustomerContactProfile = async (citizenId) => {
-  if (!citizenId) return null;
+export const getCustomerContactProfile = async (customerId) => {
+  if (!customerId) return null;
   try {
-    const { data: citizen, error } = await supabase
+    const { data: customer, error } = await supabase
       .from('users')
       .select('id, full_name, email, phone, role, status, metadata')
-      .eq('id', citizenId)
+      .eq('id', customerId)
       .single();
 
-    if (error || !citizen) {
-      console.warn(`[NOTIF-ORCHESTRATOR] ⚠️ Customer record not found for ID: ${citizenId}`);
+    if (error || !customer) {
+      console.warn(`[NOTIF-ORCHESTRATOR] ⚠️ Customer record not found for ID: ${customerId}`);
       return null;
     }
 
-    return citizen;
+    return customer;
   } catch (err) {
     console.error(`[NOTIF-ORCHESTRATOR] ❌ Error fetching customer contact profile:`, err.message);
     return null;
@@ -180,6 +181,24 @@ export const dispatchQueueJoinNotifications = async ({
       // 2. Email Notification (requires verified email)
       let emailResult = null;
       if (customer.email && isUserEmailVerified(customer)) {
+        // Enqueue to reliable outbox worker
+        await enqueueEmail({
+          to: customer.email,
+          recipientId: customer.id,
+          subject: `Hawassa MESOB — Your queue ticket #${queueNumber} is confirmed`,
+          templateName: 'QUEUE_CONFIRMATION',
+          payload: {
+            customerName: customer.full_name || 'Customer',
+            institutionName,
+            serviceName: service,
+            ticketNumber: queueNumber,
+            queuePosition: position || 1,
+            registrationDate: queueEntry.created_at || new Date().toISOString(),
+            trackingLink: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/customer`
+          },
+          idempotencyKey: `QUEUE_JOIN:${queueEntry.id || queueNumber}`
+        });
+
         emailResult = await sendQueueJoinEmail({
           to: customer.email,
           recipientUser: customer,
@@ -264,6 +283,23 @@ export const dispatchQueueCallNotifications = async ({
       // 2. Email Notification
       let emailResult = null;
       if (customer.email && isUserEmailVerified(customer)) {
+        // Enqueue to reliable outbox worker
+        await enqueueEmail({
+          to: customer.email,
+          recipientId: customer.id,
+          subject: `Hawassa MESOB — Your ticket #${queueNumber} has been called!`,
+          templateName: 'QUEUE_TURN',
+          payload: {
+            customerName: customer.full_name || 'Customer',
+            ticketNumber: queueNumber,
+            institutionName,
+            serviceName: service,
+            counterNumber: counterNumber || '1',
+            instructions: 'Please proceed immediately to your assigned counter with your National ID and required documents.'
+          },
+          idempotencyKey: `QUEUE_CALL:${queueEntry.id || queueNumber}`
+        });
+
         emailResult = await sendQueueCallEmail({
           to: customer.email,
           recipientUser: customer,
@@ -304,6 +340,72 @@ export const dispatchQueueCallNotifications = async ({
 
     } catch (err) {
       console.error('[NOTIF-ORCHESTRATOR] ❌ Error in dispatchQueueCallNotifications:', err.message);
+    }
+  });
+};
+
+/**
+ * 2.C - Event: Service completed for a queue ticket
+ */
+export const dispatchQueueCompletedNotifications = async ({
+  queueEntry,
+  citizenId,
+  serviceName,
+  institutionName = 'Hawassa MESOB Center',
+  completedAt = null,
+}) => {
+  const targetCustomerId = citizenId || queueEntry?.citizen_id;
+  if (!queueEntry || !targetCustomerId) return;
+
+  setImmediate(async () => {
+    try {
+      const customer = await getCustomerContactProfile(targetCustomerId);
+      if (!customer) return;
+
+      const queueNumber = queueEntry.queue_number || queueEntry.token;
+      const service = serviceName || 'Public Service';
+      const completionDate = completedAt || new Date().toISOString();
+      const portalUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const feedbackLink = `${portalUrl}/dashboard/customer?tab=feedback&ticket=${encodeURIComponent(queueNumber)}`;
+
+      // 1. Enqueue to reliable outbox worker (with idempotency to prevent duplicate emails)
+      if (customer.email && isUserEmailVerified(customer)) {
+        await enqueueEmail({
+          to: customer.email,
+          recipientId: customer.id,
+          subject: `Hawassa MESOB — Service completed for ticket #${queueNumber}`,
+          templateName: 'QUEUE_COMPLETED',
+          payload: {
+            customerName: customer.full_name || 'Customer',
+            ticketNumber: queueNumber,
+            serviceName: service,
+            institutionName,
+            completedAt: completionDate,
+            feedbackLink,
+          },
+          idempotencyKey: `QUEUE_COMPLETE:${queueEntry.id || queueNumber}`
+        });
+      }
+
+      // 2. In-App Notification
+      await createNotification({
+        recipientId: customer.id,
+        type: 'QUEUE_ASSIGNMENT',
+        title: 'Service Completed',
+        message: `Your service for Token #${queueNumber} has been completed. Please rate your experience!`,
+        relatedEntityType: 'queue',
+        relatedEntityId: queueEntry.id,
+      });
+
+      // 3. Audit log
+      await recordNotificationAudit(customer.id, 'QUEUE_COMPLETED_NOTIFIED', {
+        event: 'QUEUE_COMPLETED_NOTIFIED',
+        queueNumber,
+        customerId: customer.id,
+        completedAt: completionDate
+      });
+    } catch (err) {
+      console.error('[NOTIF-ORCHESTRATOR] ❌ Error in dispatchQueueCompletedNotifications:', err.message);
     }
   });
 };
@@ -660,5 +762,3 @@ export const getNotificationTrackingByEntity = async (entityId) => {
     return [];
   }
 };
-
-export const getCitizenContactProfile = getCustomerContactProfile;

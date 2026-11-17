@@ -27,18 +27,18 @@ export const isValidEmail = (email) => {
 /**
  * Checks whether a user's email address has been verified.
  * Internal staff are pre-verified by administrator onboarding.
- * Citizens must have verified their email address via verification code.
+ * Customers must have verified their email address via verification code.
  */
 export const isUserEmailVerified = (user) => {
   if (!user) return false;
   
   const roleUpper = String(user.role || '').toUpperCase();
-  const internalRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'ICT_STAFF', 'TECHNICIAN'];
+  const internalRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN'];
   if (internalRoles.includes(roleUpper)) {
     return true;
   }
 
-  // Explicitly unverified citizen accounts
+  // Explicitly unverified customer accounts
   if (user.metadata?.email_verification?.verified === false) {
     return false;
   }
@@ -234,7 +234,7 @@ export const sendEmail = async ({
 };
 
 // ── HTML Email Template Builder ──────────────────────────────────
-const buildEmailHtml = ({
+export const buildEmailHtml = ({
   heading,
   badgeText = 'Official Notice',
   badgeColor = '#1e3a8a',

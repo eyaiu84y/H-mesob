@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../../utils/api';
 import { useNotifications } from '../../context/NotificationContext';
+import { useApp } from '../../context/AppContext';
+import { getLocalizedStatus, getLocalizedRole, getInstitutionName } from '../../utils/localizedContent';
 
 export default function ApprovalsManagement({
   isManagerView = false,
@@ -8,6 +10,7 @@ export default function ApprovalsManagement({
   onClearInitialRequest = null
 }) {
   const { refreshNotifications } = useNotifications();
+  const { t, lang } = useApp();
 
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -232,28 +235,28 @@ export default function ApprovalsManagement({
     <div className="space-y-6">
       {/* Header and KPI cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Submissions</p>
-          <p className="text-2xl font-bold text-slate-900">{counts.all}</p>
-          <p className="text-xs text-slate-500 mt-1">Institutions & user accounts</p>
+        <div className="bg-white rounded-2xl border border-blue-200/90 p-5 shadow-xs bg-gradient-to-br from-blue-50/40 to-white">
+          <p className="text-xs font-semibold text-blue-800 uppercase tracking-wider mb-1">{lang === 'am' ? 'አጠቃላይ የቀረቡ' : 'Total Submissions'}</p>
+          <p className="text-2xl font-bold text-blue-600">{counts.all}</p>
+          <p className="text-xs text-blue-700 mt-1 font-medium">{lang === 'am' ? 'ተቋማት እና የተጠቃሚ መለያዎች' : 'Institutions & user accounts'}</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-amber-200/90 p-5 shadow-xs bg-gradient-to-br from-amber-50/40 to-white">
-          <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-1">Pending Review</p>
+          <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-1">{t.pending_approvals || (lang === 'am' ? 'ውሳኔ የሚጠብቁ' : 'Pending Review')}</p>
           <p className="text-2xl font-bold text-amber-600">{counts.pending}</p>
-          <p className="text-xs text-amber-700 mt-1 font-medium">Awaiting Mesob decision</p>
+          <p className="text-xs text-amber-700 mt-1 font-medium">{lang === 'am' ? 'የመሶብ ውሳኔ በመጠባበቅ ላይ' : 'Awaiting Mesob decision'}</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-emerald-200/90 p-5 shadow-xs bg-gradient-to-br from-emerald-50/40 to-white">
-          <p className="text-xs font-semibold text-emerald-800 uppercase tracking-wider mb-1">Approved & Active</p>
+          <p className="text-xs font-semibold text-emerald-800 uppercase tracking-wider mb-1">{t.approved_requests || (lang === 'am' ? 'የጸደቁ እና ንቁ' : 'Approved & Active')}</p>
           <p className="text-2xl font-bold text-emerald-600">{counts.approved}</p>
-          <p className="text-xs text-emerald-700 mt-1 font-medium">Successfully activated</p>
+          <p className="text-xs text-emerald-700 mt-1 font-medium">{lang === 'am' ? 'በተሳካ ሁኔታ የነቁ' : 'Successfully activated'}</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-rose-200/90 p-5 shadow-xs bg-gradient-to-br from-rose-50/40 to-white">
-          <p className="text-xs font-semibold text-rose-800 uppercase tracking-wider mb-1">Rejected</p>
+          <p className="text-xs font-semibold text-rose-800 uppercase tracking-wider mb-1">{t.rejected_requests || (lang === 'am' ? 'ውድቅ የተደረጉ' : 'Rejected')}</p>
           <p className="text-2xl font-bold text-rose-600">{counts.rejected}</p>
-          <p className="text-xs text-rose-700 mt-1 font-medium">Corrections required</p>
+          <p className="text-xs text-rose-700 mt-1 font-medium">{lang === 'am' ? 'ማስተካከያ የሚሹ' : 'Corrections required'}</p>
         </div>
       </div>
 
@@ -269,7 +272,7 @@ export default function ApprovalsManagement({
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Pending ({counts.pending})
+            {t.pending || (lang === 'am' ? 'ውሳኔ የሚጠብቁ' : 'Pending')} ({counts.pending})
           </button>
           <button
             onClick={() => setStatusFilter('APPROVED')}
@@ -279,7 +282,7 @@ export default function ApprovalsManagement({
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Approved ({counts.approved})
+            {t.approved || (lang === 'am' ? 'የጸደቁ' : 'Approved')} ({counts.approved})
           </button>
           <button
             onClick={() => setStatusFilter('REJECTED')}
@@ -289,7 +292,7 @@ export default function ApprovalsManagement({
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Rejected ({counts.rejected})
+            {t.rejected || (lang === 'am' ? 'ውድቅ የተደረጉ' : 'Rejected')} ({counts.rejected})
           </button>
           <button
             onClick={() => setStatusFilter('ALL')}
@@ -299,7 +302,7 @@ export default function ApprovalsManagement({
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            All ({counts.all})
+            {lang === 'am' ? 'ሁሉም' : 'All'} ({counts.all})
           </button>
         </div>
 
@@ -310,9 +313,9 @@ export default function ApprovalsManagement({
             onChange={(e) => setTypeFilter(e.target.value)}
             className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-[#314ea1]/20"
           >
-            <option value="ALL">All Entities</option>
-            <option value="INSTITUTION">Institutions</option>
-            <option value="USER">User Accounts</option>
+            <option value="ALL">{lang === 'am' ? 'ሁሉም አካላት' : 'All Entities'}</option>
+            <option value="INSTITUTION">{t.institutions || (lang === 'am' ? 'ተቋማት' : 'Institutions')}</option>
+            <option value="USER">{lang === 'am' ? 'የተጠቃሚ መለያዎች' : 'User Accounts'}</option>
           </select>
 
           <div className="relative flex-1 md:w-64">
@@ -320,7 +323,7 @@ export default function ApprovalsManagement({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, code, or email..."
+              placeholder={lang === 'am' ? 'በስም፣ በኮድ ወይም በኢሜይል ፈልግ...' : 'Search by name, code, or email...'}
               className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 bg-white text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#314ea1]/20"
             />
             <svg
@@ -376,12 +379,12 @@ export default function ApprovalsManagement({
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3.5 px-4">Entity</th>
-                  <th className="py-3.5 px-4">Identifier / Role</th>
-                  <th className="py-3.5 px-4">Submitted By</th>
-                  <th className="py-3.5 px-4">Submission Date</th>
-                  <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-4 text-right">Actions</th>
+                  <th className="py-3.5 px-4">{lang === 'am' ? 'አካል' : 'Entity'}</th>
+                  <th className="py-3.5 px-4">{lang === 'am' ? 'መለያ / ሚና' : 'Identifier / Role'}</th>
+                  <th className="py-3.5 px-4">{lang === 'am' ? 'ያቀረበው አካል' : 'Submitted By'}</th>
+                  <th className="py-3.5 px-4">{lang === 'am' ? 'የቀረበበት ቀን' : 'Submission Date'}</th>
+                  <th className="py-3.5 px-4">{t.status || 'Status'}</th>
+                  <th className="py-3.5 px-4 text-right">{t.actions || 'Actions'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">

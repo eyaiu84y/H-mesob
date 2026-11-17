@@ -5,12 +5,12 @@ const API_URL = 'http://localhost:5000/api';
 
 // Test users for each role
 const testUsers = {
-  SUPER_ADMIN: { email: 'superadmin@mesobcenter.et', password: 'SuperAdmin@2026' },
-  MESOB_MANAGER: { email: 'manager@mesobcenter.et', password: 'MesobManager@2026' },
-  INSTITUTION_MANAGER: { email: 'inst.manager@mesobcenter.et', password: 'InstManager@2026' }, // Fayda
-  EMPLOYEE: { email: 'employee@mesobcenter.et', password: 'Employee@2026' }, // Fayda
-  ICT_STAFF: { email: 'tech@mesobcenter.et', password: 'tech@2026' }, // Fayda
-  CITIZEN: { email: 'customer@mesobcenter.et', password: 'customer@2026' }
+  SUPER_ADMIN: { email: 'superadmin@mesobcenterh.gov.et', password: 'Admin@2026' },
+  MESOB_MANAGER: { email: 'manager@mesobcenterh.gov.et', password: 'Manager@2026' },
+  INSTITUTION_MANAGER: { email: 'instmanager@mesobcenterh.gov.et', password: 'InstMgr@2026' },
+  EMPLOYEE: { email: 'employee@mesobcenterh.gov.et', password: 'Employee@2026' },
+  TECHNICIAN: { email: 'technician@mesobcenterh.gov.et', password: 'Technician@2026' },
+  CUSTOMER: { email: 'customer@gmail.com', password: 'Customer@2026' }
 };
 
 let tokens = {};
@@ -78,7 +78,7 @@ async function testAuthentication() {
     const res = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'citizen@mesobcenter.et', password: 'WrongPassword123' })
+      body: JSON.stringify({ email: 'customer@gmail.com', password: 'WrongPassword123' })
     });
     const data = await res.json();
 
@@ -147,7 +147,7 @@ async function testAuthentication() {
       });
       const data = await res.json();
 
-      if (res.ok && data.success && data.data.role === role) {
+      if (res.ok && data.success && (data.data.user?.role === role || data.data.role === role)) {
         pass(`${role}: Profile retrieved, role verified`);
       } else {
         fail(`${role}: Profile retrieval failed`, data.message);
@@ -209,8 +209,8 @@ async function testRBAC() {
     MESOB_MANAGER: true,
     INSTITUTION_MANAGER: true,
     EMPLOYEE: true,
-    ICT_STAFF: true,
-    CITIZEN: true  // Citizens can view institutions
+    TECHNICIAN: true,
+    CUSTOMER: true
   };
 
   for (const [role, shouldAllow] of Object.entries(institutionsAccess)) {
@@ -248,8 +248,8 @@ async function testRBAC() {
     MESOB_MANAGER: true,
     INSTITUTION_MANAGER: true,
     EMPLOYEE: true,
-    ICT_STAFF: true,
-    CITIZEN: true
+    TECHNICIAN: true,
+    CUSTOMER: true
   };
 
   for (const [role, shouldAllow] of Object.entries(queuesAccess)) {
@@ -277,9 +277,9 @@ async function testRBAC() {
     }
   }
 
-  // Test join queue endpoint (CITIZEN only)
+  // Test join queue endpoint (CUSTOMER only)
   console.log('\n──────────────────────────────────────');
-  console.log('TEST 10: POST /api/queues/join access (CITIZEN only)');
+  console.log('TEST 10: POST /api/queues/join access (CUSTOMER only)');
   console.log('──────────────────────────────────────');
   
   const joinQueueAccess = {
@@ -287,19 +287,19 @@ async function testRBAC() {
     MESOB_MANAGER: false,
     INSTITUTION_MANAGER: false,
     EMPLOYEE: false,
-    ICT_STAFF: false,
-    CITIZEN: true
+    TECHNICIAN: false,
+    CUSTOMER: true
   };
 
   // Get a valid service and institution for testing
   const instRes = await fetch(`${API_URL}/institutions`, {
-    headers: { Authorization: `Bearer ${tokens.CITIZEN}` }
+    headers: { Authorization: `Bearer ${tokens.CUSTOMER}` }
   });
   const institutions = await instRes.json();
   const testInst = institutions.data[0];
 
   const servRes = await fetch(`${API_URL}/services?institutionId=${testInst.id}`, {
-    headers: { Authorization: `Bearer ${tokens.CITIZEN}` }
+    headers: { Authorization: `Bearer ${tokens.CUSTOMER}` }
   });
   const services = await servRes.json();
   const testService = services.data[0];
@@ -321,7 +321,7 @@ async function testRBAC() {
       const data = await res.json();
 
       if (shouldAllow) {
-        // For CITIZEN, we expect success OR "already in queue" message (400 is OK for duplicate)
+        // For CUSTOMER, we expect success OR "already in queue" message (400 is OK for duplicate)
         if (res.ok) {
           pass(`${role}: Can join queue (correct)`);
         } else if (data.message && (data.message.includes('already in queue') || data.message.includes('Institution ID and Service ID are required'))) {
@@ -351,8 +351,8 @@ async function testRBAC() {
     MESOB_MANAGER: false,
     INSTITUTION_MANAGER: true,
     EMPLOYEE: true,
-    ICT_STAFF: false,
-    CITIZEN: false
+    TECHNICIAN: false,
+    CUSTOMER: false
   };
 
   for (const [role, shouldAllow] of Object.entries(callNextAccess)) {
@@ -401,8 +401,8 @@ async function testRBAC() {
     MESOB_MANAGER: true,
     INSTITUTION_MANAGER: true,
     EMPLOYEE: false,
-    ICT_STAFF: false,
-    CITIZEN: false
+    TECHNICIAN: false,
+    CUSTOMER: false
   };
 
   for (const [role, shouldAllow] of Object.entries(usersAccess)) {
@@ -525,7 +525,7 @@ async function testRegistration() {
   console.log('TEST 15: Register with valid data');
   console.log('──────────────────────────────────────');
 
-  const testEmail = `test${Date.now()}@mesobcenter.et`;
+  const testEmail = `test${Date.now()}@gmail.com`;
   try {
     const res = await fetch(`${API_URL}/auth/register`, {
       method: 'POST',
@@ -558,7 +558,7 @@ async function testRegistration() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'citizen@mesobcenter.et', // Already exists
+        email: 'customer@gmail.com', // Already exists
         password: 'TestPass123!',
         firstName: 'Duplicate',
         lastName: 'User'

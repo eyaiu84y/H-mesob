@@ -7,7 +7,7 @@ import { useApp } from '../context/AppContext';
  * for an attractive, simple, and modern scrolling experience inspired by mesobcenter.et.
  */
 export default function ScrollEnhancements() {
-  const { lang } = useApp();
+  const { t } = useApp();
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
@@ -70,6 +70,8 @@ export default function ScrollEnhancements() {
     });
   };
 
+  const backToTopLabel = t['common.backToTop'] || 'Back to top';
+
   return (
     <>
       {/* ─── Top Scroll Progress Bar ─────────────────────────────── */}
@@ -100,8 +102,8 @@ export default function ScrollEnhancements() {
         <button
           type="button"
           onClick={scrollToTop}
-          title={lang === 'am' ? 'ወደ ላይ ተመለስ' : 'Back to top'}
-          aria-label={lang === 'am' ? 'ወደ ላይ ተመለስ' : 'Back to top'}
+          title={backToTopLabel}
+          aria-label={backToTopLabel}
           className="relative group w-12 h-12 rounded-full bg-white dark:bg-slate-800 text-[#1e3a8a] dark:text-[#f4b51a] shadow-xl hover:shadow-2xl border border-slate-200/80 dark:border-slate-700 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
         >
           {/* Subtle Progress Ring */}

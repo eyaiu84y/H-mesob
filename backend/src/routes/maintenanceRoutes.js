@@ -23,11 +23,11 @@ const router = express.Router();
 /**
  * @route   POST /api/maintenance/reports
  * @desc    Create maintenance report
- * @access  Private (EMPLOYEE, TECHNICIAN, ICT_STAFF, INSTITUTION_MANAGER)
+ * @access  Private (EMPLOYEE, TECHNICIAN, INSTITUTION_MANAGER)
  */
 router.post('/reports', 
   authenticate,
-  authorize('EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'),
+  authorize('EMPLOYEE', 'TECHNICIAN', 'INSTITUTION_MANAGER'),
   postMaintenanceReport
 );
 
@@ -98,22 +98,22 @@ router.post('/reports/:id/assign',
 /**
  * @route   PATCH /api/maintenance/reports/:id/status
  * @desc    Update report status (IN_PROGRESS, WAITING_PARTS, ON_HOLD)
- * @access  Private (TECHNICIAN, ICT_STAFF, INSTITUTION_MANAGER, SUPER_ADMIN, MESOB_MANAGER)
+ * @access  Private (TECHNICIAN, INSTITUTION_MANAGER, SUPER_ADMIN, MESOB_MANAGER)
  */
 router.patch('/reports/:id/status',
   authenticate,
-  authorize('TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER', 'SUPER_ADMIN', 'MESOB_MANAGER'),
+  authorize('TECHNICIAN', 'INSTITUTION_MANAGER', 'SUPER_ADMIN', 'MESOB_MANAGER'),
   patchReportStatus
 );
 
 /**
  * @route   PATCH /api/maintenance/reports/:id/resolve
  * @desc    Resolve maintenance report directly
- * @access  Private (TECHNICIAN, ICT_STAFF, INSTITUTION_MANAGER)
+ * @access  Private (TECHNICIAN, INSTITUTION_MANAGER)
  */
 router.patch('/reports/:id/resolve',
   authenticate,
-  authorize('TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'),
+  authorize('TECHNICIAN', 'INSTITUTION_MANAGER'),
   patchResolveReport
 );
 
@@ -142,44 +142,44 @@ router.patch('/reports/:id/reopen',
 /**
  * @route   GET /api/maintenance/my-tasks
  * @desc    Get my maintenance tasks (for Technicians)
- * @access  Private (TECHNICIAN, ICT_STAFF)
+ * @access  Private (TECHNICIAN)
  */
 router.get('/my-tasks', 
   authenticate,
-  authorize('TECHNICIAN', 'ICT_STAFF'),
+  authorize('TECHNICIAN'),
   getMyTasksController
 );
 
 /**
  * @route   GET /api/maintenance/tasks/:id
  * @desc    Get task by ID
- * @access  Private (TECHNICIAN, ICT_STAFF, INSTITUTION_MANAGER, SUPER_ADMIN, MESOB_MANAGER)
+ * @access  Private (TECHNICIAN, INSTITUTION_MANAGER, SUPER_ADMIN, MESOB_MANAGER)
  */
 router.get('/tasks/:id', 
   authenticate,
-  authorize('TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER', 'SUPER_ADMIN', 'MESOB_MANAGER'),
+  authorize('TECHNICIAN', 'INSTITUTION_MANAGER', 'SUPER_ADMIN', 'MESOB_MANAGER'),
   getTask
 );
 
 /**
  * @route   PATCH /api/maintenance/tasks/:id/status
  * @desc    Update task status
- * @access  Private (TECHNICIAN, ICT_STAFF, INSTITUTION_MANAGER)
+ * @access  Private (TECHNICIAN, INSTITUTION_MANAGER)
  */
 router.patch('/tasks/:id/status', 
   authenticate,
-  authorize('TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'),
+  authorize('TECHNICIAN', 'INSTITUTION_MANAGER'),
   patchTaskStatus
 );
 
 /**
  * @route   PATCH /api/maintenance/tasks/:id/resolve
  * @desc    Resolve maintenance task
- * @access  Private (TECHNICIAN, ICT_STAFF, INSTITUTION_MANAGER)
+ * @access  Private (TECHNICIAN, INSTITUTION_MANAGER)
  */
 router.patch('/tasks/:id/resolve', 
   authenticate,
-  authorize('TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'),
+  authorize('TECHNICIAN', 'INSTITUTION_MANAGER'),
   patchResolveTask
 );
 

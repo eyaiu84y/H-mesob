@@ -7,13 +7,17 @@ const QueueContext = createContext(null);
 
 // ─── Status mapping: Backend → Frontend ───────────────────────────
 function mapBackendStatusToFrontend(backendStatus) {
+  const norm = String(backendStatus || '').trim().toUpperCase();
   const mapping = {
     'PENDING': 'waiting',
+    'WAITING': 'waiting',
+    'CALLED': 'called',
     'IN_PROGRESS': 'called',
+    'SERVING': 'called',
     'COMPLETED': 'completed',
     'CANCELLED': 'cancelled',
   };
-  return mapping[backendStatus] || 'waiting';
+  return mapping[norm] || 'waiting';
 }
 
 // ─── Transform backend queue to frontend format ───────────────────
@@ -29,7 +33,7 @@ function transformQueueEntry(backendQueue, allQueues = []) {
     const servingEntry = allQueues.find(q => 
       q.institution_id === backendQueue.institution_id &&
       q.service_id === backendQueue.service_id &&
-      q.status === 'IN_PROGRESS'
+      (String(q.status).toUpperCase() === 'IN_PROGRESS' || String(q.status).toUpperCase() === 'CALLED' || String(q.status).toUpperCase() === 'SERVING')
     );
     currentServing = servingEntry ? servingEntry.queue_number : 'None';
   }
@@ -58,6 +62,16 @@ function transformQueueEntry(backendQueue, allQueues = []) {
   const startedAt = backendQueue.started_at || backendQueue.startedAt || backendQueue.called_at || backendQueue.calledAt || null;
   const completedAt = backendQueue.completed_at || backendQueue.completedAt || null;
   const createdAt = backendQueue.created_at || backendQueue.createdAt || null;
+  const windowNumber = String(
+    backendQueue.metadata?.window_number ||
+    backendQueue.metadata?.window ||
+    backendQueue.metadata?.counter_number ||
+    backendQueue.metadata?.counter ||
+    backendQueue.window_number ||
+    backendQueue.counter_number ||
+    '1'
+  );
+  const counterNumber = windowNumber;
 
   return {
     id: backendQueue.id,
@@ -69,6 +83,10 @@ function transformQueueEntry(backendQueue, allQueues = []) {
     ticketNumber: token,
     queueNumber: token,
     queue_number: token,
+    windowNumber,
+    counterNumber,
+    window: windowNumber,
+    counter: counterNumber,
     status,
     rawStatus: backendQueue.status,
     currentServing,
@@ -222,16 +240,27 @@ export function QueueProvider({ children }) {
       setLoading(true);
       setError(null);
 
+      // Support both positional arguments and object parameter
+      let instId = institutionUUID;
+      let svcId = serviceUUID;
+      let prio = priority;
+
+      if (typeof institutionUUID === 'object' && institutionUUID !== null) {
+        instId = institutionUUID.institutionId || institutionUUID.institution_id;
+        svcId = institutionUUID.serviceId || institutionUUID.service_id;
+        prio = institutionUUID.priority || 'NORMAL';
+      }
+
       console.log('=== JOIN QUEUE REQUEST ===');
-      console.log('Institution ID:', institutionUUID);
-      console.log('Service ID:', serviceUUID);
-      console.log('Priority:', priority);
+      console.log('Institution ID:', instId);
+      console.log('Service ID:', svcId);
+      console.log('Priority:', prio);
       console.log('Token:', localStorage.getItem('mesob_token') ? 'EXISTS' : 'MISSING');
 
       const response = await api.post('/queues/join', {
-        institutionId: institutionUUID,
-        serviceId: serviceUUID,
-        priority,
+        institutionId: instId,
+        serviceId: svcId,
+        priority: prio,
       });
 
       console.log('=== JOIN QUEUE RESPONSE ===');
@@ -245,18 +274,19 @@ export function QueueProvider({ children }) {
         // Transform with empty array since we don't have full queue data yet
         const newTicket = transformQueueEntry(response.data, [response.data]);
 
-        // Add to local state
+        // Add to local state immediately
         setMyTickets(prev => [newTicket, ...prev]);
 
-        // Refresh from backend to get updated queue position and currentServing
-        await fetchQueues();
+        // Background non-blocking sync to keep positions accurate
+        fetchQueues({}, { silent: true });
 
-        return newTicket;
+        return { success: true, ticket: newTicket, ...newTicket };
       }
 
-      const errorMsg = response.message || 'Failed to join queue';
+      const errorMsg = response?.message || 'Failed to join queue';
       console.error('❌ Queue registration failed:', errorMsg);
-      throw new Error(errorMsg);
+      setError(errorMsg);
+      return { success: false, message: errorMsg, code: response?.code };
     } catch (err) {
       console.error('=== JOIN QUEUE ERROR ===');
       console.error('Error object:', err);
@@ -267,7 +297,7 @@ export function QueueProvider({ children }) {
         err.response?.data?.message || err.message || 'Failed to join queue. Please check your connection and try again.';
 
       setError(errorMessage);
-      throw new Error(errorMessage, { cause: err });
+      return { success: false, message: errorMessage, code: err.response?.data?.code };
     } finally {
       setLoading(false);
     }
@@ -279,23 +309,24 @@ export function QueueProvider({ children }) {
       setLoading(true);
       setError(null);
 
+      // Instant optimistic local update
+      setMyTickets(prev =>
+        prev.map(t =>
+          t.id === ticketId
+            ? { ...t, status: 'cancelled', rawStatus: 'CANCELLED', completedAt: new Date().toISOString() }
+            : t
+        )
+      );
+
       const response = await api.patch(`/queues/${ticketId}/status`, {
         status: 'CANCELLED',
       });
 
       if (response.success) {
-        // Update local state
-        setMyTickets(prev =>
-          prev.map(t =>
-            t.id === ticketId
-              ? { ...t, status: 'cancelled', completedAt: new Date().toISOString() }
-              : t
-          )
-        );
-        
-        // Refresh from backend
-        await fetchQueues();
+        // Fast background sync without blocking UI
+        fetchQueues({}, { silent: true });
       } else {
+        await fetchQueues();
         throw new Error(response.message || 'Failed to cancel queue entry');
       }
     } catch (err) {
@@ -345,7 +376,7 @@ export function QueueProvider({ children }) {
   const getCurrentServing = useCallback((institutionUUID) => {
     return myTickets.find(t => 
       t.institutionId === institutionUUID && 
-      t.status === 'called'
+      (t.status === 'called' || t.status === 'serving' || String(t.rawStatus).toUpperCase() === 'CALLED' || String(t.rawStatus).toUpperCase() === 'IN_PROGRESS')
     );
   }, [myTickets]);
 
@@ -358,8 +389,28 @@ export function QueueProvider({ children }) {
       const response = await api.post('/queues/call-next', institutionId ? { institutionId } : {});
 
       if (response.success) {
-        // Refresh queues from backend
-        await fetchQueues();
+        if (response.data) {
+          const calledEntry = transformQueueEntry(response.data);
+          // Instant optimistic UI update: mark previous active ticket as completed and mark this one called
+          setMyTickets(prev => {
+            const updated = prev.map(t => {
+              if (t.id === calledEntry.id) {
+                return { ...t, ...calledEntry, status: 'called', rawStatus: 'CALLED' };
+              }
+              if (t.institutionId === (institutionId || calledEntry.institutionId) && (t.status === 'called' || t.status === 'serving')) {
+                return { ...t, status: 'completed', rawStatus: 'COMPLETED' };
+              }
+              return t;
+            });
+            if (!updated.some(t => t.id === calledEntry.id)) {
+              return [calledEntry, ...updated];
+            }
+            return updated;
+          });
+        }
+
+        // Fast background sync without blocking UI
+        fetchQueues({}, { silent: true });
         return response.data;
       } else {
         throw new Error(response.message || 'Failed to call next person');
@@ -382,21 +433,31 @@ export function QueueProvider({ children }) {
       // Find the current serving ticket
       const currentTicket = myTickets.find(t => 
         t.institutionId === institutionUUID && 
-        t.status === 'called'
+        (t.status === 'called' || t.status === 'serving' || String(t.rawStatus).toUpperCase() === 'CALLED' || String(t.rawStatus).toUpperCase() === 'IN_PROGRESS')
       );
 
       if (!currentTicket) {
         throw new Error('No customer currently being served');
       }
 
+      // Instant optimistic UI update
+      setMyTickets(prev =>
+        prev.map(t =>
+          t.id === currentTicket.id
+            ? { ...t, status: 'completed', rawStatus: 'COMPLETED', completedAt: new Date().toISOString() }
+            : t
+        )
+      );
+
       const response = await api.patch(`/queues/${currentTicket.id}/status`, {
         status: 'COMPLETED',
       });
 
       if (response.success) {
-        // Refresh queues from backend
-        await fetchQueues();
+        // Fast background sync without blocking UI
+        fetchQueues({}, { silent: true });
       } else {
+        await fetchQueues();
         throw new Error(response.message || 'Failed to complete service');
       }
     } catch (err) {

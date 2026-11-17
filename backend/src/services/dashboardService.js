@@ -21,11 +21,9 @@ export const getDashboardData = async (currentUser) => {
         dashboardData = await getEmployeeDashboard(currentUser.id, currentUser.institution_id);
         break;
       case 'TECHNICIAN':
-      case 'ICT_STAFF':
-        dashboardData = await getIctStaffDashboard(currentUser.id, currentUser.institution_id);
+        dashboardData = await getTechnicianDashboard(currentUser.id, currentUser.institution_id);
         break;
       case 'CUSTOMER':
-      case 'CITIZEN':
         dashboardData = await getCustomerDashboard(currentUser.id);
         break;
       default:
@@ -134,7 +132,7 @@ const getInstitutionManagerDashboard = async (institutionId) => {
     .from('users')
     .select('id', { count: 'exact', head: true })
     .eq('institution_id', institutionId)
-    .in('role', ['EMPLOYEE', 'ICT_STAFF'])
+    .in('role', ['EMPLOYEE', 'TECHNICIAN'])
     .eq('status', 'ACTIVE');
 
   // Applications (last 30 days)
@@ -234,9 +232,9 @@ const getEmployeeDashboard = async (userId, institutionId) => {
 };
 
 /**
- * ICT Staff / Technician Dashboard
+ * Technician Dashboard
  */
-const getIctStaffDashboard = async (userId, institutionId) => {
+const getTechnicianDashboard = async (userId, institutionId) => {
   // My tasks
   const { count: myTasks } = await supabase
     .from('maintenance_tasks')

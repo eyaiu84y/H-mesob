@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { useQueue } from '../../context/QueueContext';
 import { useServices } from '../../context/ServiceContext';
 import { useApp } from '../../context/AppContext';
 import FeedbackRating from './FeedbackRating';
 import { formatDisplayDate } from '../../utils/formatters';
+import { getInstitutionName, getServiceTitle } from '../../utils/localizedContent';
 
 // ─── Status badge styles ──────────────────────────────────────────
 const STATUS_STYLES = {
@@ -16,32 +18,34 @@ const STATUS_STYLES = {
 };
 
 // ─── Format estimated wait label accurately ────────────────────────
-function formatEstimatedWait(ticket, lang, t) {
+function formatEstimatedWait(ticket, t, i18nT) {
   if (ticket.status === 'called') {
-    return t.at_counter || (lang === 'am' ? 'አሁን በመስኮት ላይ' : 'At counter');
+    return t.at_counter || i18nT('queue.atCounter', 'At counter');
   }
   if (ticket.peopleAhead > 0) {
     return `~${ticket.estimatedWaitMinutes} min`;
   }
   // When peopleAhead === 0:
   if (ticket.queueReadiness === 'AWAITING_STAFF') {
-    return t.awaiting_counter || (lang === 'am' ? 'መስኮት በመጠበቅ ላይ' : 'Awaiting counter');
+    return t.awaiting_counter || i18nT('queue.awaitingCounter', 'Awaiting counter');
   }
   // Ready to be called:
-  return t.ready_to_be_called || (lang === 'am' ? 'ሊጠሩ ተዘጋጅተዋል' : 'Ready to be called');
+  return t.ready_to_be_called || i18nT('queue.readyToBeCalled', 'Ready to be called');
 }
 
 // ─── Ticket card component ────────────────────────────────────────
 function TicketCard({ ticket, onView, onCancel }) {
-  const { t, lang } = useApp();
+  const { t } = useApp();
+  const { i18n, t: i18nT } = useTranslation();
   const [cancelling, setCancelling] = useState(false);
+  const currentLang = i18n.language || 'en';
 
   const statusLabels = {
-    waiting:   t.status_waiting || 'Waiting',
-    called:    t.status_called || 'Called — Go to Counter!',
-    serving:   t.status_serving || 'Being Served',
-    completed: t.status_completed || 'Completed',
-    cancelled: t.status_cancelled || 'Cancelled',
+    waiting:   t.status_waiting || i18nT('status.waiting', 'Waiting'),
+    called:    t.status_called || i18nT('status.called', 'Called — Go to Counter!'),
+    serving:   t.status_serving || i18nT('status.serving', 'Being Served'),
+    completed: t.status_completed || i18nT('status.completed', 'Completed'),
+    cancelled: t.status_cancelled || i18nT('status.cancelled', 'Cancelled'),
   };
 
   async function handleCancel() {
@@ -56,8 +60,33 @@ function TicketCard({ ticket, onView, onCancel }) {
     }
   }
 
+  const timeLocale = currentLang === 'am' ? 'am-ET' : 'en-US';
+
   return (
     <div className={`bg-white rounded-2xl border shadow-xs p-5 transition-all ${ticket.status === 'called' ? 'border-[#314ea1] ring-2 ring-blue-100' : 'border-slate-200/90 hover:border-blue-300'}`}>
+      {/* Prominent Called Notification Banner displaying Window / Desk */}
+      {ticket.status === 'called' && (
+        <div className="mb-3 p-3 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white rounded-xl flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-blue-100">
+                {currentLang === 'am' ? 'ተራዎ ደርሷል — ወደ መስኮት ይሂዱ' : 'Now Calling — Go to Window'}
+              </p>
+              <p className="text-xs font-semibold text-white/90">
+                {ticket.institutionName} • {ticket.serviceName}
+              </p>
+            </div>
+          </div>
+          <div className="bg-white/20 backdrop-blur-xs px-3 py-1 rounded-lg border border-white/25 text-right">
+            <p className="text-[9px] uppercase font-bold text-blue-100">{currentLang === 'am' ? 'መስኮት' : 'Window'}</p>
+            <p className="text-base font-black text-[#f4b51a] leading-none">
+              {currentLang === 'am' ? `መስኮት ${ticket.windowNumber || ticket.counterNumber || '1'}` : `Window #${ticket.windowNumber || ticket.counterNumber || '1'}`}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start justify-between mb-3">
         <div>
           <p className="text-xs font-semibold text-slate-500 mb-1">{ticket.institutionName}</p>
@@ -70,26 +99,26 @@ function TicketCard({ ticket, onView, onCancel }) {
 
       <div className="flex items-center gap-4 mb-3">
         <div className="text-center">
-          <p className="text-xs text-slate-500">{t.your_token || 'Your Token'}</p>
+          <p className="text-xs text-slate-500">{t.your_token || i18nT('queue.yourToken', 'Your Token')}</p>
           <p className="text-2xl font-bold text-[#1e3a8a]">{ticket.token}</p>
         </div>
         {(ticket.status === 'waiting' || ticket.status === 'called') && (
           <>
             <div className="h-10 border-l border-slate-200" />
             <div className="text-center">
-              <p className="text-xs text-slate-500">{t.now_serving || 'Now Serving'}</p>
+              <p className="text-xs text-slate-500">{t.now_serving || i18nT('queue.nowServing', 'Now Serving')}</p>
               <p className="text-lg font-bold text-slate-800">{ticket.currentServing}</p>
             </div>
             <div className="h-10 border-l border-slate-200" />
             <div className="text-center">
-              <p className="text-xs text-slate-500">{t.ahead || 'Ahead'}</p>
+              <p className="text-xs text-slate-500">{t.ahead || i18nT('queue.ahead', 'Ahead')}</p>
               <p className="text-lg font-bold text-slate-800">{ticket.peopleAhead}</p>
             </div>
             <div className="h-10 border-l border-slate-200" />
             <div className="text-center">
-              <p className="text-xs text-slate-500">{t.est_wait || (lang === 'am' ? 'የሚገመት ቆይታ' : 'Est. Wait')}</p>
+              <p className="text-xs text-slate-500">{t.est_wait || i18nT('queue.estWait', 'Est. Wait')}</p>
               <p className="text-lg font-bold text-[#1e3a8a]">
-                {formatEstimatedWait(ticket, lang, t)}
+                {formatEstimatedWait(ticket, t, i18nT)}
               </p>
             </div>
           </>
@@ -98,14 +127,14 @@ function TicketCard({ ticket, onView, onCancel }) {
 
       <div className="flex items-center justify-between pt-2 border-t border-slate-100">
         <p className="text-xs text-slate-400">
-          {formatDisplayDate(ticket.createdAt, lang)}
+          {formatDisplayDate(ticket.createdAt, currentLang)}
           {' · '}
-          {new Date(ticket.createdAt).toLocaleTimeString(lang === 'am' ? 'am-ET' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+          {new Date(ticket.createdAt).toLocaleTimeString(timeLocale, { hour: '2-digit', minute: '2-digit' })}
         </p>
         <div className="flex gap-3">
           {onView && (
             <button onClick={() => onView(ticket)} className="text-xs text-[#314ea1] hover:text-[#1e3a8a] font-semibold cursor-pointer">
-              {t.details || 'View Details'}
+              {t.details || i18nT('common.viewDetails', 'View Details')}
             </button>
           )}
           {onCancel && (ticket.status === 'waiting' || ticket.status === 'called') && (
@@ -114,7 +143,7 @@ function TicketCard({ ticket, onView, onCancel }) {
               disabled={cancelling}
               className="text-xs text-rose-600 hover:text-rose-800 font-semibold disabled:opacity-50 cursor-pointer"
             >
-              {cancelling ? (t.leaving || 'Leaving...') : (t.leave_queue || 'Leave Queue')}
+              {cancelling ? (t.leaving || i18nT('queue.leaving', 'Leaving...')) : (t.leave_queue || i18nT('queue.leaveQueue', 'Leave Queue'))}
             </button>
           )}
         </div>
@@ -123,37 +152,44 @@ function TicketCard({ ticket, onView, onCancel }) {
   );
 }
 
-// ─── Main QueueManagement component ───────────────────────────────
-export default function QueueManagement() {
+// ─── Main Queue Management Component ─────────────────────────────
+export default function QueueManagement({ initialStep = 'list', onBack = null, onVerifyEmail = null }) {
   const { user } = useAuth();
-  const { t, lang } = useApp();
   const { 
-    getActiveTickets, 
-    getTicketHistory, 
+    myTickets, 
     registerForQueue, 
     cancelTicket, 
-    myTickets,
-    connectionStatus,
-    connectionError,
-    lastUpdated
+    connectionStatus, 
+    lastUpdated, 
+    connectionError 
   } = useQueue();
   const { institutions, getServicesByInstitution } = useServices();
+  const { t } = useApp();
+  const { i18n, t: i18nT } = useTranslation();
 
-  // Steps: 'overview' | 'select-institution' | 'select-service' | 'confirm' | 'token-display'
-  const [step, setStep] = useState('overview');
-  const [historyTab, setHistoryTab] = useState('active'); // 'active' | 'history'
+  const currentLang = i18n.language || 'en';
+  const timeLocale = currentLang === 'am' ? 'am-ET' : 'en-US';
+
+  const [step, setStep] = useState(initialStep);
   const [selectedInstitution, setSelectedInstitution] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [newTicket, setNewTicket] = useState(null);
+  const [historyTab, setHistoryTab] = useState('active');
   const [searchTerm, setSearchTerm] = useState('');
-  const [registrationError, setRegistrationError] = useState(null);
+  const [registrationError, setRegistrationError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const activeTickets = getActiveTickets();
-  const ticketHistory = getTicketHistory();
+  const activeTickets = myTickets.filter(t => t.status === 'waiting' || t.status === 'called');
+  const ticketHistory = myTickets.filter(t => t.status === 'completed' || t.status === 'cancelled');
+
+  function handleStartRegistration() {
+    setStep('select-institution');
+    setSearchTerm('');
+    setRegistrationError('');
+  }
 
   function handleSelectInstitution(inst) {
     setSelectedInstitution(inst);
-    setSelectedService(null);
     setStep('select-service');
   }
 
@@ -163,37 +199,47 @@ export default function QueueManagement() {
   }
 
   async function handleRegister() {
+    if (submitting) return;
+    setRegistrationError('');
+
+    if (user?.emailVerified === false) {
+      if (onVerifyEmail) {
+        onVerifyEmail();
+      } else {
+        setRegistrationError(i18nT('queue.verifyEmailBeforeQueue', 'Please verify your email address before registering for a queue ticket.'));
+      }
+      return;
+    }
+
+    if (!selectedService || !selectedInstitution) {
+      setRegistrationError(i18nT('queue.selectServiceFirst', 'Please select a valid institution and service first.'));
+      return;
+    }
+
+    setSubmitting(true);
+
     try {
-      setRegistrationError(null);
-      const ticket = await registerForQueue(
-        selectedInstitution.id,  // UUID
-        selectedService.id,       // UUID
+      const result = await registerForQueue(
+        selectedInstitution.id,
+        selectedService.id,
         'NORMAL'
       );
-      setNewTicket(ticket);
-      setStep('token-display');
-    } catch (err) {
-      console.error('Registration failed:', err);
-      setRegistrationError(err.message || 'Failed to register for queue. Please try again.');
-    }
-  }
 
-  function handleBack() {
-    if (step === 'select-service') {
-      setStep('select-institution');
-      setSelectedInstitution(null);
-    } else if (step === 'confirm') {
-      setStep('select-service');
-      setSelectedService(null);
-      setRegistrationError(null);
-    } else if (step === 'token-display') {
-      setStep('overview');
-      setNewTicket(null);
-      setSelectedInstitution(null);
-      setSelectedService(null);
-      setRegistrationError(null);
-    } else {
-      setStep('overview');
+      const ticket = result?.ticket || (result?.id ? result : null);
+      if (result?.success || ticket) {
+        setNewTicket(ticket);
+        setStep('token-display');
+      } else {
+        if (result?.code === 'EMAIL_VERIFICATION_REQUIRED' && onVerifyEmail) {
+          onVerifyEmail();
+        }
+        setRegistrationError(result?.message || i18nT('queue.registrationFailed', 'Failed to register for queue'));
+      }
+    } catch (err) {
+      console.error('Queue registration error:', err);
+      setRegistrationError(err.message || i18nT('queue.registrationFailed', 'Failed to register for queue'));
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -202,31 +248,65 @@ export default function QueueManagement() {
     setStep('token-display');
   }
 
-  // Filter institutions by search
-  const filteredInstitutions = institutions.filter(inst =>
-    inst.name_en?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    inst.name_am?.includes(searchTerm)
-  );
+  function handleBack() {
+    if (step === 'token-display') {
+      setStep('list');
+      setNewTicket(null);
+    } else if (step === 'confirm') {
+      setStep('select-service');
+    } else if (step === 'select-service') {
+      setStep('select-institution');
+    } else if (step === 'select-institution') {
+      setStep('list');
+    } else if (onBack) {
+      onBack();
+    }
+  }
 
-  // ─── STEP: Overview ─────────────────────────────────────────────
-  if (step === 'overview') {
+  const filteredInstitutions = institutions.filter(inst => {
+    const term = searchTerm.toLowerCase();
+    const nameEn = (inst.name_en || inst.name || '').toLowerCase();
+    const nameAm = (inst.name_am || '').toLowerCase();
+    return nameEn.includes(term) || nameAm.includes(term);
+  });
+
+  // ─── STEP: Queue List View ──────────────────────────────────────
+  if (step === 'list') {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 mb-1">{t.my_queue_title || 'My Queue'}</h2>
-            <p className="text-slate-500 text-sm">{t.my_queue_desc || 'Register for queues and track your token status.'}</p>
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">{t.my_queue_title || i18nT('queue.title', 'My Queue')}</h2>
+            <p className="text-slate-500 text-sm">{t.queue_desc || i18nT('queue.desc', 'View and manage your active queue tokens.')}</p>
           </div>
           <button
-            onClick={() => { setStep('select-institution'); setSearchTerm(''); }}
-            className="px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white rounded-xl shadow-xs transition text-sm font-semibold cursor-pointer"
+            onClick={handleStartRegistration}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white rounded-xl shadow-xs transition font-semibold text-sm cursor-pointer"
           >
-            {t.join_queue_btn || '+ Join a Queue'}
+            <span className="text-base leading-none">+</span>
+            <span>{t.join_queue || i18nT('queue.joinQueue', 'Join a Queue')}</span>
           </button>
         </div>
 
-        {/* Tab switcher & Live Indicator */}
-        <div className="flex items-center justify-between flex-wrap gap-2">
+        {registrationError && (
+          <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-800 flex items-center justify-between">
+            <div>
+              <strong>{t.error || i18nT('common.error', 'Error')}:</strong> {registrationError}
+            </div>
+            {onVerifyEmail && (
+              <button
+                onClick={onVerifyEmail}
+                className="px-3 py-1 bg-[#1e3a8a] hover:bg-[#172554] text-white rounded-lg text-xs font-semibold cursor-pointer"
+              >
+                {t.verify_now || 'Verify Now'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Tab switcher + live badge */}
+        <div className="flex items-center justify-between border-b border-slate-200/80 pb-3 flex-wrap gap-2">
           <div className="flex gap-2">
             <button
               onClick={() => setHistoryTab('active')}
@@ -236,7 +316,7 @@ export default function QueueManagement() {
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80 font-medium'
               }`}
             >
-              {t.tab_active || 'Active'} ({activeTickets.length})
+              {t.tab_active || i18nT('status.active', 'Active')} ({activeTickets.length})
             </button>
             <button
               onClick={() => setHistoryTab('history')}
@@ -246,7 +326,7 @@ export default function QueueManagement() {
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80 font-medium'
               }`}
             >
-              {t.tab_history || 'History'} ({ticketHistory.length})
+              {t.tab_history || i18nT('common.history', 'History')} ({ticketHistory.length})
             </button>
           </div>
 
@@ -254,20 +334,20 @@ export default function QueueManagement() {
             connectionStatus === 'connected' ? (
               <span 
                 className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200"
-                title={lastUpdated ? (lang === 'am' ? `የመጨረሻ ዝመና: ${lastUpdated.toLocaleTimeString()}` : `Last updated: ${lastUpdated.toLocaleTimeString()}`) : ''}
+                title={lastUpdated ? `${i18nT('queue.lastUpdated', 'Last updated:')} ${lastUpdated.toLocaleTimeString(timeLocale)}` : ''}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                {lang === 'am' ? 'የቀጥታ ዝመናዎች ነቅተዋል' : 'Live updates active'}
+                {i18nT('queue.liveUpdatesActive', 'Live updates active')}
               </span>
             ) : connectionStatus === 'connecting' ? (
               <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />
-                {lang === 'am' ? 'በመገናኘት ላይ...' : 'Connecting...'}
+                {i18nT('queue.connecting', 'Connecting...')}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200" title={connectionError || (lang === 'am' ? 'ግንኙነት ተቋርጧል' : 'Connection lost')}>
+              <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200" title={connectionError || i18nT('queue.connectionLost', 'Connection lost')}>
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                {lang === 'am' ? 'ግንኙነት ተቋርጧል (እንደገና በመሞከር ላይ...)' : 'Offline (retrying...)'}
+                {i18nT('queue.offlineRetrying', 'Offline (retrying...)')}
               </span>
             )
           )}
@@ -283,8 +363,8 @@ export default function QueueManagement() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
                   </svg>
                 </div>
-                <p className="font-semibold text-slate-700 text-sm">{t.no_active_tickets || 'No active queue tickets'}</p>
-                <p className="text-xs text-slate-500 mt-1">{t.no_active_tickets_desc || 'Click "+ Join a Queue" to register for a service queue.'}</p>
+                <p className="font-semibold text-slate-700 text-sm">{t.no_active_tickets || i18nT('queue.noActiveTickets', 'No active queue tickets')}</p>
+                <p className="text-xs text-slate-500 mt-1">{t.no_active_tickets_desc || i18nT('queue.noActiveTicketsDesc', 'Click "+ Join a Queue" to register for a service queue.')}</p>
               </div>
             ) : (
               activeTickets.map(ticket => (
@@ -309,8 +389,8 @@ export default function QueueManagement() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <p className="font-semibold text-slate-700 text-sm">{t.no_history_tickets || 'No queue history yet'}</p>
-                <p className="text-xs text-slate-500 mt-1">{t.no_history_tickets_desc || 'Completed and cancelled queues will appear here.'}</p>
+                <p className="font-semibold text-slate-700 text-sm">{t.no_history_tickets || i18nT('queue.noHistoryTickets', 'No queue history yet')}</p>
+                <p className="text-xs text-slate-500 mt-1">{t.no_history_tickets_desc || i18nT('queue.noHistoryTicketsDesc', 'Completed and cancelled queues will appear here.')}</p>
               </div>
             ) : (
               ticketHistory.map(ticket => (
@@ -324,8 +404,8 @@ export default function QueueManagement() {
         <div className="p-4.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl text-xs sm:text-sm text-blue-950 flex items-start gap-3 shadow-xs">
           <span className="text-base flex-shrink-0">ℹ️</span>
           <div>
-            <strong className="font-semibold text-[#1e3a8a]">{t.queue_management || 'Queue Management'}:</strong>{' '}
-            {t.queue_info_banner || 'Join a service queue, receive a system-generated token, and track your position in real time. Your token number is assigned automatically.'}
+            <strong className="font-semibold text-[#1e3a8a]">{t.queue_management || i18nT('queue.title', 'Queue Management')}:</strong>{' '}
+            {t.queue_info_banner || i18nT('queue.infoBanner', 'Join a service queue, receive a system-generated token, and track your position in real time. Your token number is assigned automatically.')}
           </div>
         </div>
       </div>
@@ -338,17 +418,17 @@ export default function QueueManagement() {
       <div className="space-y-6">
         <div>
           <button onClick={handleBack} className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold mb-2 inline-flex items-center gap-1.5 cursor-pointer">
-            ← {t.back_to_applications || t.my_queue_title || 'Back to My Queue'}
+            ← {t.back_to_applications || t.my_queue_title || i18nT('queue.backToMyQueue', 'Back to My Queue')}
           </button>
-          <h2 className="text-xl font-bold text-slate-900 mb-1">{t.select_institution || 'Select Institution'}</h2>
-          <p className="text-slate-500 text-sm">{t.choose_institution_desc || 'Choose the institution you want to queue for.'}</p>
+          <h2 className="text-xl font-bold text-slate-900 mb-1">{t.select_institution || i18nT('institutions.selectInstitution', 'Select Institution')}</h2>
+          <p className="text-slate-500 text-sm">{t.choose_institution_desc || i18nT('institutions.chooseInstitutionDesc', 'Choose the institution you want to queue for.')}</p>
         </div>
 
         {/* Search */}
         <div className="relative">
           <input
             type="text"
-            placeholder={t.search_institutions_services || (lang === 'am' ? 'ተቋማትን ወይም አገልግሎቶችን ይፈልጉ...' : 'Search institutions or services...')}
+            placeholder={t.search_institutions_services || i18nT('queue.searchInstitutionsOrServices', 'Search institutions or services...')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-4 py-3 pl-11 rounded-2xl border border-slate-300 bg-white text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none shadow-2xs text-sm"
@@ -362,8 +442,8 @@ export default function QueueManagement() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredInstitutions.map(inst => {
             const instServices = getServicesByInstitution(inst.id);
-            const instDisplayName = lang === 'am' && inst.name_am ? inst.name_am : (inst.name_en || inst.name);
-            const instSecondaryName = lang === 'am' ? inst.name_en : inst.name_am;
+            const instDisplayName = getInstitutionName(inst, currentLang);
+            const instSecondaryName = currentLang === 'am' ? inst.name_en : inst.name_am;
 
             return (
               <button
@@ -379,7 +459,7 @@ export default function QueueManagement() {
                     <h3 className="font-bold text-slate-900 group-hover:text-[#314ea1] transition-colors mb-1 text-sm leading-tight">{instDisplayName}</h3>
                     {instSecondaryName && <p className="text-xs text-slate-500 truncate">{instSecondaryName}</p>}
                     <p className="text-xs text-[#314ea1] mt-1.5 font-semibold group-hover:translate-x-0.5 transition-transform inline-block">
-                      {instServices.length} {lang === 'am' ? 'አገልግሎቶች' : (instServices.length === 1 ? 'service' : 'services')} →
+                      {instServices.length} {instServices.length === 1 ? i18nT('common.service', 'service') : i18nT('common.services', 'services')} →
                     </p>
                   </div>
                 </div>
@@ -390,8 +470,8 @@ export default function QueueManagement() {
 
         {filteredInstitutions.length === 0 && (
           <div className="text-center py-8 text-slate-500 bg-white rounded-2xl border border-slate-200/90 p-8">
-            <p className="font-semibold text-slate-700">{t.no_institutions_found || 'No institutions found'}</p>
-            <p className="text-xs text-slate-400 mt-1">{t.try_diff_search || 'Try a different search term'}</p>
+            <p className="font-semibold text-slate-700">{t.no_institutions_found || i18nT('institutions.noInstitutionsFound', 'No institutions found')}</p>
+            <p className="text-xs text-slate-400 mt-1">{t.try_diff_search || i18nT('common.tryDifferentSearch', 'Try a different search term')}</p>
           </div>
         )}
       </div>
@@ -401,17 +481,17 @@ export default function QueueManagement() {
   // ─── STEP: Select Service ───────────────────────────────────────
   if (step === 'select-service') {
     const institutionServices = getServicesByInstitution(selectedInstitution.id);
-    const selectedInstName = lang === 'am' && selectedInstitution.name_am ? selectedInstitution.name_am : selectedInstitution.name_en;
+    const selectedInstName = getInstitutionName(selectedInstitution, currentLang);
     
     return (
       <div className="space-y-6">
         <div>
           <button onClick={handleBack} className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold mb-2 inline-flex items-center gap-1.5 cursor-pointer">
-            ← {t.back_to_institutions || 'Back to Institutions'}
+            ← {t.back_to_institutions || i18nT('institutions.backToInstitutions', 'Back to Institutions')}
           </button>
-          <h2 className="text-xl font-bold text-slate-900 mb-1">{t.select_service || 'Select Service'}</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-1">{t.select_service || i18nT('services.selectService', 'Select Service')}</h2>
           <p className="text-slate-500 text-sm">
-            {t.choose_service_at || 'Choose a service at'} <span className="font-semibold text-[#1e3a8a]">{selectedInstName}</span>
+            {t.choose_service_at || i18nT('services.chooseServiceAt', 'Choose a service at')} <span className="font-semibold text-[#1e3a8a]">{selectedInstName}</span>
           </p>
         </div>
 
@@ -419,13 +499,13 @@ export default function QueueManagement() {
         <div className="space-y-3">
           {institutionServices.length === 0 ? (
             <div className="text-center py-8 text-slate-500 bg-white rounded-2xl border border-slate-200/90 p-8">
-              <p className="font-semibold text-slate-700">{t.no_services_available || 'No services available'}</p>
-              <p className="text-xs text-slate-400 mt-1">{t.try_diff_search || 'This institution has no services configured yet'}</p>
+              <p className="font-semibold text-slate-700">{t.no_services_available || i18nT('services.noServicesAvailable', 'No services available')}</p>
+              <p className="text-xs text-slate-400 mt-1">{t.try_diff_search || i18nT('services.noServicesConfigured', 'This institution has no services configured yet')}</p>
             </div>
           ) : (
             institutionServices.map((svc) => {
-              const svcTitle = lang === 'am' && (svc.title_am || svc.name_am) ? (svc.title_am || svc.name_am) : (svc.title_en || svc.name);
-              const svcSecondaryTitle = lang === 'am' ? (svc.title_en || svc.name) : (svc.title_am || svc.name_am);
+              const svcTitle = getServiceTitle(svc, currentLang);
+              const svcSecondaryTitle = currentLang === 'am' ? (svc.title_en || svc.name) : (svc.title_am || svc.name_am);
 
               return (
                 <button
@@ -440,12 +520,12 @@ export default function QueueManagement() {
                       <div className="flex gap-4 mt-2 text-xs text-slate-600">
                         {svc.processing_time && (
                           <span>
-                            <span className="font-semibold text-slate-700">{t.processing_time || 'Time'}:</span> {svc.processing_time}
+                            <span className="font-semibold text-slate-700">{t.processing_time || i18nT('common.processingTime', 'Time')}:</span> {svc.processing_time}
                           </span>
                         )}
                         {svc.service_fee && (
                           <span>
-                            <span className="font-semibold text-[#1e3a8a]">{t.service_fee || 'Fee'}:</span> {svc.service_fee}
+                            <span className="font-semibold text-[#1e3a8a]">{t.service_fee || i18nT('common.serviceFee', 'Fee')}:</span> {svc.service_fee}
                           </span>
                         )}
                       </div>
@@ -465,34 +545,45 @@ export default function QueueManagement() {
 
   // ─── STEP: Confirm Registration ─────────────────────────────────
   if (step === 'confirm') {
-    const selectedInstName = lang === 'am' && selectedInstitution.name_am ? selectedInstitution.name_am : selectedInstitution.name_en;
-    const selectedInstSecondary = lang === 'am' ? selectedInstitution.name_en : selectedInstitution.name_am;
-    const selectedSvcTitle = lang === 'am' && (selectedService.title_am || selectedService.name_am) ? (selectedService.title_am || selectedService.name_am) : (selectedService.title_en || selectedService.name);
-    const selectedSvcSecondary = lang === 'am' ? (selectedService.title_en || selectedService.name) : (selectedService.title_am || selectedService.name_am);
+    const selectedInstName = getInstitutionName(selectedInstitution, currentLang);
+    const selectedInstSecondary = currentLang === 'am' ? selectedInstitution.name_en : selectedInstitution.name_am;
+    const selectedSvcTitle = getServiceTitle(selectedService, currentLang);
+    const selectedSvcSecondary = currentLang === 'am' ? (selectedService.title_en || selectedService.name) : (selectedService.title_am || selectedService.name_am);
 
     return (
       <div className="space-y-6">
         <div>
           <button onClick={handleBack} className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold mb-2 inline-flex items-center gap-1.5 cursor-pointer">
-            ← {t.back_to_service_details || 'Back to Services'}
+            ← {t.back_to_service_details || i18nT('services.backToServices', 'Back to Services')}
           </button>
-          <h2 className="text-xl font-bold text-slate-900 mb-1">{t.confirm_queue_reg || 'Confirm Queue Registration'}</h2>
-          <p className="text-slate-500 text-sm">{t.review_confirm_queue || 'Review and confirm your queue registration.'}</p>
+          <h2 className="text-xl font-bold text-slate-900 mb-1">{t.confirm_queue_reg || i18nT('queue.confirmQueueReg', 'Confirm Queue Registration')}</h2>
+          <p className="text-slate-500 text-sm">{t.review_confirm_queue || i18nT('queue.reviewConfirmQueue', 'Review and confirm your queue registration.')}</p>
         </div>
 
         {registrationError && (
           <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-800">
-            <strong>{t.error || 'Error'}:</strong> {registrationError}
+            <strong>{t.error || i18nT('common.error', 'Error')}:</strong> {registrationError}
           </div>
         )}
 
         {user?.emailVerified === false && (
-          <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-start gap-3">
-            <span className="text-xl">⚠️</span>
-            <div>
-              <p className="font-bold">{lang === 'am' ? 'የኢሜይል ማረጋገጫ ያስፈልጋል' : 'Email Verification Required'}</p>
-              <p className="mt-0.5">{lang === 'am' ? 'ወረፋ ለመያዝ እባክዎ መጀመሪያ ኢሜይልዎን ያረጋግጡ።' : 'Please verify your email address before registering for a queue ticket.'}</p>
+          <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <span className="text-xl">⚠️</span>
+              <div>
+                <p className="font-bold">{i18nT('auth.emailVerificationRequired', 'Email Verification Required')}</p>
+                <p className="mt-0.5">{i18nT('queue.verifyEmailBeforeQueue', 'Please verify your email address before registering for a queue ticket.')}</p>
+              </div>
             </div>
+            {onVerifyEmail && (
+              <button
+                type="button"
+                onClick={onVerifyEmail}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs shrink-0 cursor-pointer transition shadow-xs"
+              >
+                {currentLang === 'am' ? 'ኢሜይል አረጋግጥ' : 'Verify Email'}
+              </button>
+            )}
           </div>
         )}
 
@@ -509,40 +600,50 @@ export default function QueueManagement() {
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">{t.service || 'Service'}</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">{t.service || i18nT('common.service', 'Service')}</p>
               <p className="font-bold text-slate-900 text-base">{selectedSvcTitle}</p>
               {selectedSvcSecondary && <p className="text-xs text-slate-500">{selectedSvcSecondary}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-3.5">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">{t.processing_time || 'Processing Time'}</p>
-                <p className="text-sm font-bold text-[#1e3a8a]">{selectedService.processing_time || 'N/A'}</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">{t.processing_time || i18nT('common.processingTime', 'Processing Time')}</p>
+                <p className="text-sm font-bold text-[#1e3a8a]">{selectedService.processing_time || i18nT('common.notSpecified', 'N/A')}</p>
               </div>
               <div className="bg-emerald-50/70 border border-emerald-100 rounded-xl p-3.5">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">{t.service_fee || 'Fee'}</p>
-                <p className="text-sm font-bold text-emerald-800">{selectedService.service_fee || 'N/A'}</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">{t.service_fee || i18nT('common.serviceFee', 'Fee')}</p>
+                <p className="text-sm font-bold text-emerald-800">{selectedService.service_fee || i18nT('common.notSpecified', 'N/A')}</p>
               </div>
             </div>
 
             <div className="p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs sm:text-sm text-amber-900">
-              <strong>{t.info || 'Note'}:</strong> {t.auto_token_note || 'Your queue token will be generated automatically by the system. You cannot choose a token number.'}
+              <strong>{t.info || i18nT('common.info', 'Note')}:</strong> {t.auto_token_note || i18nT('queue.autoTokenNote', 'Your queue token will be generated automatically by the system. You cannot choose a token number.')}
             </div>
           </div>
 
           <div className="mt-6 flex gap-3">
             <button
               onClick={handleRegister}
-              disabled={user?.emailVerified === false}
+              disabled={submitting}
               className="flex-1 px-5 py-3 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white rounded-xl shadow-xs transition text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {user?.emailVerified === false ? (lang === 'am' ? 'ኢሜይል ማረጋገጥ ያስፈልጋል' : 'Email Verification Required') : (t.register_for_queue || 'Register for Queue')}
+              {submitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>{currentLang === 'am' ? 'በመመዝገብ ላይ...' : 'Registering...'}</span>
+                </span>
+              ) : user?.emailVerified === false ? (
+                onVerifyEmail ? (currentLang === 'am' ? 'ኢሜይል አረጋግጥ እና ተመዝገብ' : 'Verify Email & Register') : (t.register_for_queue || i18nT('queue.registerForQueue', 'Register for Queue'))
+              ) : (
+                t.register_for_queue || i18nT('queue.registerForQueue', 'Register for Queue')
+              )}
             </button>
             <button
               onClick={handleBack}
-              className="px-5 py-3 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition text-sm font-medium cursor-pointer"
+              disabled={submitting}
+              className="px-5 py-3 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition text-sm font-medium cursor-pointer disabled:opacity-50"
             >
-              {t.cancel || 'Cancel'}
+              {t.cancel || i18nT('common.cancel', 'Cancel')}
             </button>
           </div>
         </div>
@@ -552,43 +653,50 @@ export default function QueueManagement() {
 
   // ─── STEP: Token Display ────────────────────────────────────────
   if (step === 'token-display' && newTicket) {
-    // Find the latest version of this ticket from context (for live updates)
     const liveTicket = myTickets.find(t => t.id === newTicket.id) || newTicket;
     const statusLabels = {
-      waiting:   t.status_waiting || 'Waiting',
-      called:    t.status_called || 'Called — Go to Counter!',
-      serving:   t.status_serving || 'Being Served',
-      completed: t.status_completed || 'Completed',
-      cancelled: t.status_cancelled || 'Cancelled',
+      waiting:   t.status_waiting || i18nT('status.waiting', 'Waiting'),
+      called:    t.status_called || i18nT('status.called', 'Called — Go to Counter!'),
+      serving:   t.status_serving || i18nT('status.serving', 'Being Served'),
+      completed: t.status_completed || i18nT('status.completed', 'Completed'),
+      cancelled: t.status_cancelled || i18nT('status.cancelled', 'Cancelled'),
     };
 
     return (
       <div className="space-y-6">
         <div>
           <button onClick={handleBack} className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold mb-2 inline-flex items-center gap-1.5 cursor-pointer">
-            ← {t.my_queue_title || 'Back to My Queue'}
+            ← {t.my_queue_title || i18nT('queue.backToMyQueue', 'Back to My Queue')}
           </button>
-          <h2 className="text-xl font-bold text-slate-900 mb-1">{t.your_token || 'Your Queue Token'}</h2>
-          <p className="text-slate-500 text-sm">{t.token_generated_desc || 'Your token has been generated. Please wait for your number to be called.'}</p>
+          <h2 className="text-xl font-bold text-slate-900 mb-1">{t.your_token || i18nT('queue.yourQueueToken', 'Your Queue Token')}</h2>
+          <p className="text-slate-500 text-sm">{t.token_generated_desc || i18nT('queue.tokenGeneratedDesc', 'Your token has been generated. Please wait for your number to be called.')}</p>
         </div>
 
         {/* Token card */}
         <div className={`bg-white rounded-2xl border-2 shadow-xs p-6 text-center ${liveTicket.status === 'called' ? 'border-[#314ea1] ring-4 ring-blue-100' : 'border-slate-200/90'}`}>
           {liveTicket.status === 'called' && (
-            <div className="mb-4 p-3.5 bg-blue-50 border border-blue-200 rounded-xl">
-              <p className="text-[#1e3a8a] font-bold text-lg">🔔 {t.number_being_called || 'Your number is being called!'}</p>
-              <p className="text-blue-700 text-sm">{t.proceed_counter || 'Please proceed to the service counter.'}</p>
+            <div className="mb-4 p-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white border border-blue-300 rounded-2xl shadow-sm flex items-center justify-between">
+              <div className="text-left">
+                <p className="text-white font-black text-lg">🔔 {t.number_being_called || i18nT('queue.numberBeingCalled', 'Your number is being called!')}</p>
+                <p className="text-blue-100 text-sm mt-0.5">{t.proceed_counter || i18nT('queue.proceedToCounter', 'Please proceed to the service counter.')}</p>
+              </div>
+              <div className="bg-white/20 backdrop-blur-xs px-4 py-2 rounded-xl border border-white/30 text-right shrink-0 ml-3">
+                <p className="text-[10px] uppercase font-bold text-blue-100">{currentLang === 'am' ? 'የአገልግሎት መስኮት' : 'Service Window'}</p>
+                <p className="text-2xl font-black text-[#f4b51a] leading-tight">
+                  {currentLang === 'am' ? `መስኮት ${liveTicket.windowNumber || liveTicket.counterNumber || '1'}` : `Window #${liveTicket.windowNumber || liveTicket.counterNumber || '1'}`}
+                </p>
+              </div>
             </div>
           )}
 
           {liveTicket.status === 'completed' && (
             <div className="mb-4 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl">
-              <p className="text-emerald-800 font-bold text-lg">✅ {t.service_completed_title || 'Service Completed'}</p>
-              <p className="text-emerald-700 text-sm">{t.service_completed_desc || 'Your queue session has been completed.'}</p>
+              <p className="text-emerald-800 font-bold text-lg">✅ {t.service_completed_title || i18nT('queue.serviceCompletedTitle', 'Service Completed')}</p>
+              <p className="text-emerald-700 text-sm">{t.service_completed_desc || i18nT('queue.serviceCompletedDesc', 'Your queue session has been completed.')}</p>
             </div>
           )}
 
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t.your_token || 'Your Token Number'}</p>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t.your_token || i18nT('queue.yourTokenNumber', 'Your Token Number')}</p>
           <p className="text-5xl font-extrabold text-[#1e3a8a] mb-2">{liveTicket.token}</p>
           <span className={`inline-block text-xs px-3 py-1 rounded-full font-semibold border ${STATUS_STYLES[liveTicket.status]}`}>
             {statusLabels[liveTicket.status] || liveTicket.status}
@@ -598,74 +706,74 @@ export default function QueueManagement() {
         {/* Queue status details */}
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h3 className="font-bold text-slate-900 text-base">{t.queue_status || 'Queue Status'}</h3>
+            <h3 className="font-bold text-slate-900 text-base">{t.queue_status || i18nT('queue.queueStatus', 'Queue Status')}</h3>
             {connectionStatus === 'connected' ? (
               <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                {lang === 'am' ? 'የቀጥታ ክትትል ነቅቷል' : 'Live tracking active'}
+                {i18nT('queue.liveTrackingActive', 'Live tracking active')}
               </span>
             ) : connectionStatus === 'connecting' ? (
               <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />
-                {lang === 'am' ? 'በመገናኘት ላይ...' : 'Connecting...'}
+                {i18nT('queue.connecting', 'Connecting...')}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200" title={connectionError || (lang === 'am' ? 'ግንኙነት ተቋርጧል' : 'Connection lost')}>
+              <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200" title={connectionError || i18nT('queue.connectionLost', 'Connection lost')}>
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                {lang === 'am' ? 'ግንኙነት ተቋርጧል (እንደገና በመሞከር ላይ...)' : 'Offline (retrying...)'}
+                {i18nT('queue.offlineRetrying', 'Offline (retrying...)')}
               </span>
             )}
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <div className="text-center p-3.5 bg-slate-50/80 border border-slate-100 rounded-xl">
-              <p className="text-xs text-slate-500 mb-1">{t.now_serving || 'Now Serving'}</p>
+              <p className="text-xs text-slate-500 mb-1">{t.now_serving || i18nT('queue.nowServing', 'Now Serving')}</p>
               <p className="text-xl font-bold text-slate-900">{liveTicket.currentServing}</p>
             </div>
             <div className="text-center p-3.5 bg-slate-50/80 border border-slate-100 rounded-xl">
-              <p className="text-xs text-slate-500 mb-1">{t.people_ahead || 'People Ahead'}</p>
+              <p className="text-xs text-slate-500 mb-1">{t.people_ahead || i18nT('queue.peopleAhead', 'People Ahead')}</p>
               <p className="text-xl font-bold text-[#314ea1]">{liveTicket.peopleAhead}</p>
             </div>
             <div className="text-center p-3.5 bg-blue-50/60 border border-blue-100 rounded-xl">
-              <p className="text-xs text-slate-500 mb-1">{t.est_wait || (lang === 'am' ? 'የሚገመት ቆይታ' : 'Est. Wait')}</p>
+              <p className="text-xs text-slate-500 mb-1">{t.est_wait || i18nT('queue.estWait', 'Est. Wait')}</p>
               <p className="text-xl font-bold text-[#1e3a8a]">
-                {formatEstimatedWait(liveTicket, lang, t)}
+                {formatEstimatedWait(liveTicket, t, i18nT)}
               </p>
             </div>
             <div className="text-center p-3.5 bg-slate-50/80 border border-slate-100 rounded-xl">
-              <p className="text-xs text-slate-500 mb-1">{t.institution || 'Institution'}</p>
+              <p className="text-xs text-slate-500 mb-1">{t.institution || i18nT('common.institution', 'Institution')}</p>
               <p className="text-sm font-semibold text-slate-900 leading-tight">{liveTicket.institutionName}</p>
             </div>
             <div className="text-center p-3.5 bg-slate-50/80 border border-slate-100 rounded-xl">
-              <p className="text-xs text-slate-500 mb-1">{t.service || 'Service'}</p>
+              <p className="text-xs text-slate-500 mb-1">{t.service || i18nT('common.service', 'Service')}</p>
               <p className="text-sm font-semibold text-slate-900 leading-tight">{liveTicket.serviceName}</p>
             </div>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-4 text-xs sm:text-sm pt-4 border-t border-slate-100">
             <div>
-              <p className="text-xs text-slate-500">{t.registered || 'Registered'}</p>
+              <p className="text-xs text-slate-500">{t.registered || i18nT('queue.registered', 'Registered')}</p>
               <p className="font-medium text-slate-800">
-                {formatDisplayDate(liveTicket.createdAt, lang)}
+                {formatDisplayDate(liveTicket.createdAt, currentLang)}
                 {' '}
-                {new Date(liveTicket.createdAt).toLocaleTimeString(lang === 'am' ? 'am-ET' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                {new Date(liveTicket.createdAt).toLocaleTimeString(timeLocale, { hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>
             {liveTicket.calledAt && (
               <div>
-                <p className="text-xs text-slate-500">{t.called_at || 'Called At'}</p>
+                <p className="text-xs text-slate-500">{t.called_at || i18nT('queue.calledAt', 'Called At')}</p>
                 <p className="font-medium text-slate-800">
-                  {new Date(liveTicket.calledAt).toLocaleTimeString(lang === 'am' ? 'am-ET' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(liveTicket.calledAt).toLocaleTimeString(timeLocale, { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
             )}
             {liveTicket.completedAt && (
               <div>
                 <p className="text-xs text-slate-500">
-                  {liveTicket.status === 'cancelled' ? (t.cancelled_at || 'Cancelled At') : (t.completed_at || 'Completed At')}
+                  {liveTicket.status === 'cancelled' ? (t.cancelled_at || i18nT('queue.cancelledAt', 'Cancelled At')) : (t.completed_at || i18nT('queue.completedAt', 'Completed At'))}
                 </p>
                 <p className="font-medium text-slate-800">
-                  {new Date(liveTicket.completedAt).toLocaleTimeString(lang === 'am' ? 'am-ET' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(liveTicket.completedAt).toLocaleTimeString(timeLocale, { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
             )}
@@ -678,14 +786,14 @@ export default function QueueManagement() {
             onClick={() => { cancelTicket(liveTicket.id); handleBack(); }}
             className="w-full px-4 py-3 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl hover:bg-rose-100 transition text-sm font-semibold cursor-pointer"
           >
-            {t.leave_queue || 'Leave Queue'}
+            {t.leave_queue || i18nT('queue.leaveQueue', 'Leave Queue')}
           </button>
         )}
 
         {/* Feedback Rating - Only show for completed queue entries */}
         {liveTicket.status === 'completed' && liveTicket.institutionId && liveTicket.serviceId && (
           <div>
-            <h3 className="font-bold text-slate-900 mb-4 text-base">{t.rate_your_experience || 'Rate Your Experience'}</h3>
+            <h3 className="font-bold text-slate-900 mb-4 text-base">{t.rate_your_experience || i18nT('feedback.rateYourExperience', 'Rate Your Experience')}</h3>
             <FeedbackRating
               queueEntryId={liveTicket.id}
               institutionId={liveTicket.institutionId}

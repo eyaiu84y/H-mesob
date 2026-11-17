@@ -15,19 +15,16 @@ export const VALID_DB_ROLES = [
   'MESOB_MANAGER',
   'INSTITUTION_MANAGER',
   'EMPLOYEE',
-  'ICT_STAFF',
-  'CITIZEN'
+  'TECHNICIAN',
+  'CUSTOMER'
 ];
 
 /**
- * Maps any role string/alias to the exact PostgreSQL enum value
- * E.g., 'CUSTOMER' -> 'CITIZEN', 'TECHNICIAN' -> 'ICT_STAFF'
+ * Validates role string to the official PostgreSQL enum value
  */
 export const toDbRole = (role) => {
   if (!role) return null;
   const upper = String(role).toUpperCase().trim();
-  if (upper === 'CUSTOMER' || upper === 'CITIZEN') return 'CITIZEN';
-  if (upper === 'TECHNICIAN' || upper === 'ICT_STAFF') return 'ICT_STAFF';
   if (VALID_DB_ROLES.includes(upper)) return upper;
   return null;
 };
@@ -166,10 +163,10 @@ export const createNotification = async (options) => {
 
       if (!recUserErr && recipientUsers) {
         const customerIds = new Set(
-          recipientUsers.filter(u => u.role === 'CITIZEN' || u.role === 'CUSTOMER').map(u => u.id)
+          recipientUsers.filter(u => u.role === 'CUSTOMER').map(u => u.id)
         );
         if (customerIds.size > 0) {
-          console.warn(`[SECURITY] Stripped ${customerIds.size} CUSTOMER/CITIZEN recipients from internal notification: "${title}"`);
+          console.warn(`[SECURITY] Stripped ${customerIds.size} CUSTOMER recipients from internal notification: "${title}"`);
           recipients = recipients.filter(id => !customerIds.has(id));
         }
       }
@@ -298,7 +295,7 @@ export const getNotifications = async (currentUser, filters = {}) => {
     const limit = Math.min(Math.max(parseInt(filters.limit) || 30, 1), 100);
     const offset = Math.max(parseInt(filters.offset) || 0, 0);
     const userRole = toDbRole(currentUser.role);
-    const isCustomer = userRole === 'CITIZEN' || userRole === 'CUSTOMER';
+    const isCustomer = userRole === 'CUSTOMER';
 
     // Strict Authorization: User can ONLY see their own notifications
     let query = supabase
@@ -402,7 +399,7 @@ export const getUnreadCount = async (currentUser) => {
     }
 
     const userRole = toDbRole(currentUser.role);
-    const isCustomer = userRole === 'CITIZEN' || userRole === 'CUSTOMER';
+    const isCustomer = userRole === 'CUSTOMER';
 
     let query = supabase
       .from('notifications')
@@ -464,7 +461,7 @@ export const markAsRead = async (notificationId, currentUser) => {
     }
 
     const userRole = toDbRole(currentUser.role);
-    const isCustomer = userRole === 'CITIZEN' || userRole === 'CUSTOMER';
+    const isCustomer = userRole === 'CUSTOMER';
 
     // Verify ownership: notification must exist and belong strictly to current user
     const { data: notification, error: findError } = await supabase
@@ -546,7 +543,7 @@ export const markAllAsRead = async (currentUser) => {
     }
 
     const userRole = toDbRole(currentUser.role);
-    const isCustomer = userRole === 'CITIZEN' || userRole === 'CUSTOMER';
+    const isCustomer = userRole === 'CUSTOMER';
 
     let updateQuery = supabase
       .from('notifications')

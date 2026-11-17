@@ -423,14 +423,14 @@ export const submitUser = async (userData, currentUser) => {
     }
 
     // Role validation
-    const validRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'CUSTOMER', 'ICT_STAFF', 'CITIZEN'];
+    const validRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'CUSTOMER'];
     const normTargetRole = targetRole.toUpperCase();
     if (!validRoles.includes(normTargetRole)) {
       return { success: false, message: 'Invalid target role specified.' };
     }
 
     // Official institutional email validation for internal staff (strictly @mesobcenterh.gov.et)
-    const internalRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'];
+    const internalRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN'];
     if (internalRoles.includes(normTargetRole)) {
       if (!isOfficialInstitutionalEmail(email)) {
         return {
@@ -456,7 +456,7 @@ export const submitUser = async (userData, currentUser) => {
       }
     }
 
-    if (['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'].includes(normTargetRole) && !resolvedInstitutionId) {
+    if (['INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN'].includes(normTargetRole) && !resolvedInstitutionId) {
       return { success: false, message: 'An institution assignment is required for this role.' };
     }
 
@@ -494,8 +494,7 @@ export const submitUser = async (userData, currentUser) => {
       ]
     };
 
-    // Map role alias to PostgreSQL database enum user_role ('TECHNICIAN' -> 'ICT_STAFF', 'CUSTOMER' -> 'CITIZEN')
-    const dbRole = normTargetRole === 'CUSTOMER' ? 'CITIZEN' : normTargetRole === 'TECHNICIAN' ? 'ICT_STAFF' : normTargetRole;
+    const dbRole = normTargetRole;
 
     // User is created INACTIVE so login and protected endpoints are blocked until approved
     const { data: newUser, error: insertError } = await supabase
@@ -615,8 +614,7 @@ export const resubmitUser = async (userId, updates, currentUser) => {
     if (updates.employeeId) updatePayload.employee_id = updates.employeeId;
     if (updates.institutionId) updatePayload.institution_id = updates.institutionId;
     if (updates.role) {
-      const normR = String(updates.role).toUpperCase();
-      updatePayload.role = normR === 'CUSTOMER' ? 'CITIZEN' : normR === 'TECHNICIAN' ? 'ICT_STAFF' : normR;
+      updatePayload.role = String(updates.role).toUpperCase();
     }
 
     const { data: updated, error: updateErr } = await supabase

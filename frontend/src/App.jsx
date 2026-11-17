@@ -77,13 +77,14 @@ export default function App() {
                   {/* Auth */}
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/signup" element={<SignupPage />} />
+                  <Route path="/verify-email" element={<SignupPage />} />
                   <Route path="/change-password" element={<ChangePasswordPage />} />
 
                   {/* General Dashboard Route - redirects based on role */}
                   <Route
                     path="/dashboard"
                     element={
-                      <RequireAuth allowedRoles={['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'technician', 'customer', 'ict_staff']}>
+                      <RequireAuth allowedRoles={['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'technician', 'customer']}>
                         <DashboardRedirect />
                       </RequireAuth>
                     }
@@ -125,7 +126,7 @@ export default function App() {
                   <Route
                     path="/dashboard/technician"
                     element={
-                      <RequireAuth allowedRoles={['technician', 'ict_staff']}>
+                      <RequireAuth allowedRoles={['technician']}>
                         <TechnicianDashboard />
                       </RequireAuth>
                     }
@@ -138,9 +139,9 @@ export default function App() {
                       </RequireAuth>
                     }
                   />
-                  {/* Legacy route redirects */}
-                  <Route path="/dashboard/ict-staff" element={<Navigate to="/dashboard/technician" replace />} />
-                  <Route path="/dashboard/customer-alias" element={<Navigate to="/dashboard/customer" replace />} />
+
+
+
                 </Routes>
                         </Suspense>
                       </ErrorBoundary>

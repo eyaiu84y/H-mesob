@@ -4,8 +4,10 @@ import { createNotification } from './notificationService.js';
 import {
   dispatchQueueJoinNotifications,
   dispatchQueueCallNotifications,
+  dispatchQueueCompletedNotifications,
   dispatchApplicationCompletedNotifications
 } from './customerNotificationOrchestrator.js';
+import { isUserEmailVerified } from './emailService.js';
 
 /**
  * Join queue
@@ -40,6 +42,18 @@ export const joinQueue = async (queueData, currentUser) => {
     }
 
     console.log('✅ Validation passed');
+
+    // Strict Customer Email Verification Check:
+    // Unverified customers cannot register for queues
+    const roleUpper = String(currentUser.role || '').toUpperCase();
+    if (roleUpper === 'CUSTOMER' && !isUserEmailVerified(currentUser)) {
+      console.warn(`[QUEUE] Blocked unverified customer from joining queue: ${currentUser.email || currentUser.id}`);
+      return {
+        success: false,
+        code: 'EMAIL_VERIFICATION_REQUIRED',
+        message: 'You must verify your email address before joining a service queue. Please check your inbox or request a new verification link.'
+      };
+    }
 
     // Check if user is already in queue for this service today
     const today = new Date().toISOString().split('T')[0];
@@ -82,102 +96,109 @@ export const joinQueue = async (queueData, currentUser) => {
       };
     }
 
-    // Get the highest queue number for the year to generate next number
-    const currentYear = new Date().getFullYear();
-    const queuePrefix = `Q-${currentYear}-`;
-    
-    console.log('Finding highest queue number for prefix:', queuePrefix);
+    // Scalable, concurrency-safe queue token generation (temporal ordering + numeric sequence)
+    let newQueue = null;
+    let insertError = null;
+    let queueNumber = '';
 
-    const {
-      data: latestQueues,
-      error: latestError
-    } = await supabase
-      .from('queue_entries')
-      .select('queue_number')
-      .like('queue_number', `${queuePrefix}%`)
-      .order('queue_number', { ascending: false })
-      .limit(1);
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const currentYear = new Date().getFullYear();
+      const queuePrefix = `Q-${currentYear}-`;
 
-    if (latestError) {
-      console.error('=== LATEST QUEUE ERROR ===');
-      console.error('Error:', latestError);
-      console.error('==========================');
+      // Order by created_at DESC to prevent lexicographical sorting bugs beyond 9,999 tickets
+      const {
+        data: latestQueues,
+        error: latestError
+      } = await supabase
+        .from('queue_entries')
+        .select('queue_number, created_at')
+        .like('queue_number', `${queuePrefix}%`)
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-      return {
-        success: false,
-        message: 'Failed to generate queue token.'
-      };
+      if (latestError) {
+        console.error('=== LATEST QUEUE ERROR ===');
+        console.error('Error:', latestError);
+        return {
+          success: false,
+          message: 'Failed to generate queue token.'
+        };
+      }
+
+      let maxNum = 0;
+      if (latestQueues && latestQueues.length > 0) {
+        for (const row of latestQueues) {
+          const parts = (row.queue_number || '').split('-');
+          const num = parseInt(parts[2], 10);
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num;
+          }
+        }
+      }
+
+      const tokenNum = maxNum + 1 + attempt;
+      // 6-digit zero padding supports scaling to 1,000,000 tickets annually without collision
+      queueNumber = `${queuePrefix}${String(tokenNum).padStart(6, '0')}`;
+
+      // Create queue entry
+      const {
+        data,
+        error
+      } = await supabase
+        .from('queue_entries')
+        .insert({
+          queue_number: queueNumber,
+          institution_id: institutionId,
+          service_id: serviceId,
+          citizen_id: currentUser.id,
+          priority: priority || 'NORMAL',
+          status: 'PENDING',
+          created_at: new Date().toISOString()
+        })
+        .select(`
+          id,
+          queue_number,
+          created_at,
+          priority,
+          status,
+          services (
+            id,
+            title_en,
+            title_am
+          ),
+          institutions (
+            id,
+            name_en,
+            name_am
+          )
+        `)
+        .single();
+
+      if (!error && data) {
+        newQueue = data;
+        insertError = null;
+        break;
+      }
+
+      insertError = error;
+      if (error?.code !== '23505') {
+        break; // Non-collision error, fail immediately
+      }
+      // Unique collision detected: wait briefly and retry with refreshed latest number
+      await new Promise(r => setTimeout(r, Math.random() * 80 + 20));
     }
 
-    let tokenNum = 1;
-    if (latestQueues && latestQueues.length > 0) {
-      // Extract number from last queue number (e.g., "Q-2026-0005" -> 5)
-      const lastNumber = latestQueues[0].queue_number.split('-')[2];
-      tokenNum = parseInt(lastNumber, 10) + 1;
-    }
-
-    const queueNumber = `${queuePrefix}${String(tokenNum).padStart(4, '0')}`;
-
-    console.log('Generated queue number:', queueNumber);
-
-    // Create queue entry
-    const {
-      data: newQueue,
-      error
-    } = await supabase
-      .from('queue_entries')
-      .insert({
-        queue_number: queueNumber,
-        institution_id: institutionId,
-        service_id: serviceId,
-        citizen_id: currentUser.id,
-        priority: priority || 'NORMAL',
-        status: 'PENDING',
-        created_at: new Date().toISOString()
-      })
-      .select(`
-        id,
-        queue_number,
-        created_at,
-        priority,
-        status,
-        services (
-          id,
-          title_en,
-          title_am
-        ),
-        institutions (
-          id,
-          name_en,
-          name_am
-        )
-      `)
-      .single();
-
-    if (error) {
+    if (insertError || !newQueue) {
       console.error('=== JOIN QUEUE INSERT ERROR ===');
-      console.error('Error Code:', error.code);
-      console.error('Error Message:', error.message);
-      console.error('Error Details:', error.details);
-      console.error('Error Hint:', error.hint);
-      console.error('Full Error:', JSON.stringify(error, null, 2));
-      console.error('Attempted Insert:', {
-        queue_number: queueNumber,
-        institution_id: institutionId,
-        service_id: serviceId,
-        citizen_id: currentUser.id,
-        priority: priority || 'NORMAL',
-        status: 'PENDING'
-      });
-      console.error('==============================');
-
+      console.error('Error Code:', insertError?.code);
+      console.error('Error Message:', insertError?.message);
       return {
         success: false,
-        message: error.message || 'Failed to join queue.',
+        message: insertError?.message || 'Failed to join queue.',
         error: {
-          code: error.code,
-          details: error.details,
-          hint: error.hint
+          code: insertError?.code,
+          details: insertError?.details,
+          hint: insertError?.hint
         }
       };
     }
@@ -298,7 +319,7 @@ export const calculateQueuePositionAndEstimate = async (queueEntry) => {
     let query = supabase
       .from('queue_entries')
       .select('id, queue_number, priority, status, created_at, institution_id, service_id, citizen_id')
-      .in('status', ['IN_PROGRESS', 'PENDING', 'WAITING']);
+      .in('status', ['IN_PROGRESS', 'CALLED', 'PENDING', 'WAITING']);
 
     if (institutionId) {
       query = query.eq('institution_id', institutionId);
@@ -321,13 +342,13 @@ export const calculateQueuePositionAndEstimate = async (queueEntry) => {
     const entries = activeEntries || [];
 
     // Find who is currently being served
-    const inProgressEntries = entries.filter(e => e.status === 'IN_PROGRESS');
+    const inProgressEntries = entries.filter(e => e.status === 'IN_PROGRESS' || e.status === 'CALLED');
     const currentServing = inProgressEntries.length > 0
       ? inProgressEntries[0].queue_number
       : 'None';
 
-    // If this ticket is currently IN_PROGRESS, customer is currently at counter
-    if (status === 'IN_PROGRESS') {
+    // If this ticket is currently IN_PROGRESS or CALLED, customer is currently at counter
+    if (status === 'IN_PROGRESS' || status === 'CALLED') {
       return {
         people_ahead: 0,
         estimated_wait_minutes: 0,
@@ -469,6 +490,7 @@ export const getQueues = async (filters = {}, currentUser) => {
         started_at,
         completed_at,
         updated_at,
+        metadata,
         institutions (
           id,
           code,
@@ -492,12 +514,12 @@ export const getQueues = async (filters = {}, currentUser) => {
      */
 
     const userRole = (currentUser.role || '').toUpperCase();
-    if (userRole === 'CITIZEN' || userRole === 'CUSTOMER') {
+    if (userRole === 'CUSTOMER') {
       query = query.eq('citizen_id', currentUser.id);
     }
 
     else if (
-      ['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(
+      ['EMPLOYEE', 'TECHNICIAN', 'INSTITUTION_MANAGER'].includes(
         userRole
       )
     ) {
@@ -823,20 +845,29 @@ export const getQueues = async (filters = {}, currentUser) => {
         employeeMap.get(queue.assigned_to) || null
     }));
 
-    // Enrich active tickets with live queue position, estimated wait time, and current serving token
-    for (const queue of result) {
-      if (['PENDING', 'WAITING', 'IN_PROGRESS'].includes(queue.status)) {
-        const liveInfo = await calculateQueuePositionAndEstimate(queue);
-        queue.people_ahead = liveInfo.people_ahead;
-        queue.estimated_wait_minutes = liveInfo.estimated_wait_minutes;
-        queue.current_serving = liveInfo.current_serving;
-        queue.queue_readiness = liveInfo.queue_readiness;
-      } else {
-        queue.people_ahead = 0;
-        queue.estimated_wait_minutes = 0;
-        queue.current_serving = 'None';
-        queue.queue_readiness = queue.status;
-      }
+    // High-performance batch enrichment of live queue positions
+    const activeQueues = result.filter((q) => ['PENDING', 'WAITING', 'IN_PROGRESS'].includes(q.status));
+    const inactiveQueues = result.filter((q) => !['PENDING', 'WAITING', 'IN_PROGRESS'].includes(q.status));
+
+    for (const queue of inactiveQueues) {
+      queue.people_ahead = 0;
+      queue.estimated_wait_minutes = 0;
+      queue.current_serving = 'None';
+      queue.queue_readiness = queue.status;
+    }
+
+    // Parallel chunked execution (10 at a time) to prevent N+1 serial query bottlenecks
+    for (let i = 0; i < activeQueues.length; i += 10) {
+      const chunk = activeQueues.slice(i, i + 10);
+      await Promise.all(
+        chunk.map(async (queue) => {
+          const liveInfo = await calculateQueuePositionAndEstimate(queue);
+          queue.people_ahead = liveInfo.people_ahead;
+          queue.estimated_wait_minutes = liveInfo.estimated_wait_minutes;
+          queue.current_serving = liveInfo.current_serving;
+          queue.queue_readiness = liveInfo.queue_readiness;
+        })
+      );
     }
 
     return {
@@ -902,14 +933,14 @@ export const getQueueById = async (queueId, currentUser) => {
 
     // Authorization check
     const userRole = (currentUser.role || '').toUpperCase();
-    if ((userRole === 'CITIZEN' || userRole === 'CUSTOMER') && queue.citizen_id !== currentUser.id) {
+    if (userRole === 'CUSTOMER' && queue.citizen_id !== currentUser.id) {
       return {
         success: false,
         message: 'You do not have permission to view this queue entry.'
       };
     }
 
-    if (['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(userRole)
+    if (['EMPLOYEE', 'TECHNICIAN', 'INSTITUTION_MANAGER'].includes(userRole)
         && queue.institution_id !== currentUser.institution_id) {
       return {
         success: false,
@@ -1021,17 +1052,50 @@ export const callNext = async (queueId, currentUser) => {
 
     // Update queue status (without join to avoid foreign key issues)
     console.log('Attempting to update queue_entries...');
-    const { data: updatedQueue, error: updateError } = await supabase
+    const callTimestamp = new Date().toISOString();
+    const counterNumber = currentUser.counter_number || currentUser.metadata?.counter || currentUser.metadata?.window || currentUser.window_number || (currentUser.employee_id ? currentUser.employee_id.replace(/\D/g, '') : null) || '1';
+    const updatedMetadata = {
+      ...(queue.metadata || {}),
+      status: 'CALLED',
+      called_at: callTimestamp,
+      called_by: currentUser.id,
+      called_by_name: currentUser.full_name || currentUser.name || 'Staff Member',
+      counter_number: String(counterNumber),
+      window_number: String(counterNumber),
+      counter: String(counterNumber),
+      window: String(counterNumber),
+    };
+
+    let { data: updatedQueue, error: updateError } = await supabase
       .from('queue_entries')
       .update({
-        status: 'IN_PROGRESS',
+        status: 'CALLED',
         assigned_to: currentUser.id,
-        started_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        started_at: callTimestamp,
+        updated_at: callTimestamp,
+        metadata: updatedMetadata
       })
       .eq('id', queue.id)
       .select('*')
       .single();
+
+    if (updateError) {
+      console.log('Trying fallback status IN_PROGRESS with CALLED metadata...');
+      const fallbackRes = await supabase
+        .from('queue_entries')
+        .update({
+          status: 'IN_PROGRESS',
+          assigned_to: currentUser.id,
+          started_at: callTimestamp,
+          updated_at: callTimestamp,
+          metadata: updatedMetadata
+        })
+        .eq('id', queue.id)
+        .select('*')
+        .single();
+      updatedQueue = fallbackRes.data;
+      updateError = fallbackRes.error;
+    }
 
     if (updateError) {
       console.error('❌ Call next update error:', updateError);
@@ -1119,7 +1183,7 @@ export const callNext = async (queueId, currentUser) => {
  */
 export const updateQueueStatus = async (queueId, status, currentUser) => {
   try {
-    const validStatuses = ['PENDING', 'WAITING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+    const validStatuses = ['PENDING', 'WAITING', 'IN_PROGRESS', 'CALLED', 'COMPLETED', 'CANCELLED'];
     
     if (!validStatuses.includes(status)) {
       return {
@@ -1160,7 +1224,20 @@ export const updateQueueStatus = async (queueId, status, currentUser) => {
     }
 
     // Authorization
-    if (['EMPLOYEE', 'INSTITUTION_MANAGER'].includes(currentUser.role)
+    if (currentUser.role === 'CUSTOMER') {
+      if (status !== 'CANCELLED') {
+        return {
+          success: false,
+          message: 'Customers can only cancel their own queues.'
+        };
+      }
+      if (queue.citizen_id !== currentUser.id) {
+        return {
+          success: false,
+          message: 'You can only cancel your own queue tickets.'
+        };
+      }
+    } else if (['EMPLOYEE', 'INSTITUTION_MANAGER'].includes(currentUser.role)
         && queue.institution_id !== currentUser.institution_id) {
       return {
         success: false,
@@ -1179,8 +1256,22 @@ export const updateQueueStatus = async (queueId, status, currentUser) => {
       if (!queue.started_at) {
         updateData.started_at = updateData.completed_at;
       }
-    } else if (status === 'IN_PROGRESS' && !queue.started_at) {
-      updateData.started_at = new Date().toISOString();
+    } else if (status === 'IN_PROGRESS' || status === 'CALLED') {
+      const counterNumber = currentUser.counter_number || currentUser.metadata?.counter || currentUser.metadata?.window || currentUser.window_number || (currentUser.employee_id ? currentUser.employee_id.replace(/\D/g, '') : null) || '1';
+      updateData.metadata = {
+        ...(queue.metadata || {}),
+        status: 'CALLED',
+        called_at: new Date().toISOString(),
+        called_by: currentUser.id,
+        called_by_name: currentUser.full_name || currentUser.name || 'Staff Member',
+        counter_number: String(counterNumber),
+        window_number: String(counterNumber),
+        counter: String(counterNumber),
+        window: String(counterNumber),
+      };
+      if (!queue.started_at) {
+        updateData.started_at = new Date().toISOString();
+      }
     }
 
     const { data: updatedQueue, error } = await supabase
@@ -1238,6 +1329,13 @@ export const updateQueueStatus = async (queueId, status, currentUser) => {
           counterNumber,
         });
       } else if (isCompleted) {
+        dispatchQueueCompletedNotifications({
+          queueEntry: updatedQueue || queue,
+          citizenId: queue.citizen_id,
+          serviceName: serviceTitle,
+          institutionName,
+          completedAt: new Date().toISOString(),
+        });
         dispatchApplicationCompletedNotifications({
           application: { id: queue.id, application_number: queue.queue_number },
           citizenId: queue.citizen_id,

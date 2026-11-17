@@ -123,7 +123,7 @@ export default function NotificationBell({ onNavigate, className = '' }) {
       }
     }
 
-    if (role === 'technician' || role === 'ict_staff') {
+    if (role === 'technician') {
       switch (type) {
         case 'MAINTENANCE_ASSIGNMENT':
           return 'My Tasks';

@@ -72,7 +72,7 @@ export const getReport = async (req, res) => {
 
 export const postAssignReport = async (req, res) => {
   try {
-    const technicianId = req.body.technicianId || req.body.ictStaffId;
+    const technicianId = req.body.technicianId;
     if (!technicianId) {
       return res.status(400).json({ success: false, message: 'Technician ID is required.' });
     }

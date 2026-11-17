@@ -47,7 +47,7 @@ export async function submitFeedback(req, res) {
 
     // Ensure user is a customer
     const role = (req.user.role || '').toUpperCase();
-    if (role !== 'CUSTOMER' && role !== 'CITIZEN') {
+    if (role !== 'CUSTOMER') {
       return res.status(403).json({
         success: false,
         message: 'Only customers can submit feedback'
@@ -106,7 +106,7 @@ export async function getMyFeedback(req, res) {
 
     // Only customers can access their own feedback
     const role = (req.user.role || '').toUpperCase();
-    if (role !== 'CUSTOMER' && role !== 'CITIZEN') {
+    if (role !== 'CUSTOMER') {
       return res.status(403).json({
         success: false,
         message: 'Only customers can access this endpoint'
@@ -118,7 +118,7 @@ export async function getMyFeedback(req, res) {
     if (service_id) filters.service_id = service_id;
     if (rating) filters.rating = parseInt(rating);
 
-    const feedback = await feedbackService.getCitizenFeedback(req.user.id, filters);
+    const feedback = await feedbackService.getCustomerFeedback(req.user.id, filters);
 
     return res.status(200).json({
       success: true,
@@ -307,7 +307,7 @@ export async function checkCanSubmit(req, res) {
 
     // Only customers can check feedback eligibility
     const role = (req.user.role || '').toUpperCase();
-    if (role !== 'CUSTOMER' && role !== 'CITIZEN') {
+    if (role !== 'CUSTOMER') {
       return res.status(403).json({
         success: false,
         message: 'Only customers can check feedback eligibility'

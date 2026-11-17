@@ -7,6 +7,11 @@ import {
   verifyDatabaseSchema
 } from '../services/databaseService.js';
 
+// In-memory cache for health diagnostics to keep response times < 10ms
+let cachedHealthDiagnostics = null;
+let cachedHealthDiagnosticsTime = 0;
+const HEALTH_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+
 /**
  * Health check controller
  * GET /api/health
@@ -14,21 +19,39 @@ import {
 export const getHealth = asyncHandler(async (req, res) => {
   const startTime = Date.now();
 
-  // Check Supabase connection
-  const connectionTest = await testDatabaseConnection();
+  const isCacheFresh = cachedHealthDiagnostics && (Date.now() - cachedHealthDiagnosticsTime < HEALTH_CACHE_TTL_MS);
 
-  // Get database stats if connected
+  let connectionTest;
   let dbStats = null;
   let schemaVerification = null;
 
-  if (connectionTest.connected && connectionTest.schemaExists) {
-    try {
-      [dbStats, schemaVerification] = await Promise.all([
-        getDatabaseStats(),
-        verifyDatabaseSchema()
-      ]);
-    } catch (error) {
-      console.error('Error fetching database stats:', error);
+  if (isCacheFresh) {
+    connectionTest = cachedHealthDiagnostics.connectionTest;
+    dbStats = cachedHealthDiagnostics.dbStats;
+    schemaVerification = cachedHealthDiagnostics.schemaVerification;
+  } else {
+    // Check Supabase connection
+    connectionTest = await testDatabaseConnection();
+
+    // Get database stats if connected
+    if (connectionTest.connected && connectionTest.schemaExists) {
+      try {
+        [dbStats, schemaVerification] = await Promise.all([
+          getDatabaseStats(),
+          verifyDatabaseSchema()
+        ]);
+      } catch (error) {
+        console.error('Error fetching database stats:', error);
+      }
+    }
+
+    if (connectionTest.connected) {
+      cachedHealthDiagnostics = {
+        connectionTest,
+        dbStats,
+        schemaVerification
+      };
+      cachedHealthDiagnosticsTime = Date.now();
     }
   }
 

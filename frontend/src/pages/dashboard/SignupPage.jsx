@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth, ROLE_ROUTES, ROLE_LABELS } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import PasswordInput from '../../components/PasswordInput';
@@ -7,7 +8,8 @@ import LanguageSwitcher from '../../components/LanguageSwitcher';
 
 export default function SignupPage() {
   const { signup, verifyEmail, resendVerification, logout, isLoggedIn, user } = useAuth();
-  const { t, lang } = useApp();
+  const { t } = useApp();
+  const { t: i18nT } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -33,7 +35,7 @@ export default function SignupPage() {
     const paramEmail = searchParams.get('email');
     const paramToken = searchParams.get('token');
 
-    if (shouldVerify && paramEmail) {
+    if ((shouldVerify || paramToken) && paramEmail) {
       setIsVerifying(true);
       setVerificationEmail(paramEmail);
 
@@ -45,23 +47,23 @@ export default function SignupPage() {
             if (res.success) {
               setVerifySuccess(
                 res.alreadyVerified
-                  ? (lang === 'am' ? 'ይህ ኢሜይል አስቀድሞ ተረጋግጧል! ወደ ዳሽቦርድ በመግባት ላይ...' : 'This email is already verified! Opening your dashboard...')
-                  : (lang === 'am' ? 'ኢሜይል በተሳካ ሁኔታ ተረጋግጧል! ወደ ዳሽቦርድ በመግባት ላይ...' : 'Email verified successfully! Opening your dashboard...')
+                  ? i18nT('auth.emailAlreadyVerifiedRedirect', 'This email is already verified! Opening your dashboard...')
+                  : i18nT('auth.emailVerifiedRedirect', 'Email verified successfully! Opening your dashboard...')
               );
               setTimeout(() => {
                 navigate('/dashboard/customer', { replace: true });
               }, 1800);
             } else {
-              setVerifyError(res.message || 'Verification link expired or already used. Please request a new code.');
+              setVerifyError(res.message || i18nT('auth.verificationLinkExpired', 'Verification link expired or already used. Please request a new code.'));
             }
           })
           .catch((err) => {
             setIsVerifyingCode(false);
-            setVerifyError(err?.message || 'Verification failed. Please try again.');
+            setVerifyError(err?.message || i18nT('auth.verificationFailed', 'Verification failed. Please try again.'));
           });
       }
     }
-  }, [searchParams, verifyEmail, navigate, lang]);
+  }, [searchParams, verifyEmail, navigate, i18nT]);
 
   // Password policy live checklist
   const hasLength = password.length >= 8;
@@ -81,33 +83,29 @@ export default function SignupPage() {
     setError('');
 
     if (!name.trim()) {
-      setError(lang === 'am' ? 'ሙሉ ስም ያስፈልጋል' : 'Full name is required.');
+      setError(i18nT('auth.fullNameRequired', 'Full name is required.'));
       return;
     }
 
     const nameRegex = /^[a-zA-Z\s\u1200-\u137F]+$/;
     if (!nameRegex.test(name.trim())) {
-      setError(lang === 'am' ? 'ስም ፊደላትን እና ክፍተቶችን ብቻ መያዝ አለበት' : 'Name should only contain letters and spaces.');
+      setError(i18nT('auth.nameLettersOnly', 'Name should only contain letters and spaces.'));
       return;
     }
 
     if (!cleanEmail) {
-      setError(lang === 'am' ? 'ኢሜይል ያስፈልጋል' : 'Email is required.');
+      setError(i18nT('auth.emailRequired', 'Email is required.'));
       return;
     }
 
     // Strict Gmail validation check
     if (!isGmail) {
-      setError(lang === 'am' 
-        ? 'የተገልጋይ ምዝገባ በ@gmail.com የሚያበቃ ትክክለኛ የጉግል ኢሜይል ብቻ ይጠይቃል' 
-        : 'Customer registration strictly requires a valid Google account ending in @gmail.com.');
+      setError(i18nT('auth.customerGmailRequired', 'Customer registration strictly requires a valid Google account ending in @gmail.com.'));
       return;
     }
 
     if (!isPolicySatisfied) {
-      setError(lang === 'am' 
-        ? 'እባክዎ ሁሉንም የይለፍ ቃል የደህንነት መስፈርቶች ያሟሉ' 
-        : 'Please satisfy all password security requirements.');
+      setError(i18nT('auth.satisfyPasswordPolicy', 'Please satisfy all password security requirements.'));
       return;
     }
 
@@ -131,7 +129,7 @@ export default function SignupPage() {
 
     } catch (err) {
       console.error('Signup error:', err);
-      setError('An error occurred during registration. Please try again.');
+      setError(i18nT('auth.signupError', 'An error occurred during registration. Please try again.'));
       setIsSubmitting(false);
     }
   }
@@ -150,14 +148,14 @@ export default function SignupPage() {
         return;
       }
 
-      setVerifySuccess(lang === 'am' ? 'ኢሜይል በተሳካ ሁኔታ ተረጋግጧል! ወደ ዳሽቦርድ በመግባት ላይ...' : 'Email verified successfully! Opening your dashboard...');
+      setVerifySuccess(i18nT('auth.emailVerifiedRedirect', 'Email verified successfully! Opening your dashboard...'));
       setTimeout(() => {
         navigate('/dashboard/customer', { replace: true });
       }, 1500);
 
     } catch (err) {
       console.error('Verify error:', err);
-      setVerifyError('Verification failed. Please try again.');
+      setVerifyError(i18nT('auth.verificationFailed', 'Verification failed. Please try again.'));
       setIsVerifyingCode(false);
     }
   }
@@ -167,13 +165,13 @@ export default function SignupPage() {
     setVerifySuccess('');
     const res = await resendVerification(verificationEmail);
     if (res.success) {
-      setVerifySuccess('A new verification code has been generated.');
+      setVerifySuccess(i18nT('auth.newCodeSent', 'A new verification code has been generated.'));
       if (res.verificationCode) {
         setDevCodeHint(res.verificationCode);
         setVerificationCode(res.verificationCode);
       }
     } else {
-      setVerifyError(res.message || 'Failed to resend code.');
+      setVerifyError(res.message || i18nT('auth.failedResendCode', 'Failed to resend code.'));
     }
   }
 
@@ -188,7 +186,7 @@ export default function SignupPage() {
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
-          {t.nav_home || (lang === 'am' ? 'መነሻ' : 'Back to Home')}
+          {t.nav_home || i18nT('common.backToHome', 'Back to Home')}
         </Link>
         <LanguageSwitcher />
       </div>
@@ -207,7 +205,7 @@ export default function SignupPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">HAWASSA MESOB</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {lang === 'am' ? 'የተገልጋይ / የዜጋ ምዝገባ' : 'Customer Account Registration'}
+            {i18nT('auth.customerRegistrationTitle', 'Customer Account Registration')}
           </p>
         </div>
 
@@ -231,12 +229,13 @@ export default function SignupPage() {
                     </svg>
                   </div>
                   <h2 className="text-lg font-bold text-gray-900">
-                    {lang === 'am' ? 'ኢሜይልዎን ያረጋግጡ' : 'Verify Your Email'}
+                    {i18nT('auth.verifyYourEmail', 'Verify Your Email')}
                   </h2>
                   <p className="text-xs text-gray-600 mt-1">
-                    {lang === 'am' 
-                      ? `የማረጋገጫ ኮድ ወደ ${verificationEmail} ተልኳል። እባክዎ ከታች ያስገቡ።`
-                      : `A 6-digit verification code has been issued to ${verificationEmail}. Please enter it below.`}
+                    {i18nT('auth.verificationCodeIssued', {
+                      defaultValue: `A 6-digit verification code has been issued to ${verificationEmail}. Please enter it below.`,
+                      email: verificationEmail
+                    })}
                   </p>
                   {devCodeHint && (
                     <div className="mt-2 text-xs bg-blue-50 text-blue-800 p-2 rounded-lg border border-blue-200 font-mono">
@@ -248,7 +247,7 @@ export default function SignupPage() {
                 <form onSubmit={handleVerifyCode} className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      {lang === 'am' ? 'ባለ 6 አሃዝ የማረጋገጫ ኮድ' : '6-Digit Verification Code'}
+                      {i18nT('auth.sixDigitVerificationCode', '6-Digit Verification Code')}
                     </label>
                     <input
                       type="text"
@@ -278,7 +277,7 @@ export default function SignupPage() {
                     disabled={isVerifyingCode || verificationCode.length < 6}
                     className="w-full bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-semibold py-2.5 rounded-xl transition text-sm disabled:opacity-50 cursor-pointer"
                   >
-                    {isVerifyingCode ? 'Verifying...' : 'Verify Email & Enter Dashboard'}
+                    {isVerifyingCode ? i18nT('auth.verifying', 'Verifying...') : i18nT('auth.verifyAndEnterDashboard', 'Verify Email & Enter Dashboard')}
                   </button>
 
                   <div className="flex items-center justify-between text-xs text-gray-500 pt-2">
@@ -287,14 +286,14 @@ export default function SignupPage() {
                       onClick={handleResend}
                       className="text-[#1e3a8a] hover:underline font-medium cursor-pointer"
                     >
-                      Resend code
+                      {i18nT('auth.resendCode', 'Resend code')}
                     </button>
                     <button
                       type="button"
                       onClick={() => navigate('/dashboard/customer')}
                       className="text-gray-500 hover:text-gray-700 underline cursor-pointer"
                     >
-                      Skip to dashboard for now
+                      {i18nT('auth.skipToDashboard', 'Skip to dashboard for now')}
                     </button>
                   </div>
                 </form>
@@ -310,7 +309,7 @@ export default function SignupPage() {
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-amber-900">
-                          Signed in as {user.name} ({ROLE_LABELS[user.role] || user.role})
+                          {i18nT('auth.currentlySignedInAs', 'Signed in as')} {user.name} ({i18nT(`roles.${user.role}`, { defaultValue: ROLE_LABELS[user.role] || user.role })})
                         </p>
                         <p className="text-xs text-amber-700 mt-0.5 font-mono">{user.email}</p>
                         <div className="mt-2.5 flex items-center gap-2">
@@ -319,13 +318,13 @@ export default function SignupPage() {
                             onClick={logout}
                             className="text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white transition cursor-pointer"
                           >
-                            Sign Out
+                            {i18nT('auth.signOut', 'Sign Out')}
                           </button>
                           <Link
                             to={ROLE_ROUTES[user.role] || '/'}
                             className="text-xs font-semibold px-2.5 py-1 rounded-md bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 transition"
                           >
-                            Go to Dashboard →
+                            {i18nT('nav.dashboard', 'Go to Dashboard')} →
                           </Link>
                         </div>
                       </div>
@@ -339,12 +338,10 @@ export default function SignupPage() {
                     <span className="font-bold text-[#1e3a8a]">ℹ️</span>
                     <div>
                       <p className="font-semibold text-blue-950">
-                        {lang === 'am' ? 'የተገልጋይ ምዝገባ ደንብ:' : 'Customer Registration Requirement:'}
+                        {i18nT('auth.customerRegRequirementHeading', 'Customer Registration Requirement:')}
                       </p>
                       <p className="text-blue-800 mt-0.5">
-                        {lang === 'am'
-                          ? 'የህዝብ ተገልጋይ መለያዎች በ@gmail.com የሚያበቃ ትክክለኛ የጉግል ኢሜይል አድራሻ ብቻ መጠቀም አለባቸው።'
-                          : 'Public signup is restricted to Customer accounts and requires a valid Google account ending in @gmail.com.'}
+                        {i18nT('auth.customerRegRequirementDesc', 'Public signup is restricted to Customer accounts and requires a valid Google account ending in @gmail.com.')}
                       </p>
                     </div>
                   </div>
@@ -354,7 +351,7 @@ export default function SignupPage() {
                   {/* Full Name */}
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      {t.full_name || (lang === 'am' ? 'ሙሉ ስም' : 'Full Name')}
+                      {t.full_name || i18nT('common.fullName', 'Full Name')}
                     </label>
                     <input
                       type="text"
@@ -362,7 +359,7 @@ export default function SignupPage() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       required
-                      placeholder={lang === 'am' ? 'አበበ ከበደ' : 'Abebe Kebede'}
+                      placeholder={i18nT('common.namePlaceholder', 'Abebe Kebede')}
                       className="w-full px-4 py-2.5 rounded-xl bg-slate-50/70 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder:text-slate-400 border border-slate-300 focus:border-[#314ea1] focus:ring-3 focus:ring-[#314ea1]/15 shadow-2xs outline-none transition-all duration-200 text-sm"
                     />
                   </div>
@@ -370,7 +367,7 @@ export default function SignupPage() {
                   {/* Gmail Email Address */}
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      {lang === 'am' ? 'የጉግል ኢሜይል (@gmail.com)' : 'Google Email Address (@gmail.com)'}
+                      {i18nT('auth.gmailEmailLabel', 'Google Email Address (@gmail.com)')}
                     </label>
                     <input
                       type="email"
@@ -388,7 +385,7 @@ export default function SignupPage() {
                     />
                     {cleanEmail.length > 0 && !isGmail && (
                       <p className="text-xs text-amber-700 mt-1 font-medium">
-                        ⚠️ Must be a valid Gmail address ending in @gmail.com
+                        ⚠️ {i18nT('auth.mustBeGmailNote', 'Must be a valid Gmail address ending in @gmail.com')}
                       </p>
                     )}
                   </div>
@@ -396,7 +393,7 @@ export default function SignupPage() {
                   {/* Password */}
                   <div>
                     <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      {t.password || (lang === 'am' ? 'የይለፍ ቃል' : 'Password')}
+                      {t.password || i18nT('common.password', 'Password')}
                     </label>
                     <PasswordInput
                       id="password"
@@ -411,7 +408,7 @@ export default function SignupPage() {
                   {/* Confirm Password */}
                   <div>
                     <label htmlFor="confirm" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      {t.confirm_password || (lang === 'am' ? 'የይለፍ ቃል ያረጋግጡ' : 'Confirm Password')}
+                      {t.confirm_password || i18nT('auth.confirmPassword', 'Confirm Password')}
                     </label>
                     <PasswordInput
                       id="confirm"
@@ -425,25 +422,25 @@ export default function SignupPage() {
 
                   {/* Password Requirements Checklist */}
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
-                    <p className="font-semibold text-slate-700">Password Checklist:</p>
+                    <p className="font-semibold text-slate-700">{i18nT('auth.passwordChecklist', 'Password Checklist:')}</p>
                     <div className="grid grid-cols-2 gap-1 text-slate-600">
                       <span className={hasLength ? 'text-emerald-700 font-semibold' : ''}>
-                        {hasLength ? '✓' : '•'} 8+ characters
+                        {hasLength ? '✓' : '•'} {i18nT('auth.min8Chars', '8+ characters')}
                       </span>
                       <span className={hasUpper ? 'text-emerald-700 font-semibold' : ''}>
-                        {hasUpper ? '✓' : '•'} Uppercase (A-Z)
+                        {hasUpper ? '✓' : '•'} {i18nT('auth.oneUppercase', 'Uppercase (A-Z)')}
                       </span>
                       <span className={hasLower ? 'text-emerald-700 font-semibold' : ''}>
-                        {hasLower ? '✓' : '•'} Lowercase (a-z)
+                        {hasLower ? '✓' : '•'} {i18nT('auth.oneLowercase', 'Lowercase (a-z)')}
                       </span>
                       <span className={hasNumber ? 'text-emerald-700 font-semibold' : ''}>
-                        {hasNumber ? '✓' : '•'} Number (0-9)
+                        {hasNumber ? '✓' : '•'} {i18nT('auth.oneNumber', 'Number (0-9)')}
                       </span>
                       <span className={hasSpecial ? 'text-emerald-700 font-semibold' : ''}>
-                        {hasSpecial ? '✓' : '•'} Special char (!@#)
+                        {hasSpecial ? '✓' : '•'} {i18nT('auth.oneSpecialChar', 'Special char (!@#)')}
                       </span>
                       <span className={passwordsMatch ? 'text-emerald-700 font-semibold' : ''}>
-                        {passwordsMatch ? '✓' : '•'} Passwords match
+                        {passwordsMatch ? '✓' : '•'} {i18nT('auth.passwordsMatch', 'Passwords match')}
                       </span>
                     </div>
                   </div>
@@ -460,16 +457,16 @@ export default function SignupPage() {
                     className="w-full bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-semibold py-2.5 rounded-xl transition shadow-md hover:shadow-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {isSubmitting 
-                      ? (lang === 'am' ? 'በመመዝገብ ላይ...' : 'Creating Customer Account...') 
-                      : (t.sign_up || (lang === 'am' ? 'መለያ ፍጠር' : 'Register Customer Account'))}
+                      ? i18nT('auth.creatingAccount', 'Creating Customer Account...') 
+                      : (t.sign_up || i18nT('auth.registerCustomerAccount', 'Register Customer Account'))}
                   </button>
                 </form>
 
                 <div className="text-center text-sm text-gray-500 mt-5 pt-4 border-t border-gray-100">
                   <p>
-                    {t.already_have_account || (lang === 'am' ? 'መለያ አለዎት?' : 'Already have an account?')}{' '}
+                    {t.already_have_account || i18nT('auth.alreadyHaveAccount', 'Already have an account?')}{' '}
                     <Link to="/login" className="text-[#1e3a8a] hover:underline font-semibold">
-                      {lang === 'am' ? 'ይግቡ' : 'Login'}
+                      {t.login || i18nT('auth.login', 'Login')}
                     </Link>
                   </p>
                 </div>
@@ -481,7 +478,7 @@ export default function SignupPage() {
       </div>
 
       <div className="text-center text-xs text-gray-400 py-2">
-        {lang === 'am' ? 'የኢፌዴሪ የሃዋሳ መሶብ ማዕከል • የህዝብ አገልግሎት ፖርታል' : 'FDRE Hawassa MESOB Center • Public Service Portal'}
+        {i18nT('common.systemFooterTagline', 'FDRE Hawassa MESOB Center • Public Service Portal')}
       </div>
     </div>
   );

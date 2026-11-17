@@ -58,7 +58,7 @@ async function runTests() {
     const maskedP = maskPhone('251912345678');
     assert(maskedP.startsWith('2519') && maskedP.includes('***'), 'Mask phone for safe logging', maskedP);
 
-    const maskedE = maskEmail('mesob.citizen.hawassa@gmail.com');
+    const maskedE = maskEmail('mesob.customer.hawassa@gmail.com');
     assert(maskedE.includes('***') && maskedE.endsWith('@gmail.com'), 'Mask email for safe logging', maskedE);
 
     // -------------------------------------------------------------
@@ -91,7 +91,7 @@ async function runTests() {
       .eq('id', testUserId)
       .single();
 
-    assert(dbUser.role === 'CUSTOMER' || dbUser.role === 'CITIZEN', 'User registered strictly as CUSTOMER/CITIZEN', dbUser.role);
+    assert(dbUser.role === 'CUSTOMER', 'User registered strictly as CUSTOMER', dbUser.role);
     assert(dbUser.metadata?.email_verification?.verified === false, 'Database metadata marks email_verification.verified === false');
     assert(dbUser.metadata?.email_verification?.code === verificationCode, 'Database stores code server-side only');
 

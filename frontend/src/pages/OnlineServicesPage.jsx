@@ -1,18 +1,23 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useServices } from '../context/ServiceContext';
 import { useApplications } from '../context/ApplicationContext';
 import { useApp } from '../context/AppContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { getInstitutionName, getServiceTitle, getServiceDescription } from '../utils/localizedContent';
 
 export default function OnlineServicesPage() {
-  const { lang: language, getStatusLabel } = useApp();
+  const { getStatusLabel } = useApp();
+  const { i18n, t: i18nT } = useTranslation();
   const { user } = useAuth();
   const { services, loading: servicesLoading } = useServices();
   const { createApplication, applications } = useApplications();
   const navigate = useNavigate();
+
+  const currentLang = i18n.language || 'en';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -39,25 +44,15 @@ export default function OnlineServicesPage() {
       }
     });
     
-    console.log('Categories:', Array.from(cats));
     return Array.from(cats);
   }, [services]);
 
   // Filter services
   const filteredServices = useMemo(() => {
-    console.log('=== FILTERING SERVICES DEBUG ===');
-    console.log('Total services:', services.length);
-    console.log('Selected category:', selectedCategory);
-    console.log('Search term:', searchTerm);
-    console.log('Sample service:', services[0]);
-    
     return services.filter(service => {
       // Only show active services
       const isActive = service.is_active === true || service.status === 'ACTIVE';
-      if (!isActive) {
-        console.log(`Service ${service.title_en || service.name} is not active`);
-        return false;
-      }
+      if (!isActive) return false;
 
       // Search filter - check both old and new field names
       const searchLower = searchTerm.toLowerCase();
@@ -68,13 +63,12 @@ export default function OnlineServicesPage() {
         (service.name_am?.toLowerCase().includes(searchLower)) ||
         (service.description_en?.toLowerCase().includes(searchLower)) ||
         (service.description?.toLowerCase().includes(searchLower)) ||
-        (service.institutions?.name_en?.toLowerCase().includes(searchLower));
+        (service.institutions?.name_en?.toLowerCase().includes(searchLower)) ||
+        (service.institutions?.name_am?.toLowerCase().includes(searchLower));
 
       // Category filter
       const matchesCategory = selectedCategory === 'ALL' || 
         service.institutions?.name_en === selectedCategory;
-
-      console.log(`Service ${service.title_en || service.name}: active=${isActive}, matchesSearch=${matchesSearch}, matchesCategory=${matchesCategory}`);
 
       return matchesSearch && matchesCategory;
     });
@@ -92,14 +86,14 @@ export default function OnlineServicesPage() {
 
   const handleApplyClick = () => {
     if (!user) {
-      alert('Please login to apply for services');
+      alert(i18nT('application.loginRequiredAlert', 'Please login to apply for services'));
       navigate('/login');
       return;
     }
 
     const roleUpper = user.role?.toUpperCase();
     if (roleUpper !== 'CUSTOMER') {
-      alert('Only customers can apply for online services');
+      alert(i18nT('application.onlyCustomersAlert', 'Only customers can apply for online services'));
       return;
     }
 
@@ -119,12 +113,12 @@ export default function OnlineServicesPage() {
     if (submitting) return;
 
     if (!applicationData.fullName || !applicationData.email || !applicationData.phone) {
-      setSubmitError('Please fill in all required fields');
+      setSubmitError(i18nT('application.fillRequiredFields', 'Please fill in all required fields'));
       return;
     }
 
     if (!selectedService.institution_id) {
-      setSubmitError('Service institution not configured. Please contact support.');
+      setSubmitError(i18nT('application.institutionNotConfigured', 'Service institution not configured. Please contact support.'));
       return;
     }
 
@@ -136,15 +130,18 @@ export default function OnlineServicesPage() {
         selectedService.id,
         selectedService.institution_id,
         {
-          serviceName: language === 'am' ? selectedService.title_am : selectedService.title_en,
-          institutionName: language === 'am' ? selectedService.institutions?.name_am : selectedService.institutions?.name_en,
+          serviceName: getServiceTitle(selectedService, currentLang),
+          institutionName: getInstitutionName(selectedService.institutions, currentLang),
           ...applicationData,
         },
         []
       );
 
       if (result.success) {
-        alert(`✅ Application submitted successfully!\n\nApplication Number: ${result.application.applicationNumber}\n\nYou can track your application below.`);
+        alert(i18nT('application.successAlert', {
+          defaultValue: `Application submitted successfully!\n\nApplication Number: ${result.application?.applicationNumber || ''}\n\nYou can track your application below.`,
+          applicationNumber: result.application?.applicationNumber || ''
+        }));
         
         setShowApplicationForm(false);
         setSelectedService(null);
@@ -163,25 +160,24 @@ export default function OnlineServicesPage() {
       } else if (result.isDuplicate && result.existingApplication) {
         const refNum = result.existingApplication.applicationNumber || result.existingApplication.referenceNumber;
         const status = result.existingApplication.status;
-        setSubmitError(
-          language === 'am'
-            ? `ለዚህ አገልግሎት ንቁ ወይም የተጠናቀቀ ማመልከቻ ቀድሞውኑ አለዎት (መለያ: ${refNum}፣ ሁኔታ: ${status})። ተደጋጋሚ ምዝገባ አይፈቀድም።`
-            : `An active or completed registration already exists for this service (Reference: ${refNum}, Status: ${status}). Duplicate registrations are not permitted.`
-        );
+        setSubmitError(i18nT('application.duplicateNotice', {
+          defaultValue: `An active or completed registration already exists for this service (Reference: ${refNum}, Status: ${status}). Duplicate registrations are not permitted.`,
+          refNum,
+          status
+        }));
         setTimeout(() => {
           document.getElementById('application-tracking')?.scrollIntoView({ behavior: 'smooth' });
         }, 1000);
       } else {
-        setSubmitError(result.message || 'Failed to submit application');
+        setSubmitError(result.message || i18nT('application.submitFailed', 'Failed to submit application'));
       }
     } catch (error) {
       console.error('Application submission error:', error);
-      setSubmitError(error.message || 'An error occurred while submitting your application');
+      setSubmitError(error.message || i18nT('application.submitError', 'An error occurred while submitting your application'));
     } finally {
       setSubmitting(false);
     }
   };
-
 
   return (
     <>
@@ -192,12 +188,10 @@ export default function OnlineServicesPage() {
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center">
               <h1 className="text-5xl font-bold mb-4">
-                {language === 'am' ? 'የመስመር ላይ አገልግሎቶች' : 'Online Services'}
+                {i18nT('nav.onlineServices', 'Online Services')}
               </h1>
               <p className="text-xl opacity-90 max-w-3xl mx-auto">
-                {language === 'am' 
-                  ? 'የመንግስት የመስመር ላይ አገልግሎቶችን በፍጥነት እና በቀላሉ ያግኙ'
-                  : 'Access government online services quickly and easily'}
+                {i18nT('services.onlineHeroSubtitle', 'Access government online services quickly and easily')}
               </p>
             </div>
           </div>
@@ -213,7 +207,7 @@ export default function OnlineServicesPage() {
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={language === 'am' ? 'አገልግሎት ፈልግ (ለምሳሌ ብሔራዊ መታወቂያ, ፓስፖርት...)' : 'Search services (e.g. National ID, Passport...)'}
+                  placeholder={i18nT('services.searchOnlinePlaceholder', 'Search services (e.g. National ID, Passport...)')}
                   className="w-full px-6 py-4 pl-14 border border-gray-300 bg-white text-gray-900 placeholder-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
                 />
                 <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 text-xl"></i>
@@ -232,7 +226,7 @@ export default function OnlineServicesPage() {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  {cat}
+                  {cat === 'ALL' ? i18nT('common.all', 'ALL') : cat}
                 </button>
               ))}
             </div>
@@ -242,10 +236,10 @@ export default function OnlineServicesPage() {
           <div className="mb-12">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-                {language === 'am' ? 'ሁሉም አገልግሎቶች' : 'All Services'}
+                {i18nT('common.allServices', 'All Services')}
               </h2>
               <span className="text-gray-600 dark:text-gray-400">
-                {filteredServices.length} {language === 'am' ? 'አገልግሎቶች' : 'services'}
+                {filteredServices.length} {i18nT('common.services', 'services')}
               </span>
             </div>
 
@@ -253,14 +247,14 @@ export default function OnlineServicesPage() {
               <div className="text-center py-20">
                 <i className="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
                 <p className="text-gray-600 dark:text-gray-400">
-                  {language === 'am' ? 'አገልግሎቶችን በመጫን ላይ...' : 'Loading services...'}
+                  {i18nT('common.loadingServices', 'Loading services...')}
                 </p>
               </div>
             ) : filteredServices.length === 0 ? (
               <div className="text-center py-20">
                 <i className="fas fa-search text-6xl text-gray-300 mb-4"></i>
                 <p className="text-xl text-gray-600 dark:text-gray-400">
-                  {language === 'am' ? 'ምንም አገልግሎት አልተገኘም' : 'No services found'}
+                  {i18nT('services.noServicesFound', 'No services found')}
                 </p>
               </div>
             ) : (
@@ -279,35 +273,31 @@ export default function OnlineServicesPage() {
 
                       {/* Service Title */}
                       <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                        {language === 'am' 
-                          ? service.title_am || service.name_am || service.title_en || service.name
-                          : service.title_en || service.name}
+                        {getServiceTitle(service, currentLang)}
                       </h3>
 
                       {/* Institution */}
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                         <i className="fas fa-building mr-2"></i>
-                        {language === 'am' 
-                          ? service.institutions?.name_am || service.institutions?.name_en 
-                          : service.institutions?.name_en}
+                        {getInstitutionName(service.institutions, currentLang)}
                       </p>
 
                       {/* Service Details */}
                       <div className="flex justify-between items-center mb-4 text-sm">
                         <div>
                           <span className="text-gray-500 dark:text-gray-400 block">
-                            {language === 'am' ? 'የሂደት ጊዜ' : 'Processing Time'}
+                            {i18nT('common.processingTime', 'Processing Time')}
                           </span>
                           <span className="font-semibold text-gray-900 dark:text-white">
-                            {service.processing_time || 'N/A'}
+                            {service.processing_time || i18nT('common.notSpecified', 'N/A')}
                           </span>
                         </div>
                         <div className="text-right">
                           <span className="text-gray-500 dark:text-gray-400 block">
-                            {language === 'am' ? 'ክፍያ' : 'Fee'}
+                            {i18nT('common.fee', 'Fee')}
                           </span>
                           <span className="font-semibold text-gray-900 dark:text-white">
-                            {service.service_fee || service.fee_amount || 'N/A'}
+                            {service.service_fee || service.fee_amount || i18nT('common.notSpecified', 'N/A')}
                           </span>
                         </div>
                       </div>
@@ -320,7 +310,7 @@ export default function OnlineServicesPage() {
                         }}
                         className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 rounded-xl transition-all"
                       >
-                        {language === 'am' ? 'አሁን ያመልክቱ' : 'Apply Now'}
+                        {i18nT('common.applyNow', 'Apply Now')}
                       </button>
                     </div>
                   </div>
@@ -334,17 +324,17 @@ export default function OnlineServicesPage() {
             <div id="application-tracking" className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
                 <i className="fas fa-clipboard-list mr-3 text-blue-600"></i>
-                {language === 'am' ? 'የእኔ ማመልከቻዎች' : 'My Applications'}
+                {i18nT('application.myApplications', 'My Applications')}
               </h2>
 
               {myApplications.length === 0 ? (
                 <div className="text-center py-12">
                   <i className="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
                   <p className="text-xl text-gray-600 dark:text-gray-400">
-                    {language === 'am' ? 'እስካሁን ምንም ማመልከቻ አልተገለጸም' : 'No applications yet'}
+                    {i18nT('application.noApplicationsYet', 'No applications yet')}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-                    {language === 'am' ? 'ከላይ ካሉት አገልግሎቶች ውስጥ አንዱን ያመልክቱ' : 'Apply for a service above to get started'}
+                    {i18nT('application.applyAboveToGetStarted', 'Apply for a service above to get started')}
                   </p>
                 </div>
               ) : (
@@ -353,19 +343,19 @@ export default function OnlineServicesPage() {
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                          {language === 'am' ? 'ማመልከቻ ቁጥር' : 'Application #'}
+                          {i18nT('application.applicationNum', 'Application #')}
                         </th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                          {language === 'am' ? 'አገልግሎት' : 'Service'}
+                          {i18nT('common.service', 'Service')}
                         </th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                          {language === 'am' ? 'ሁኔታ' : 'Status'}
+                          {i18nT('common.status', 'Status')}
                         </th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                          {language === 'am' ? 'ቀን' : 'Date'}
+                          {i18nT('common.date', 'Date')}
                         </th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                          {language === 'am' ? 'ተግባር' : 'Action'}
+                          {i18nT('common.action', 'Action')}
                         </th>
                       </tr>
                     </thead>
@@ -376,7 +366,7 @@ export default function OnlineServicesPage() {
                             {app.applicationNumber}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                            {language === 'am' ? app.serviceName_am || app.service : app.service}
+                            {currentLang === 'am' ? app.serviceName_am || app.service : app.service}
                           </td>
                           <td className="px-6 py-4">
                             <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
@@ -397,7 +387,7 @@ export default function OnlineServicesPage() {
                               onClick={() => navigate('/dashboard')}
                               className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm"
                             >
-                              {language === 'am' ? 'ዝርዝር' : 'View Details'}
+                              {i18nT('common.viewDetails', 'View Details')}
                             </button>
                           </td>
                         </tr>
@@ -413,7 +403,7 @@ export default function OnlineServicesPage() {
                   className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all"
                 >
                   <i className="fas fa-tachometer-alt"></i>
-                  {language === 'am' ? 'ወደ ዳሽቦርድ ይሂዱ' : 'Go to Dashboard'}
+                  {i18nT('nav.goToDashboard', 'Go to Dashboard')}
                 </button>
               </div>
             </div>
@@ -429,7 +419,7 @@ export default function OnlineServicesPage() {
             >
               <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 p-6 flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {language === 'am' ? selectedService.title_am || selectedService.title_en : selectedService.title_en}
+                  {getServiceTitle(selectedService, currentLang)}
                 </h2>
                 <button
                   onClick={() => setSelectedService(null)}
@@ -442,41 +432,39 @@ export default function OnlineServicesPage() {
               <div className="p-6">
                 <div className="mb-6">
                   <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
-                    {language === 'am' ? 'ተቋም' : 'Institution'}
+                    {i18nT('common.institution', 'Institution')}
                   </h3>
                   <p className="text-lg font-medium text-gray-900 dark:text-white">
-                    {language === 'am' 
-                      ? selectedService.institutions?.name_am || selectedService.institutions?.name_en 
-                      : selectedService.institutions?.name_en}
+                    {getInstitutionName(selectedService.institutions, currentLang)}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                     <span className="text-sm text-gray-500 dark:text-gray-400 block mb-1">
-                      {language === 'am' ? 'የሂደት ጊዜ' : 'Processing Time'}
+                      {i18nT('common.processingTime', 'Processing Time')}
                     </span>
                     <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {selectedService.processing_time || 'N/A'}
+                      {selectedService.processing_time || i18nT('common.notSpecified', 'N/A')}
                     </span>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                     <span className="text-sm text-gray-500 dark:text-gray-400 block mb-1">
-                      {language === 'am' ? 'የአገልግሎት ክፍያ' : 'Service Fee'}
+                      {i18nT('common.serviceFee', 'Service Fee')}
                     </span>
                     <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {selectedService.service_fee || 'N/A'}
+                      {selectedService.service_fee || i18nT('common.notSpecified', 'N/A')}
                     </span>
                   </div>
                 </div>
 
-                {selectedService.description_en && (
+                {getServiceDescription(selectedService, currentLang) && (
                   <div className="mb-6">
                     <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
-                      {language === 'am' ? 'ስለ አገልግሎቱ' : 'About This Service'}
+                      {i18nT('common.aboutThisService', 'About This Service')}
                     </h3>
                     <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                      {language === 'am' ? selectedService.description_am || selectedService.description_en : selectedService.description_en}
+                      {getServiceDescription(selectedService, currentLang)}
                     </p>
                   </div>
                 )}
@@ -487,13 +475,13 @@ export default function OnlineServicesPage() {
                     className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2"
                   >
                     <i className="fas fa-paper-plane"></i>
-                    {user ? (language === 'am' ? 'አሁን ያመልክቱ' : 'Apply Now') : (language === 'am' ? 'ለማመልከት ይግቡ' : 'Login to Apply')}
+                    {user ? i18nT('common.applyNow', 'Apply Now') : i18nT('common.loginToApply', 'Login to Apply')}
                   </button>
                   <button
                     onClick={() => setSelectedService(null)}
                     className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
-                    {language === 'am' ? 'ዝጋ' : 'Close'}
+                    {i18nT('common.close', 'Close')}
                   </button>
                 </div>
               </div>
@@ -511,10 +499,10 @@ export default function OnlineServicesPage() {
               <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 p-6 flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {language === 'am' ? 'ማመልከቻ ቅጽ' : 'Application Form'}
+                    {i18nT('application.form', 'Application Form')}
                   </h2>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    {language === 'am' ? selectedService.title_am || selectedService.title_en : selectedService.title_en}
+                    {getServiceTitle(selectedService, currentLang)}
                   </p>
                 </div>
                 <button
@@ -538,7 +526,7 @@ export default function OnlineServicesPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      {language === 'am' ? 'ሙሉ ስም' : 'Full Name'} <span className="text-red-500">*</span>
+                      {i18nT('common.fullName', 'Full Name')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -551,7 +539,7 @@ export default function OnlineServicesPage() {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      {language === 'am' ? 'ኢሜይል' : 'Email'} <span className="text-red-500">*</span>
+                      {i18nT('common.email', 'Email')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
@@ -564,7 +552,7 @@ export default function OnlineServicesPage() {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      {language === 'am' ? 'ስልክ ቁጥር' : 'Phone'} <span className="text-red-500">*</span>
+                      {i18nT('common.phone', 'Phone')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="tel"
@@ -577,7 +565,7 @@ export default function OnlineServicesPage() {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      {language === 'am' ? 'አድራሻ' : 'Address'}
+                      {i18nT('common.address', 'Address')}
                     </label>
                     <input
                       type="text"
@@ -589,7 +577,7 @@ export default function OnlineServicesPage() {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      {language === 'am' ? 'ተጨማሪ መረጃ' : 'Additional Information'}
+                      {i18nT('common.additionalInfo', 'Additional Information')}
                     </label>
                     <textarea
                       rows={4}
@@ -609,12 +597,12 @@ export default function OnlineServicesPage() {
                     {submitting ? (
                       <>
                         <i className="fas fa-spinner fa-spin"></i>
-                        {language === 'am' ? 'በመላክ ላይ...' : 'Submitting...'}
+                        {i18nT('common.submitting', 'Submitting...')}
                       </>
                     ) : (
                       <>
                         <i className="fas fa-check"></i>
-                        {language === 'am' ? 'ማመልከቻ ላክ' : 'Submit Application'}
+                        {i18nT('application.submit', 'Submit Application')}
                       </>
                     )}
                   </button>
@@ -624,7 +612,7 @@ export default function OnlineServicesPage() {
                     disabled={submitting}
                     className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
                   >
-                    {language === 'am' ? 'ሰርዝ' : 'Cancel'}
+                    {i18nT('common.cancel', 'Cancel')}
                   </button>
                 </div>
               </form>

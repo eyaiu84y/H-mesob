@@ -25,7 +25,7 @@ import {
   dispatchApplicationSubmittedNotifications,
   dispatchApplicationDecisionNotifications,
   dispatchApplicationCompletedNotifications,
-  getCitizenContactProfile
+  getCustomerContactProfile
 } from '../services/customerNotificationOrchestrator.js';
 import { updateApplicationStatus } from '../services/applicationService.js';
 import { updateQueueStatus } from '../services/queueService.js';
@@ -113,7 +113,7 @@ async function runMultiCustomerNotificationTests() {
           password_hash: passwordHash,
           full_name: cust.full_name,
           phone: cust.phone,
-          role: 'CITIZEN',
+          role: 'CUSTOMER',
           status: 'ACTIVE',
           metadata: {
             is_automated_test: true,
@@ -159,9 +159,9 @@ async function runMultiCustomerNotificationTests() {
   assertCondition('All 3 distinct customer accounts verified in database', createdCustomers.length === 3);
 
   // Step 3: Test database source-of-truth lookup for each customer
-  console.log('\n📌 Step 3: Verifying getCitizenContactProfile strictly returns customer email...');
+  console.log('\n📌 Step 3: Verifying getCustomerContactProfile strictly returns customer email...');
   for (let i = 0; i < createdCustomers.length; i++) {
-    const profile = await getCitizenContactProfile(createdCustomers[i].id);
+    const profile = await getCustomerContactProfile(createdCustomers[i].id);
     assertCondition(
       `Customer ${i + 1} (${TEST_CUSTOMERS[i].full_name}) profile lookup resolves exact registered email`,
       profile && profile.email === TEST_CUSTOMERS[i].email && profile.email !== gmailUser,
@@ -223,18 +223,18 @@ async function runMultiCustomerNotificationTests() {
     if (newApp) createdAppIds.push(newApp.id);
 
     // Verify recipient profile lookup for this application
-    const appCitizen = await getCitizenContactProfile(newApp.citizen_id);
+    const appCustomer = await getCustomerContactProfile(newApp.citizen_id);
     assertCondition(
-      `Application #${appNumber} citizen resolved to ${customer.email} (NOT spoofed email)`,
-      appCitizen?.email === customer.email && appCitizen?.email !== 'attacker.spoof@example.com',
-      `Target: ${appCitizen?.email}`
+      `Application #${appNumber} customer resolved to ${customer.email} (NOT spoofed email)`,
+      appCustomer?.email === customer.email && appCustomer?.email !== 'attacker.spoof@example.com',
+      `Target: ${appCustomer?.email}`
     );
 
     // Verify no cross-recipient matching
     for (const other of otherCustomers) {
       assertCondition(
         `Application #${appNumber} does NOT match Customer "${other.full_name}" email`,
-        appCitizen?.email !== other.email
+        appCustomer?.email !== other.email
       );
     }
 
@@ -258,11 +258,11 @@ async function runMultiCustomerNotificationTests() {
 
     if (newQueue) createdQueueIds.push(newQueue.id);
 
-    const queueCitizen = await getCitizenContactProfile(newQueue.citizen_id);
+    const queueCustomer = await getCustomerContactProfile(newQueue.citizen_id);
     assertCondition(
-      `Queue Token #${queueNumber} citizen resolved to ${customer.email}`,
-      queueCitizen?.email === customer.email,
-      `Target: ${queueCitizen?.email}`
+      `Queue Token #${queueNumber} customer resolved to ${customer.email}`,
+      queueCustomer?.email === customer.email,
+      `Target: ${queueCustomer?.email}`
     );
 
     // C. Complete Application and Queue via Service functions

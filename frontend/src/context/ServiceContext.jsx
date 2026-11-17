@@ -14,27 +14,29 @@ export function ServiceProvider({ children }) {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState(null);
 
-  // Fetch institutions and services on mount
+  // Fetch institutions and services on mount in parallel
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
         setError(null);
 
-        // Fetch institutions
-        const instResponse = await api.get('/institutions');
-        if (instResponse.success && instResponse.data) {
+        // Fetch institutions and services simultaneously
+        const [instResponse, svcResponse] = await Promise.all([
+          api.get('/institutions'),
+          api.get('/services')
+        ]);
+
+        if (instResponse?.success && instResponse.data) {
           setInstitutions(instResponse.data);
         } else {
-          console.error('Failed to fetch institutions:', instResponse.message);
+          console.error('Failed to fetch institutions:', instResponse?.message);
         }
 
-        // Fetch services
-        const svcResponse = await api.get('/services');
-        if (svcResponse.success && svcResponse.data) {
+        if (svcResponse?.success && svcResponse.data) {
           setServices(svcResponse.data);
         } else {
-          console.error('Failed to fetch services:', svcResponse.message);
+          console.error('Failed to fetch services:', svcResponse?.message);
         }
 
       } catch (err) {

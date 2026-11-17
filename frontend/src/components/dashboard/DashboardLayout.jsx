@@ -12,7 +12,7 @@ export default function DashboardLayout({ title, navLinks = [], letter, subtitle
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const badgeClass = user ? ROLE_BADGE[user.role] : '';
-  const roleLabel  = user ? (t[user.role] || ROLE_LABELS[user.role]) : '';
+  const roleLabel  = user ? (t['roles.' + user.role] || t[user.role] || ROLE_LABELS[user.role]) : '';
 
   // Get user initials for avatar
   const initials = (user?.name || user?.full_name || 'U')
@@ -43,7 +43,7 @@ export default function DashboardLayout({ title, navLinks = [], letter, subtitle
               </div>
               <div>
                 <p className="font-bold text-white text-sm tracking-tight">MESOB Center</p>
-                <p className="text-xs text-slate-400 font-medium">{subtitle}</p>
+                <p className="text-xs text-blue-300 font-semibold">{subtitle}</p>
               </div>
             </div>
           </div>

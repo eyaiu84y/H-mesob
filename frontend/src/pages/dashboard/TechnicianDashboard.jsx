@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { useAnnouncements } from '../../context/AnnouncementContext';
+import { useApp } from '../../context/AppContext';
+import { getLocalizedStatus, getLocalizedPriority, getLocalizedRole, getInstitutionName } from '../../utils/localizedContent';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import ThemeToggle from '../../components/ThemeToggle';
 import NotificationBell from '../../components/dashboard/NotificationBell';
@@ -16,34 +18,48 @@ const SECTIONS = [
   'My Profile',
 ];
 
+const SECTION_KEYS = {
+  'Dashboard': 'dashboard',
+  'My Tasks': 'my_tasks',
+  'Maintenance Reports': 'maintenance_reports',
+  'Announcements': 'announcements',
+  'My Profile': 'my_profile',
+};
+
 // ─── Badge helpers ────────────────────────────────────────────────
 function PriorityBadge({ priority }) {
+  const { lang } = useApp();
+  const norm = String(priority || '').toUpperCase();
   const cls = {
-    High:   'badge bg-rose-50 text-rose-800 border border-rose-200 font-semibold',
-    Medium: 'badge bg-amber-50 text-amber-800 border border-amber-200 font-semibold',
-    Normal: 'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold',
-  }[priority] || 'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold';
-  return <span className={cls}>{priority}</span>;
+    HIGH:   'badge bg-rose-50 text-rose-800 border border-rose-200 font-semibold',
+    MEDIUM: 'badge bg-amber-50 text-amber-800 border border-amber-200 font-semibold',
+    NORMAL: 'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold',
+    LOW:    'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold',
+  }[norm] || 'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold';
+  return <span className={cls}>{getLocalizedPriority(priority, lang)}</span>;
 }
 
 function StatusBadge({ status }) {
+  const { lang } = useApp();
+  const norm = String(status || '').toUpperCase().replace(/[\s-]/g, '_');
   const cls = {
-    Assigned:      'badge bg-amber-50 text-amber-800 border border-amber-200 font-semibold',
-    'In Progress': 'badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold',
-    'Waiting Parts': 'badge bg-amber-50 text-amber-800 border border-amber-200 font-semibold',
-    Completed:     'badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold',
-    Resolved:      'badge bg-indigo-50 text-indigo-800 border border-indigo-200 font-semibold',
-    Closed:        'badge bg-slate-100 text-slate-800 border border-slate-300 font-semibold',
-    Submitted:     'badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold',
-    Draft:         'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold',
-  }[status] || 'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold';
-  return <span className={cls}>{status}</span>;
+    ASSIGNED:      'badge bg-amber-50 text-amber-800 border border-amber-200 font-semibold',
+    IN_PROGRESS:   'badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold',
+    WAITING_PARTS: 'badge bg-amber-50 text-amber-800 border border-amber-200 font-semibold',
+    COMPLETED:     'badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold',
+    RESOLVED:      'badge bg-indigo-50 text-indigo-800 border border-indigo-200 font-semibold',
+    CLOSED:        'badge bg-slate-100 text-slate-800 border border-slate-300 font-semibold',
+    SUBMITTED:     'badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold',
+    DRAFT:         'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold',
+  }[norm] || 'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold';
+  return <span className={cls}>{getLocalizedStatus(status, lang)}</span>;
 }
 
 // ─── SECTION: Dashboard Overview ─────────────────────────────────
 function SectionDashboard({ setActiveSection, tasks }) {
   const { announcements } = useAnnouncements();
   const { user } = useAuth();
+  const { t, lang } = useApp();
   const pending = tasks.filter(t => t.status !== 'Completed').length;
   const highPriority = tasks.filter(t => t.priority === 'High' && t.status !== 'Completed').length;
 
@@ -56,15 +72,15 @@ function SectionDashboard({ setActiveSection, tasks }) {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#f4b51a] border border-[#f4b51a]/30 text-xs font-semibold mb-2.5 backdrop-blur-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Technical Operations & Maintenance</span>
+              <span>{lang === 'am' ? 'የቴክኒክ ስራዎች እና ጥገና' : 'Technical Operations & Maintenance'}</span>
               <span>•</span>
-              <span className="text-blue-100 font-normal">MESOB Center</span>
+              <span className="text-blue-100 font-normal">{lang === 'am' ? 'መሶብ ማዕከል' : 'MESOB Center'}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-              Welcome, {user?.name || 'Technician'}
+              {lang === 'am' ? `እንኳን ደህና መጡ፣ ${user?.name || 'ቴክኒሻን'}` : `Welcome, ${user?.name || 'Technician'}`}
             </h2>
             <p className="text-blue-100 text-sm mt-1 max-w-xl">
-              Inspect technical systems, resolve hardware and network maintenance tickets, and keep public facilities operational.
+              {t.technician_role_banner}
             </p>
           </div>
 
@@ -76,7 +92,7 @@ function SectionDashboard({ setActiveSection, tasks }) {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              <span>View My Tasks</span>
+              <span>{t.view_my_tasks}</span>
             </button>
             <button
               onClick={() => setActiveSection('Report Issue')}
@@ -85,7 +101,7 @@ function SectionDashboard({ setActiveSection, tasks }) {
               <svg className="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              <span>Report Issue</span>
+              <span>{t.report_issue}</span>
             </button>
           </div>
         </div>
@@ -98,7 +114,7 @@ function SectionDashboard({ setActiveSection, tasks }) {
           className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-indigo-500 shadow-xs p-5 hover:border-indigo-400 hover:shadow-sm transition-all text-left cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-indigo-800 transition-colors">Assigned Tasks</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-indigo-800 transition-colors">{t.assigned_tasks}</span>
             <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-100 group-hover:bg-indigo-100 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
             </div>
@@ -107,7 +123,7 @@ function SectionDashboard({ setActiveSection, tasks }) {
           <p className="text-xs text-amber-700 mt-1.5 font-semibold flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              <span>{highPriority} high priority tasks</span>
+              <span>{highPriority} {t.high_priority_tasks}</span>
             </span>
             <span>→</span>
           </p>
@@ -118,7 +134,7 @@ function SectionDashboard({ setActiveSection, tasks }) {
           className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-amber-500 shadow-xs p-5 hover:border-amber-400 hover:shadow-sm transition-all text-left cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-amber-800 transition-colors">Pending Tasks</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-amber-800 transition-colors">{t.pending_tasks}</span>
             <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100 group-hover:bg-amber-100 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
@@ -127,7 +143,7 @@ function SectionDashboard({ setActiveSection, tasks }) {
           <p className="text-xs text-amber-800 font-medium mt-1.5 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              <span>Awaiting resolution</span>
+              <span>{t.awaiting_resolution}</span>
             </span>
             <span>→</span>
           </p>
@@ -138,7 +154,7 @@ function SectionDashboard({ setActiveSection, tasks }) {
           className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-blue-500 shadow-xs p-5 hover:border-blue-400 hover:shadow-sm transition-all text-left cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-blue-800 transition-colors">Announcements</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-blue-800 transition-colors">{t.announcements}</span>
             <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:bg-blue-100 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
             </div>
@@ -147,7 +163,7 @@ function SectionDashboard({ setActiveSection, tasks }) {
           <p className="text-xs text-blue-700 font-medium mt-1.5 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-              <span>Unread announcements</span>
+              <span>{t.unread_announcements}</span>
             </span>
             <span>→</span>
           </p>
@@ -159,13 +175,13 @@ function SectionDashboard({ setActiveSection, tasks }) {
         <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-2.5">
             <div className="w-2.5 h-2.5 rounded-full bg-[#2563eb]" />
-            <h2 className="font-bold text-slate-900 text-base">Active Maintenance Tasks</h2>
+            <h2 className="font-bold text-slate-900 text-base">{t.active_maintenance_tasks}</h2>
           </div>
           <button
             onClick={() => setActiveSection('My Tasks')}
             className="text-xs sm:text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8] flex items-center gap-1 group cursor-pointer"
           >
-            <span>View all tasks</span>
+            <span>{t.view_all_tasks}</span>
             <span className="group-hover:translate-x-0.5 transition-transform">→</span>
           </button>
         </div>
@@ -173,20 +189,20 @@ function SectionDashboard({ setActiveSection, tasks }) {
           <table className="data-table w-full">
             <thead>
               <tr className="bg-slate-50/80 text-xs font-semibold text-slate-600 uppercase tracking-wider border-b border-slate-200/80">
-                <th className="px-5 py-3 text-left">Task ID</th>
-                <th className="px-5 py-3 text-left">Task Details</th>
-                <th className="px-5 py-3 text-left">Institution</th>
-                <th className="px-5 py-3 text-left">Priority</th>
-                <th className="px-5 py-3 text-left">Status</th>
-                <th className="px-5 py-3 text-left">Action</th>
+                <th className="px-5 py-3 text-left">{t.task_id}</th>
+                <th className="px-5 py-3 text-left">{t.task_details}</th>
+                <th className="px-5 py-3 text-left">{t.institution || (lang === 'am' ? 'ተቋም' : 'Institution')}</th>
+                <th className="px-5 py-3 text-left">{t.priority || (lang === 'am' ? 'ቅድሚያ' : 'Priority')}</th>
+                <th className="px-5 py-3 text-left">{t.status || (lang === 'am' ? 'ሁኔታ' : 'Status')}</th>
+                <th className="px-5 py-3 text-left">{t.actions_label || (lang === 'am' ? 'ድርጊት' : 'Action')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {tasks.filter(t => t.status !== 'Completed').length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center text-slate-400 py-12 px-4">
-                    <p className="font-semibold text-slate-700 text-sm">All Maintenance Tasks Completed</p>
-                    <p className="text-xs text-slate-500 mt-1">No pending repairs or technical issues assigned to you.</p>
+                    <p className="font-semibold text-slate-700 text-sm">{t.all_tasks_completed}</p>
+                    <p className="text-xs text-slate-500 mt-1">{t.no_pending_tasks_desc}</p>
                   </td>
                 </tr>
               ) : (
@@ -194,7 +210,7 @@ function SectionDashboard({ setActiveSection, tasks }) {
                   <tr key={task.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-5 py-3.5 font-mono text-sm font-semibold text-slate-900">{task.id}</td>
                     <td className="px-5 py-3.5 text-slate-800 text-sm font-medium">{task.title}</td>
-                    <td className="px-5 py-3.5 text-slate-600 text-sm">{task.institution}</td>
+                    <td className="px-5 py-3.5 text-slate-600 text-sm">{getInstitutionName(task.institution, lang)}</td>
                     <td className="px-5 py-3.5"><PriorityBadge priority={task.priority} /></td>
                     <td className="px-5 py-3.5"><StatusBadge status={task.status} /></td>
                     <td className="px-5 py-3.5">
@@ -202,7 +218,7 @@ function SectionDashboard({ setActiveSection, tasks }) {
                         onClick={() => setActiveSection('My Tasks')}
                         className="text-[#2563eb] hover:text-[#1d4ed8] text-sm font-semibold transition"
                       >
-                        Open Task →
+                        {t.open_task || (lang === 'am' ? 'ተግባር ክፈት' : 'Open Task')} →
                       </button>
                     </td>
                   </tr>
@@ -220,8 +236,8 @@ function SectionDashboard({ setActiveSection, tasks }) {
           </svg>
         </div>
         <div className="text-xs sm:text-sm text-blue-950 leading-relaxed">
-          <strong className="font-semibold text-[#1e3a8a]">Technician Role:</strong>{' '}
-          Resolve assigned technical and facility tickets, record maintenance actions, and keep public service hardware functioning smoothly.
+          <strong className="font-semibold text-[#1e3a8a]">{lang === 'am' ? 'የቴክኒሻን ሚና:' : 'Technician Role:'}</strong>{' '}
+          {t.technician_role_banner}
         </div>
       </div>
     </>
@@ -230,6 +246,7 @@ function SectionDashboard({ setActiveSection, tasks }) {
 
 // ─── SECTION: My Tasks ────────────────────────────────────────────
 function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
+  const { t, lang } = useApp();
   const [selectedTask, setSelectedTask] = useState(null);
   const [showResolutionModal, setShowResolutionModal] = useState(false);
   const [resolution, setResolution] = useState('');
@@ -278,7 +295,7 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
             : prev
         );
 
-        alert('Task started successfully.');
+        alert(lang === 'am' ? 'ተግባሩ በተሳካ ሁኔታ ተጀምሯል።' : 'Task started successfully.');
       } catch (error) {
         console.error('Failed to start maintenance task:', error);
         alert(error.message || 'Failed to start task.');
@@ -288,12 +305,12 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
 
   async function handleCompleteTask() {
     if (!resolution.trim()) {
-      setResolutionError('Resolution is required');
+      setResolutionError(lang === 'am' ? 'የመፍትሄ መግለጫ ያስፈልጋል' : 'Resolution is required');
       return;
     }
 
     if (resolution.trim().length < 20) {
-      setResolutionError('Resolution must be at least 20 characters');
+      setResolutionError(lang === 'am' ? 'የመፍትሄው መግለጫ ቢያንስ 20 ፊደላት መሆን አለበት' : 'Resolution must be at least 20 characters');
       return;
     }
 
@@ -333,8 +350,9 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
       setSelectedTask(completedTask);
 
       alert(
-        'Task completed successfully!\n\n' +
-        'The maintenance report has been resolved.'
+        lang === 'am'
+          ? 'ተግባሩ በተሳካ ሁኔታ ተጠናቋል!\n\nየጥገና ሪፖርቱ መፍትሄ አግኝቷል።'
+          : 'Task completed successfully!\n\nThe maintenance report has been resolved.'
       );
     } catch (error) {
       console.error('Failed to complete maintenance task:', error);
@@ -353,7 +371,7 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
       });
       if (response.success) {
         await reloadTasks();
-        alert('Report marked as Waiting for Parts.');
+        alert(lang === 'am' ? 'ሪፖርቱ መለዋወጫ በመጠባበቅ ላይ ተብሎ ምልክት ተደርጓል።' : 'Report marked as Waiting for Parts.');
       } else {
         alert(response.message || 'Failed to update status.');
       }
@@ -371,7 +389,7 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
       });
       if (response.success) {
         await reloadTasks();
-        alert('Work resumed. Status set to In Progress.');
+        alert(lang === 'am' ? 'ስራው ቀጥሏል። ሁኔታው በሂደት ላይ ተደርጓል።' : 'Work resumed. Status set to In Progress.');
       } else {
         alert(response.message || 'Failed to resume work.');
       }
@@ -381,10 +399,10 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
   }
 
   const actionLabel = status => {
-    return {
-      Assigned: 'Start',
-      'In Progress': 'Complete'
-    }[status] || null;
+    const norm = String(status || '').toUpperCase().replace(/[\s-]/g, '_');
+    if (norm === 'ASSIGNED') return t.start_task || (lang === 'am' ? 'ጀምር' : 'Start');
+    if (norm === 'IN_PROGRESS') return t.complete_task || (lang === 'am' ? 'አጠናቅቅ' : 'Complete');
+    return null;
   };
 
   if (selectedTask) {
@@ -396,15 +414,15 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Task Details</h2>
-              <p className="text-sm text-slate-500">Maintenance task information</p>
+              <h2 className="text-xl font-bold text-slate-900">{t.task_details}</h2>
+              <p className="text-sm text-slate-500">{lang === 'am' ? 'የጥገና ስራ መረጃ' : 'Maintenance task information'}</p>
             </div>
 
             <button
               onClick={() => setSelectedTask(null)}
-              className="px-4 py-2 border border-slate-300 rounded-xl hover:bg-slate-50 text-slate-700 font-semibold text-sm transition shadow-xs"
+              className="px-4 py-2 border border-slate-300 rounded-xl hover:bg-slate-50 text-slate-700 font-semibold text-sm transition shadow-xs cursor-pointer"
             >
-              Back to My Tasks
+              {t.back_to_tasks}
             </button>
           </div>
 
@@ -413,7 +431,7 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
               <div>
                 <h3 className="text-xl font-bold text-slate-900">{live.title}</h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Task ID: <span className="font-mono text-slate-700">{live.id}</span>
+                  {t.task_id}: <span className="font-mono text-slate-700">{live.id}</span>
                 </p>
               </div>
 
@@ -422,36 +440,36 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Institution</p>
-                <p className="font-semibold text-slate-900 mt-1">{live.institution}</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t.institution || (lang === 'am' ? 'ተቋም' : 'Institution')}</p>
+                <p className="font-semibold text-slate-900 mt-1">{getInstitutionName(live.institution, lang)}</p>
               </div>
 
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Priority</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t.priority || (lang === 'am' ? 'ቅድሚያ' : 'Priority')}</p>
                 <PriorityBadge priority={live.priority} />
               </div>
 
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{lang === 'am' ? 'ቦታ' : 'Location'}</p>
                 <p className="font-medium text-slate-900 mt-1">{live.location || 'N/A'}</p>
               </div>
 
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Assigned Date</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{lang === 'am' ? 'የተመደበበት ቀን' : 'Assigned Date'}</p>
                 <p className="font-medium text-slate-900 mt-1">{live.assignedDate}</p>
               </div>
             </div>
 
             <div className="mt-6">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t.description || (lang === 'am' ? 'መግለጫ' : 'Description')}</p>
               <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
-                {live.description || 'No description provided.'}
+                {live.description || (lang === 'am' ? 'ምንም መግለጫ አልተሰጠም።' : 'No description provided.')}
               </p>
             </div>
 
             {live.equipmentInfo && (
               <div className="mt-6">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Equipment / Office</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t.equipment_office}</p>
                 <p className="mt-1 text-sm text-slate-800 font-medium">
                   {live.equipmentInfo}
                 </p>
@@ -460,7 +478,7 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
 
             {live.photo && (
               <div className="mt-6">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Problem Photo</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t.problem_photo}</p>
                 <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
                   <img 
                     src={live.photo} 
@@ -477,7 +495,7 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
 
             {live.attachments && live.attachments.length > 0 && (
               <div className="mt-6">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Attachments ({live.attachments.length})</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t.attachments_count} ({live.attachments.length})</p>
                 <div className="space-y-2">
                   {live.attachments.map((attachment, i) => (
                     <a
@@ -508,7 +526,7 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
             {live.status === 'Completed' && live.resolution && (
               <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-xl">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Resolution
+                  {t.resolution_title}
                 </p>
                 <p className="mt-1 text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
                   {live.resolution}
@@ -520,33 +538,33 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
               {label && (
                 <button
                   onClick={() => advanceStatus(live.id)}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white font-semibold transition shadow-xs text-sm"
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white font-semibold transition shadow-xs text-sm cursor-pointer"
                 >
-                  {label} Task
+                  {label}
                 </button>
               )}
 
               {live.status === 'In Progress' && (
                 <button
                   onClick={() => handleWaitingParts(live)}
-                  className="px-4 py-2.5 rounded-xl border border-amber-300 text-amber-800 hover:bg-amber-50 font-semibold transition text-sm"
+                  className="px-4 py-2.5 rounded-xl border border-amber-300 text-amber-800 hover:bg-amber-50 font-semibold transition text-sm cursor-pointer"
                 >
-                  Mark Waiting Parts
+                  {t.mark_waiting_parts}
                 </button>
               )}
 
               {live.status === 'Waiting Parts' && (
                 <button
                   onClick={() => handleResumeWork(live)}
-                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition text-sm"
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition text-sm cursor-pointer"
                 >
-                  Resume Work
+                  {t.resume_work}
                 </button>
               )}
 
               {live.status === 'Completed' && (
                 <span className="badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold text-sm py-1.5 px-3">
-                  Task Completed
+                  {t.task_completed}
                 </span>
               )}
             </div>
@@ -554,15 +572,15 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
             <div className="mt-8">
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
                 <span className={live.status === 'Assigned' || live.status === 'In Progress' || live.status === 'Completed' ? 'text-[#314ea1] font-bold' : ''}>
-                  Assigned
+                  {getLocalizedStatus('ASSIGNED', lang)}
                 </span>
                 <span>→</span>
                 <span className={live.status === 'In Progress' || live.status === 'Completed' ? 'text-[#314ea1] font-bold' : ''}>
-                  In Progress
+                  {getLocalizedStatus('IN_PROGRESS', lang)}
                 </span>
                 <span>→</span>
                 <span className={live.status === 'Completed' ? 'text-emerald-700 font-bold' : ''}>
-                  Completed
+                  {getLocalizedStatus('COMPLETED', lang)}
                 </span>
               </div>
             </div>
@@ -573,11 +591,11 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
             <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
               <h3 className="text-lg font-bold text-slate-900">
-                Complete Task
+                {t.resolution_modal_title}
               </h3>
 
               <p className="mt-1 text-sm text-slate-500">
-                Enter the resolution details for this maintenance task.
+                {t.resolution_modal_desc}
               </p>
 
               <textarea
@@ -588,7 +606,7 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
                 }}
                 rows={6}
                 className="mt-4 w-full rounded-xl border border-slate-300 p-3 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] focus:outline-none text-sm bg-white"
-                placeholder="Describe how the maintenance issue was resolved..."
+                placeholder={t.resolution_placeholder}
               />
 
               {resolutionError && (
@@ -604,16 +622,16 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
                     setResolution('');
                     setResolutionError('');
                   }}
-                  className="px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 font-semibold text-sm text-slate-700 transition"
+                  className="px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 font-semibold text-sm text-slate-700 transition cursor-pointer"
                 >
-                  Cancel
+                  {t.cancel_action}
                 </button>
 
                 <button
                   onClick={handleCompleteTask}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white font-semibold text-sm transition shadow-xs"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white font-semibold text-sm transition shadow-xs cursor-pointer"
                 >
-                  Submit & Complete Task
+                  {t.submit_complete_task}
                 </button>
               </div>
             </div>
@@ -626,19 +644,19 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-slate-900">My Tasks</h2>
+        <h2 className="text-xl font-bold text-slate-900">{t.my_tasks}</h2>
         <p className="text-sm text-slate-500">
-          Maintenance tasks assigned to you
+          {lang === 'am' ? 'ለእርስዎ የተመደቡ የጥገና ተግባራት' : 'Maintenance tasks assigned to you'}
         </p>
       </div>
 
       {loadingTasks ? (
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-8 text-center text-slate-500">
-          Loading tasks...
+          {lang === 'am' ? 'ተግባራት በመጫን ላይ...' : 'Loading tasks...'}
         </div>
       ) : tasks.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-8 text-center text-slate-500">
-          No maintenance tasks assigned to you.
+          {t.no_pending_tasks_desc}
         </div>
       ) : (
         <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 overflow-hidden">
@@ -646,13 +664,13 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/80 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  <th className="text-left p-4">Task ID</th>
-                  <th className="text-left p-4">Task</th>
-                  <th className="text-left p-4">Institution</th>
-                  <th className="text-left p-4">Priority</th>
-                  <th className="text-left p-4">Assigned Date</th>
-                  <th className="text-left p-4">Status</th>
-                  <th className="text-left p-4">Action</th>
+                  <th className="text-left p-4">{t.task_id}</th>
+                  <th className="text-left p-4">{t.task_details}</th>
+                  <th className="text-left p-4">{t.institution || (lang === 'am' ? 'ተቋም' : 'Institution')}</th>
+                  <th className="text-left p-4">{t.priority || (lang === 'am' ? 'ቅድሚያ' : 'Priority')}</th>
+                  <th className="text-left p-4">{lang === 'am' ? 'የተመደበበት ቀን' : 'Assigned Date'}</th>
+                  <th className="text-left p-4">{t.status || (lang === 'am' ? 'ሁኔታ' : 'Status')}</th>
+                  <th className="text-left p-4">{t.actions_label || (lang === 'am' ? 'ድርጊት' : 'Action')}</th>
                 </tr>
               </thead>
 
@@ -661,7 +679,7 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
                   <tr key={task.id} className="hover:bg-slate-50/50 transition">
                     <td className="p-4 font-mono text-xs text-slate-600">{task.id}</td>
                     <td className="p-4 font-semibold text-slate-900">{task.title}</td>
-                    <td className="p-4 text-slate-700">{task.institution}</td>
+                    <td className="p-4 text-slate-700">{getInstitutionName(task.institution, lang)}</td>
                     <td className="p-4">
                       <PriorityBadge priority={task.priority} />
                     </td>
@@ -672,9 +690,9 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
                     <td className="p-4">
                       <button
                         onClick={() => setSelectedTask(task)}
-                        className="px-3.5 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-50 font-semibold text-xs text-slate-700 transition"
+                        className="px-3.5 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-50 font-semibold text-xs text-slate-700 transition cursor-pointer"
                       >
-                        {task.status === 'Completed' ? 'View' : 'Open'}
+                        {task.status === 'Completed' ? (lang === 'am' ? 'ዝርዝር' : 'View') : (lang === 'am' ? 'ክፈት' : 'Open')}
                       </button>
                     </td>
                   </tr>
@@ -689,37 +707,38 @@ function SectionMyTasks({ tasks, loadingTasks, reloadTasks }) {
 }
 
 function SectionMaintenanceReports({ tasks }) {
+  const { t, lang } = useApp();
   const completedTasks = tasks.filter(t => t.status === 'Completed');
 
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-bold text-slate-900 mb-1">Maintenance Reports</h2>
-        <p className="text-sm text-slate-500">Your completed maintenance tasks serve as your maintenance reports.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">{t.maintenance_reports}</h2>
+        <p className="text-sm text-slate-500">{lang === 'am' ? 'ያጠናቀቋቸው የጥገና ተግባራት እንደ ጥገና ሪፖርት ያገለግላሉ።' : 'Your completed maintenance tasks serve as your maintenance reports.'}</p>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="font-bold text-slate-900">Completed Maintenance Work</h3>
-          <span className="text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full px-2.5 py-1">{completedTasks.length} completed</span>
+          <h3 className="font-bold text-slate-900">{t.completed_maintenance_work}</h3>
+          <span className="text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full px-2.5 py-1">{completedTasks.length} {lang === 'am' ? 'ተጠናቋል' : 'completed'}</span>
         </div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
             <thead>
               <tr>
-                <th>Task ID</th>
-                <th>Title</th>
-                <th>Related Report</th>
-                <th>Institution</th>
-                <th>Priority</th>
-                <th>Completed Date</th>
+                <th>{t.task_id}</th>
+                <th>{lang === 'am' ? 'ርዕስ' : 'Title'}</th>
+                <th>{lang === 'am' ? 'ተዛማጅ ሪፖርት' : 'Related Report'}</th>
+                <th>{t.institution || (lang === 'am' ? 'ተቋም' : 'Institution')}</th>
+                <th>{t.priority || (lang === 'am' ? 'ቅድሚያ' : 'Priority')}</th>
+                <th>{lang === 'am' ? 'የተጠናቀቀበት ቀን' : 'Completed Date'}</th>
               </tr>
             </thead>
             <tbody>
               {completedTasks.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center text-slate-400 py-6">
-                    No completed maintenance work yet.
+                    {t.no_completed_tasks_desc}
                   </td>
                 </tr>
               ) : completedTasks.map(task => (
@@ -727,7 +746,7 @@ function SectionMaintenanceReports({ tasks }) {
                   <td className="font-medium font-mono text-xs text-slate-600">{task.id}</td>
                   <td className="font-semibold text-slate-900">{task.title}</td>
                   <td>{task.reportId || <span className="text-slate-400">—</span>}</td>
-                  <td>{task.institution}</td>
+                  <td>{getInstitutionName(task.institution, lang)}</td>
                   <td><PriorityBadge priority={task.priority} /></td>
                   <td className="text-slate-600">{task.completedDate || task.assignedDate}</td>
                 </tr>
@@ -738,7 +757,10 @@ function SectionMaintenanceReports({ tasks }) {
       </div>
 
       <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-xl text-sm text-slate-800">
-        <strong className="text-slate-900">Maintenance Reports:</strong> When you complete a task, it automatically becomes part of your maintenance history. Institution Managers can view your completed work.
+        <strong className="text-slate-900">{lang === 'am' ? 'የጥገና ሪፖርቶች:' : 'Maintenance Reports:'}</strong>{' '}
+        {lang === 'am'
+          ? 'ተግባር ሲያጠናቅቁ በራስ-ሰር ወደ ጥገና ታሪክዎ ውስጥ ይካተታል። የተቋሙ ስራ አስኪያጆች የተጠናቀቀውን ስራ መመልከት ይችላሉ።'
+          : 'When you complete a task, it automatically becomes part of your maintenance history. Institution Managers can view your completed work.'}
       </div>
     </>
   );
@@ -747,6 +769,7 @@ function SectionMaintenanceReports({ tasks }) {
 // ─── SECTION: Announcements ───────────────────────────────────────
 function SectionAnnouncements() {
   const { announcements, loading } = useAnnouncements();
+  const { t, lang } = useApp();
   const [selected, setSelected] = useState(null);
 
   if (selected) {
@@ -758,18 +781,18 @@ function SectionAnnouncements() {
         <div className="mb-6">
           <button
             onClick={() => setSelected(null)}
-            className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold flex items-center gap-1.5 transition"
+            className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold flex items-center gap-1.5 transition cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Announcements
+            {lang === 'am' ? 'ወደ ማስታወቂያዎች ተመለስ' : 'Back to Announcements'}
           </button>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
             <h2 className="text-lg font-bold text-slate-900">{ann.title}</h2>
-            {ann.is_active && <span className="badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold flex-shrink-0">Active</span>}
+            {ann.is_active && <span className="badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold flex-shrink-0">{getLocalizedStatus('ACTIVE', lang)}</span>}
           </div>
           <p className="text-xs text-slate-500 mb-4">{new Date(ann.published_at || ann.created_at).toLocaleDateString()} {ann.creator?.full_name && `• ${ann.creator.full_name}`}</p>
           <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{ann.content}</p>
@@ -781,17 +804,17 @@ function SectionAnnouncements() {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-bold text-slate-900 mb-1">Announcements</h2>
-        <p className="text-sm text-slate-500">Operational announcements and notifications.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">{t.announcements}</h2>
+        <p className="text-sm text-slate-500">{lang === 'am' ? 'የስራ ማስታወቂያዎች እና ማሳወቂያዎች።' : 'Operational announcements and notifications.'}</p>
       </div>
 
       {loading && !announcements.length && (
-        <div className="text-center py-8 text-slate-500">Loading announcements...</div>
+        <div className="text-center py-8 text-slate-500">{lang === 'am' ? 'ማስታወቂያዎች በመጫን ላይ...' : 'Loading announcements...'}</div>
       )}
 
       <div className="space-y-3">
         {announcements.length === 0 ? (
-          <div className="text-center text-slate-400 py-12">No announcements available.</div>
+          <div className="text-center text-slate-400 py-12">{lang === 'am' ? 'ምንም ማስታወቂያ የለም።' : 'No announcements available.'}</div>
         ) : announcements.map(ann => (
           <div
             key={ann.id}
@@ -820,11 +843,12 @@ function SectionAnnouncements() {
 
 // ─── SECTION: My Profile ──────────────────────────────────────────
 function SectionMyProfile({ user }) {
+  const { t, lang } = useApp();
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-bold text-slate-900 mb-1">My Profile</h2>
-        <p className="text-sm text-slate-500">Your account information.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">{t.my_profile}</h2>
+        <p className="text-sm text-slate-500">{lang === 'am' ? 'የመለያዎ መረጃ።' : 'Your account information.'}</p>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6 max-w-lg">
@@ -835,25 +859,25 @@ function SectionMyProfile({ user }) {
           <div>
             <p className="font-bold text-slate-900">{user?.name}</p>
             <p className="text-sm text-slate-500">{user?.email}</p>
-            <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold mt-1">Technician</span>
+            <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold mt-1">{getLocalizedRole(user?.role || 'technician', lang)}</span>
           </div>
         </div>
         <div className="space-y-4 text-sm">
           <div className="flex justify-between">
-            <span className="text-slate-500">Full Name</span>
+            <span className="text-slate-500">{t.user_full_name}</span>
             <span className="font-semibold text-slate-900">{user?.name}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Email</span>
+            <span className="text-slate-500">{t.user_email_address}</span>
             <span className="font-semibold text-slate-900">{user?.email}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Role</span>
-            <span className="font-semibold text-slate-900">Technician</span>
+            <span className="text-slate-500">{t.user_role_label}</span>
+            <span className="font-semibold text-slate-900">{getLocalizedRole(user?.role || 'technician', lang)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Department</span>
-            <span className="font-semibold text-slate-900">MESOB Center – ICT</span>
+            <span className="text-slate-500">{lang === 'am' ? 'ክፍል' : 'Department'}</span>
+            <span className="font-semibold text-slate-900">{lang === 'am' ? 'መሶብ ማዕከል – አይሲቲ' : 'MESOB Center – ICT'}</span>
           </div>
         </div>
       </div>
@@ -868,6 +892,7 @@ function SectionMyProfile({ user }) {
 // ─── Main TechnicianDashboard ───────────────────────────────────────
 export default function TechnicianDashboard() {
   const { user, logout } = useAuth();
+  const { t, lang } = useApp();
   const [activeSection, setActiveSection] = useState('Dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tasks, setTasks] = useState([]);
@@ -1002,7 +1027,7 @@ export default function TechnicianDashboard() {
               </div>
               <div>
                 <p className="font-bold text-white text-sm tracking-tight">MESOB Center</p>
-                <p className="text-xs text-slate-400 font-medium">Technician Portal</p>
+                <p className="text-xs text-slate-400 font-medium">{t.technician_portal || (lang === 'am' ? 'የቴክኒሻን መግቢያ' : 'Technician Portal')}</p>
               </div>
             </div>
           </div>
@@ -1017,7 +1042,7 @@ export default function TechnicianDashboard() {
                   className={`sidebar-link w-full text-left${isActive ? ' active' : ''} cursor-pointer`}
                 >
                   <SidebarNavIcon section={section} className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="truncate">{section}</span>
+                  <span className="truncate">{t[SECTION_KEYS[section]] || section}</span>
                 </button>
               );
             })}
@@ -1031,7 +1056,7 @@ export default function TechnicianDashboard() {
               <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
               </svg>
-              <span>Logout</span>
+              <span>{t.logout || 'Logout'}</span>
             </button>
           </div>
         </aside>
@@ -1053,14 +1078,14 @@ export default function TechnicianDashboard() {
                 </svg>
               </button>
               <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-                {activeSection === 'Dashboard' ? 'Technician Dashboard' : activeSection}
+                {activeSection === 'Dashboard' ? (t.technician_dashboard || 'Technician Dashboard') : (t[SECTION_KEYS[activeSection]] || activeSection)}
               </h1>
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
               <ThemeToggle />
               <NotificationBell onNavigate={(section) => navigate(section)} />
-              <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold">Technician</span>
+              <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold">{getLocalizedRole(user?.role || 'technician', lang)}</span>
               <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200 hidden sm:flex">
                 <div className="w-8 h-8 rounded-full bg-blue-100 text-[#1e3a8a] font-bold text-xs flex items-center justify-center border border-blue-200/80">
                   {initials}

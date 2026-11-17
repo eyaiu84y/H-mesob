@@ -6,30 +6,44 @@ import { useQueue } from '../../context/QueueContext';
 import { useMaintenance } from '../../context/MaintenanceContext';
 import { organizationsData } from '../../data/organizations';
 import { useApp } from '../../context/AppContext';
+import { getLocalizedStatus, getLocalizedPriority, getLocalizedRole, getInstitutionName, getServiceName } from '../../utils/localizedContent';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import ThemeToggle from '../../components/ThemeToggle';
 import NotificationBell from '../../components/dashboard/NotificationBell';
 import ApprovalsManagement from '../../components/dashboard/ApprovalsManagement';
+import EmailOutboxMonitoring from '../../components/dashboard/EmailOutboxMonitoring';
 import SidebarNavIcon from '../../components/dashboard/SidebarNavIcon';
 import { getYouTubeVideoId } from '../../utils/formatters';
 import api from '../../utils/api';
 
 // ─── Navigation sections ──────────────────────────────────────────
-// Using function to access translations dynamically
-function getSections(t) {
-  return [
-    t.dashboard,
-    t.user_management,
-    t.institution_management,
-    t.central_approvals || 'Central Approvals',
-    t.roles_permissions,
-    t.system_settings,
-    t.reports,
-    t.analytics,
-    t.announcements,
-    t.my_profile,
-  ];
-}
+const SECTIONS = [
+  'Dashboard',
+  'User Management',
+  'Institution Management',
+  'Central Approvals',
+  'Email Monitoring',
+  'Roles & Permissions',
+  'System Settings',
+  'Reports',
+  'Analytics',
+  'Announcements',
+  'My Profile',
+];
+
+const SECTION_KEYS = {
+  'Dashboard': 'dashboard',
+  'User Management': 'user_management',
+  'Institution Management': 'institution_management',
+  'Central Approvals': 'central_approvals',
+  'Email Monitoring': 'email_monitoring',
+  'Roles & Permissions': 'roles_permissions',
+  'System Settings': 'system_settings',
+  'Reports': 'reports',
+  'Analytics': 'analytics',
+  'Announcements': 'announcements',
+  'My Profile': 'my_profile',
+};
 
 // ─── Role display helpers ─────────────────────────────────────────
 const ROLE_COLORS = {
@@ -40,8 +54,6 @@ const ROLE_COLORS = {
   technician:          'bg-blue-50 text-[#1e3a8a] border-blue-200',
   customer:            'bg-blue-50 text-[#1e3a8a] border-blue-200',
 };
-Object.defineProperty(ROLE_COLORS, 'ict_staff', { value: 'bg-blue-50 text-[#1e3a8a] border-blue-200', enumerable: false, writable: true, configurable: true });
-Object.defineProperty(ROLE_COLORS, 'citizen', { value: 'bg-blue-50 text-[#1e3a8a] border-blue-200', enumerable: false, writable: true, configurable: true });
 
 // No mock data - all data comes from shared data system or real backend
 
@@ -62,40 +74,36 @@ function stripPassword(u) {
 }
 
 function RoleBadge({ role }) {
+  const { lang } = useApp();
   const cls = ROLE_BADGE[role] || 'bg-slate-100 text-slate-700 border-slate-200';
-  return <span className={`badge ${cls} font-semibold`}>{ROLE_LABELS[role] || role}</span>;
+  return <span className={`badge ${cls} font-semibold`}>{getLocalizedRole(role, lang)}</span>;
 }
 
 function StatusBadge({ status, approvalStatus }) {
+  const { lang } = useApp();
   const effective = approvalStatus || status;
   let cls = 'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold';
-  let label = effective || 'Unknown';
 
   if (effective === 'Active' || effective === 'ACTIVE' || effective === 'APPROVED') {
     cls = 'badge bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold';
-    label = 'Active';
   } else if (effective === 'PENDING_APPROVAL' || effective === 'pending') {
     cls = 'badge bg-amber-50 text-amber-800 border border-amber-200 font-semibold';
-    label = 'Pending Approval';
   } else if (effective === 'REJECTED' || effective === 'rejected') {
     cls = 'badge bg-rose-50 text-rose-800 border border-rose-200 font-semibold';
-    label = 'Rejected';
   } else if (effective === 'INACTIVE' || effective === 'Inactive') {
     cls = 'badge bg-slate-100 text-slate-700 border border-slate-200 font-semibold';
-    label = 'Inactive';
   } else if (effective === 'SUSPENDED' || effective === 'Suspended') {
     cls = 'badge bg-rose-50 text-rose-700 border border-rose-200 font-semibold';
-    label = 'Suspended';
   }
-  return <span className={cls}>{label}</span>;
+  return <span className={cls}>{getLocalizedStatus(effective, lang)}</span>;
 }
 
 // ─── SECTION: Dashboard Overview ─────────────────────────────────
 function SectionDashboard({ setActiveSection }) {
+  const { t, lang } = useApp();
   const { getUsers } = useAuth();
   const { announcements } = useAnnouncements();
   const { institutions } = useServices();
-  const { t } = useApp();
   const users = getUsers().map(stripPassword);
   const unread = announcements.filter(a => !a.is_read).length;
 
@@ -108,15 +116,15 @@ function SectionDashboard({ setActiveSection }) {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#f4b51a] border border-[#f4b51a]/30 text-xs font-semibold mb-2.5 backdrop-blur-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Full System Administration</span>
+              <span>{lang === 'am' ? 'የስርዓት ሙሉ አስተዳደር' : 'Full System Administration'}</span>
               <span>•</span>
-              <span className="text-blue-100 font-normal">Hawassa MESOB</span>
+              <span className="text-blue-100 font-normal">{lang === 'am' ? 'ሀዋሳ መሶብ' : 'Hawassa MESOB'}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-              System Health & Administration
+              {lang === 'am' ? 'የስርዓት ጤና እና አጠቃላይ አስተዳደር' : 'System Health & Administration'}
             </h2>
             <p className="text-blue-100 text-sm mt-1 max-w-xl">
-              Complete oversight of registered customers, administrative personnel, institutions, central approvals, security policies, and system audit logs.
+              {lang === 'am' ? 'የተመዘገቡ ደንበኞች፣ አስተዳዳሪዎች፣ ተቋማት፣ ማጽደቆች፣ የደህንነት ፖሊሲዎች እና የስርዓት ኦዲት መዝገቦች ሙሉ ቁጥጥር።' : 'Complete oversight of registered customers, administrative personnel, institutions, central approvals, security policies, and system audit logs.'}
             </p>
           </div>
 
@@ -268,7 +276,7 @@ function SectionDashboard({ setActiveSection }) {
         <h2 className="font-bold text-slate-900 mb-4">Role Overview</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
           {Object.entries(INTERNAL_ROLE_LABELS).map(([key, label]) => {
-            const count = users.filter(u => u.role === key || (key === 'technician' && u.role === 'ict_staff')).length;
+            const count = users.filter(u => u.role === key).length;
             return (
               <div key={key} className={`p-3 rounded-xl border ${ROLE_COLORS[key] || 'bg-slate-50 text-slate-800 border-slate-200'}`}>
                 <strong className="text-slate-900">{label}</strong>
@@ -291,7 +299,7 @@ function SectionDashboard({ setActiveSection }) {
 // ─── SECTION: User Management ─────────────────────────────────────
 // ─── SECTION: User Management ─────────────────────────────────────
 function SectionUserManagement() {
-  const { user: currentUser, getUsers, fetchUsers, createUser, updateUser, toggleUserStatus, usersLoading } = useAuth();
+  const { user: currentUser, getUsers, fetchUsers, createUser, updateUser, toggleUserStatus, deleteUser, usersLoading } = useAuth();
   const [rawUsers, setRawUsers] = useState(() => getUsers().map(stripPassword));
   const [query, setQuery] = useState('');
   const [filterRole, setFilterRole] = useState('');
@@ -341,12 +349,7 @@ function SectionUserManagement() {
       u.name.toLowerCase().includes(q) || 
       u.email.toLowerCase().includes(q) ||
       (u.employeeId && u.employeeId.toLowerCase().includes(q));
-    const matchR = !filterRole || 
-      u.role === filterRole || 
-      (filterRole === 'technician' && u.role === 'ict_staff') ||
-      (filterRole === 'customer' && u.role === 'citizen') ||
-      (filterRole === 'ict_staff' && u.role === 'technician') ||
-      (filterRole === 'citizen' && u.role === 'customer');
+    const matchR = !filterRole || u.role === filterRole;
     const matchI = !filterInstitution || u.institution === filterInstitution;
     const matchS = !filterStatus || u.status === filterStatus;
     return matchQ && matchR && matchI && matchS;
@@ -354,8 +357,8 @@ function SectionUserManagement() {
 
   // Determine which fields are required based on role
   function getRequiredFields(role) {
-    const institutionRequired = ['institution_manager', 'employee', 'technician', 'ict_staff'].includes(role);
-    const employeeIdRequired = ['institution_manager', 'employee', 'technician', 'ict_staff'].includes(role);
+    const institutionRequired = ['institution_manager', 'employee', 'technician'].includes(role);
+    const employeeIdRequired = ['institution_manager', 'employee', 'technician'].includes(role);
     return { institutionRequired, employeeIdRequired };
   }
 
@@ -395,7 +398,7 @@ function SectionUserManagement() {
     }
 
     // Email domain validation for internal roles
-    const internalRoles = ['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'technician', 'ict_staff'];
+    const internalRoles = ['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'technician'];
     if (internalRoles.includes(newUserForm.role)) {
       const emailLower = newUserForm.email.trim().toLowerCase();
       if (!emailLower.endsWith('@mesobcenterh.gov.et')) {
@@ -557,6 +560,24 @@ function SectionUserManagement() {
     }
   }
 
+  async function handleDeleteUser(userId, userName) {
+    if (userId === currentUser?.id) {
+      alert("You cannot delete your own account.");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to permanently delete user "${userName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    const result = await deleteUser(userId);
+    if (result.success) {
+      alert(result.message || "User deleted successfully.");
+    } else {
+      alert(result.message || "Failed to delete user.");
+    }
+  }
+
   // Add User Modal
   const addUserModal = showAddUser && (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs overflow-y-auto">
@@ -632,7 +653,7 @@ function SectionUserManagement() {
           </div>
 
           {/* Institution (conditional) */}
-          {['institution_manager', 'employee', 'technician', 'ict_staff'].includes(newUserForm.role) && (
+          {['institution_manager', 'employee', 'technician'].includes(newUserForm.role) && (
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                 Institution <span className="text-rose-500">*</span>
@@ -651,16 +672,16 @@ function SectionUserManagement() {
           )}
 
           {/* Employee/Staff ID (conditional) */}
-          {['institution_manager', 'employee', 'technician', 'ict_staff'].includes(newUserForm.role) && (
+          {['institution_manager', 'employee', 'technician'].includes(newUserForm.role) && (
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                {['technician', 'ict_staff'].includes(newUserForm.role) ? 'Technician ID' : 'Employee ID'} <span className="text-rose-500">*</span>
+                {newUserForm.role === 'technician' ? 'Technician ID' : 'Employee ID'} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 value={newUserForm.employeeId}
                 onChange={e => setNewUserForm(f => ({ ...f, employeeId: e.target.value }))}
-                placeholder={['technician', 'ict_staff'].includes(newUserForm.role) ? 'TECH-001' : 'EMP-001'}
+                placeholder={newUserForm.role === 'technician' ? 'TECH-001' : 'EMP-001'}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
               />
             </div>
@@ -766,7 +787,7 @@ function SectionUserManagement() {
           </div>
 
           {/* Institution (conditional) */}
-          {['institution_manager', 'employee', 'technician', 'ict_staff'].includes(editUser.role) && (
+          {['institution_manager', 'employee', 'technician'].includes(editUser.role) && (
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                 Institution <span className="text-rose-500">*</span>
@@ -785,16 +806,16 @@ function SectionUserManagement() {
           )}
 
           {/* Employee/Staff ID (conditional) */}
-          {['institution_manager', 'employee', 'technician', 'ict_staff'].includes(editUser.role) && (
+          {['institution_manager', 'employee', 'technician'].includes(editUser.role) && (
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                {['technician', 'ict_staff'].includes(editUser.role) ? 'Technician ID' : 'Employee ID'} <span className="text-rose-500">*</span>
+                {editUser.role === 'technician' ? 'Technician ID' : 'Employee ID'} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 value={editUser.employeeId || ''}
                 onChange={e => setEditUser(u => ({ ...u, employeeId: e.target.value }))}
-                placeholder={['technician', 'ict_staff'].includes(editUser.role) ? 'TECH-001' : 'EMP-001'}
+                placeholder={editUser.role === 'technician' ? 'TECH-001' : 'EMP-001'}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm bg-white"
               />
             </div>
@@ -997,7 +1018,7 @@ function SectionUserManagement() {
                         <button
                           onClick={() => {
                             const fullUser = getUsers().find(user => user.id === u.id);
-                            const userRole = fullUser.role === 'ict_staff' ? 'technician' : fullUser.role === 'citizen' ? 'customer' : fullUser.role;
+                            const userRole = fullUser.role;
                             setEditUser({
                               id: fullUser.id,
                               name: fullUser.name,
@@ -1029,13 +1050,22 @@ function SectionUserManagement() {
                             {u.status === 'Active' ? 'Deactivate' : 'Activate'}
                           </button>
                         )}
-                        {['super_admin','mesob_manager','institution_manager','employee','technician','ict_staff'].includes(u.role) && u.id !== currentUser?.id && (
+                        {['super_admin','mesob_manager','institution_manager','employee','technician'].includes(u.role) && u.id !== currentUser?.id && (
                           <button
                             onClick={() => handleResetPassword(u.id, u.name)}
                             className="text-sm font-semibold text-violet-700 hover:text-violet-900 transition"
                             title="Reset to temporary password"
                           >
                             Reset Pwd
+                          </button>
+                        )}
+                        {u.id !== currentUser?.id && (
+                          <button
+                            onClick={() => handleDeleteUser(u.id, u.name || u.email)}
+                            className="text-sm font-semibold text-rose-600 hover:text-rose-800 transition cursor-pointer"
+                            title="Delete User"
+                          >
+                            Delete
                           </button>
                         )}
                       </div>
@@ -2298,7 +2328,7 @@ function QueueReportTab() {
                 return (
                   <tr key={q.id}>
                     <td className="font-medium">{q.queueNumber || q.queue_number || q.token || 'N/A'}</td>
-                    <td>{q.customerName || q.citizenName || 'Customer'}</td>
+                    <td>{q.customerName || 'Customer'}</td>
                     <td>{inst?.name_en || 'Unknown'}</td>
                     <td>
                       <span className={`badge ${
@@ -2413,7 +2443,7 @@ function SectionAnalytics() {
   const byRole = Object.entries(INTERNAL_ROLE_LABELS).map(([k, v]) => ({
     role: k,
     label: v,
-    count: users.filter(u => u.role === k || (k === 'technician' && u.role === 'ict_staff')).length
+    count: users.filter(u => u.role === k).length
   }));
 
   return (
@@ -2942,8 +2972,8 @@ function SectionMyProfile({ user }) {
 // ─── Main SuperAdminDashboard ─────────────────────────────────────
 export default function SuperAdminDashboard() {
   const { user, logout } = useAuth();
-  const { t } = useApp();
-  const [activeSection, setActiveSection] = useState(t.dashboard);
+  const { t, lang } = useApp();
+  const [activeSection, setActiveSection] = useState(t.dashboard || 'Dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedApprovalEntityId, setSelectedApprovalEntityId] = useState(null);
 
@@ -2965,7 +2995,10 @@ export default function SuperAdminDashboard() {
 
   function renderSection() {
     switch (activeSection) {
-      case t.dashboard:                                return <SectionDashboard setActiveSection={navigate} />;
+      case t.dashboard:
+      case 'Dashboard':
+      case 'ዳሽቦርድ':
+        return <SectionDashboard setActiveSection={navigate} />;
       case t.user_management:                          return <SectionUserManagement />;
       case t.institution_management:                   return <SectionInstitutionManagement />;
       case t.central_approvals || 'Central Approvals':
@@ -2978,6 +3011,9 @@ export default function SuperAdminDashboard() {
             onClearInitialRequest={() => setSelectedApprovalEntityId(null)}
           />
         );
+      case 'Email Monitoring':
+      case 'የኢሜይል ክትትል':
+        return <EmailOutboxMonitoring />;
       case t.roles_permissions:                        return <SectionRolesPermissions />;
       case t.system_settings:       return <SectionSystemSettings />;
       case t.reports:               return <SectionReports />;
@@ -2999,19 +3035,20 @@ export default function SuperAdminDashboard() {
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a8a] to-[#0f172a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-sm border border-slate-700/60">S</div>
               <div>
                 <p className="font-bold text-white text-sm tracking-tight">MESOB Center</p>
-                <p className="text-xs text-slate-400 font-medium">Super Admin</p>
+                <p className="text-xs text-slate-400 font-medium">{t.super_admin_portal || (lang === 'am' ? 'የዋና አስተዳዳሪ መግቢያ' : 'Super Admin')}</p>
               </div>
             </div>
           </div>
 
           <nav className="flex-1 p-3.5 space-y-1 overflow-y-auto">
-            {getSections(t).map((section, idx) => {
+            {SECTIONS.map((section, idx) => {
+              const label = t[SECTION_KEYS[section]] || section;
               const isActive = activeSection === section;
               return (
                 <button key={idx} onClick={() => navigate(section)}
                   className={`sidebar-link w-full text-left${isActive ? ' active' : ''} cursor-pointer`}>
                   <SidebarNavIcon section={section} className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="truncate">{section}</span>
+                  <span className="truncate">{label}</span>
                 </button>
               );
             })}
@@ -3038,14 +3075,16 @@ export default function SuperAdminDashboard() {
                 </svg>
               </button>
               <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-                {activeSection === t.dashboard ? t.system_admin_dashboard : activeSection}
+                {activeSection === t.dashboard || activeSection === 'Dashboard' || activeSection === 'ዳሽቦርድ'
+                  ? (t.system_admin_dashboard || 'System Admin Dashboard')
+                  : (t[SECTION_KEYS[activeSection]] || (typeof activeSection === 'string' ? activeSection : 'Dashboard'))}
               </h1>
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
               <ThemeToggle />
               <NotificationBell onNavigate={(section, notification) => navigate(section, notification)} />
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-[#1e3a8a] border border-blue-200">Super Admin</span>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-[#1e3a8a] border border-blue-200">{getLocalizedRole(user?.role || 'super_admin', lang)}</span>
               <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200 hidden sm:flex">
                 <div className="w-8 h-8 rounded-full bg-blue-100 text-[#1e3a8a] font-bold text-xs flex items-center justify-center border border-blue-200/80">
                   {initials}

@@ -159,12 +159,12 @@ async function runVerification() {
   sectionHeader('SECTION 3: Role-Based Authentication & JWT Generation');
 
   const credentials = [
-    { roleKey: 'SUPER_ADMIN', email: 'superadmin@mesobcenter.et', pass: 'SuperAdmin@2026' },
-    { roleKey: 'MESOB_MANAGER', email: 'manager@mesobcenter.et', pass: 'MesobManager@2026' },
-    { roleKey: 'INSTITUTION_MANAGER', email: 'inst.manager@mesobcenter.et', pass: 'InstManager@2026' },
-    { roleKey: 'EMPLOYEE', email: 'employee@mesobcenter.et', pass: 'Employee@2026' },
-    { roleKey: 'TECHNICIAN', email: 'tech@mesobcenter.et', pass: 'tech@2026' },
-    { roleKey: 'CUSTOMER', email: 'customer@mesobcenter.et', pass: 'customer@2026' }
+    { roleKey: 'SUPER_ADMIN', email: 'superadmin@mesobcenterh.gov.et', pass: 'Admin@2026' },
+    { roleKey: 'MESOB_MANAGER', email: 'manager@mesobcenterh.gov.et', pass: 'Manager@2026' },
+    { roleKey: 'INSTITUTION_MANAGER', email: 'instmanager@mesobcenterh.gov.et', pass: 'InstMgr@2026' },
+    { roleKey: 'EMPLOYEE', email: 'employee@mesobcenterh.gov.et', pass: 'Employee@2026' },
+    { roleKey: 'TECHNICIAN', email: 'technician@mesobcenterh.gov.et', pass: 'Technician@2026' },
+    { roleKey: 'CUSTOMER', email: 'customer@gmail.com', pass: 'Customer@2026' }
   ];
 
   for (const cred of credentials) {

@@ -4,6 +4,94 @@ import {
   markAsRead,
   markAllAsRead
 } from '../services/notificationService.js';
+import { getOutboxStats, getOutboxLogs, purgeMockOutbox } from '../services/emailOutboxService.js';
+import { getWorkerHealth, setWorkerConcurrency } from '../services/emailWorker.js';
+import { setActiveEmailProvider, getActiveEmailProvider } from '../services/emailProviderFactory.js';
+
+export const getEmailOutboxStatsController = async (req, res) => {
+  try {
+    const stats = await getOutboxStats();
+    res.status(200).json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Get email outbox stats controller error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch email outbox statistics.' });
+  }
+};
+
+export const getEmailOutboxHealthController = async (req, res) => {
+  try {
+    const health = await getWorkerHealth();
+    res.status(200).json({
+      success: true,
+      data: health
+    });
+  } catch (error) {
+    console.error('Get email outbox health controller error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch email outbox health.' });
+  }
+};
+
+export const patchEmailOutboxConfigController = async (req, res) => {
+  try {
+    const { concurrency, provider } = req.body;
+    let concurrencyUpdated = false;
+    let providerUpdated = false;
+
+    if (concurrency !== undefined) {
+      concurrencyUpdated = setWorkerConcurrency(concurrency);
+    }
+
+    if (provider !== undefined) {
+      providerUpdated = setActiveEmailProvider(provider);
+    }
+
+    const currentHealth = await getWorkerHealth();
+    res.status(200).json({
+      success: true,
+      message: 'Worker configuration updated successfully.',
+      data: {
+        concurrencyUpdated,
+        providerUpdated,
+        currentHealth,
+      }
+    });
+  } catch (error) {
+    console.error('Patch email outbox config controller error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update email outbox configuration.' });
+  }
+};
+
+export const getEmailOutboxLogsController = async (req, res) => {
+  try {
+    const { limit, page, status } = req.query;
+    const logs = await getOutboxLogs({ limit, page, status });
+    res.status(200).json({
+      success: true,
+      data: logs
+    });
+  } catch (error) {
+    console.error('Get email outbox logs controller error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch email outbox logs.' });
+  }
+};
+
+export const purgeMockEmailOutboxController = async (req, res) => {
+  try {
+    const { clearAllFailed } = req.body || {};
+    const result = await purgeMockOutbox({ clearAllFailed: Boolean(clearAllFailed) });
+    res.status(200).json({
+      success: true,
+      message: `Successfully purged ${result.purgedCount} mock/test outbox records.`,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Purge mock email outbox error:', error);
+    res.status(500).json({ success: false, message: 'Failed to purge mock email logs.' });
+  }
+};
 
 export const getNotificationsController = async (req, res) => {
   try {

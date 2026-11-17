@@ -1,10 +1,19 @@
-
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import enTranslation from '../i18n/locales/en/translation.json';
+import amTranslation from '../i18n/locales/am/translation.json';
 
 const AppContext = createContext(null);
 
+export const translations = {
+  en: enTranslation,
+  am: amTranslation,
+};
+
 export function AppProvider({ children }) {
+  const { t: i18nT, i18n } = useTranslation();
+
   const [isDark, setIsDark] = useState(() => {
     try {
       const savedTheme = localStorage.getItem('theme');
@@ -42,27 +51,153 @@ export function AppProvider({ children }) {
   }
 
   const [lang, setLang] = useState(() => {
-    try { return localStorage.getItem('lang') || 'en'; }
-    catch { return 'en'; }
+    try {
+      const saved = localStorage.getItem('lang') || localStorage.getItem('i18nextLng') || i18n.language;
+      return saved && saved.startsWith('am') ? 'am' : 'en';
+    } catch {
+      return 'en';
+    }
   });
 
+  useEffect(() => {
+    const handleLangChange = (lng) => {
+      const code = lng && lng.startsWith('am') ? 'am' : 'en';
+      setLang(code);
+      if (typeof document !== 'undefined') {
+        document.documentElement.lang = code;
+        if (code === 'am') {
+          document.documentElement.classList.add('lang-am');
+        } else {
+          document.documentElement.classList.remove('lang-am');
+        }
+      }
+    };
+
+    i18n.on('languageChanged', handleLangChange);
+    return () => i18n.off('languageChanged', handleLangChange);
+  }, [i18n]);
+
   function switchLang(code) {
-    setLang(code);
-    try { localStorage.setItem('lang', code); } catch {
-      // Ignore localStorage errors
+    const target = code && code.startsWith('am') ? 'am' : 'en';
+    i18n.changeLanguage(target);
+    setLang(target);
+    try {
+      localStorage.setItem('lang', target);
+      localStorage.setItem('i18nextLng', target);
+      if (typeof document !== 'undefined') {
+        document.documentElement.lang = target;
+        if (target === 'am') {
+          document.documentElement.classList.add('lang-am');
+        } else {
+          document.documentElement.classList.remove('lang-am');
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to save language preference:', err);
     }
   }
 
   useEffect(() => {
     document.documentElement.lang = lang;
+    if (lang === 'am') {
+      document.documentElement.classList.add('lang-am');
+    } else {
+      document.documentElement.classList.remove('lang-am');
+    }
   }, [lang]);
 
-  const t = translations[lang] || translations.en;
+  // Backward-compatible smart translation proxy
+  // Supports both function call: t('common.save') and property access: t.nav_home
+  const t = useMemo(() => {
+    const KNOWN_LABELS = {
+      dashboard: lang === 'am' ? 'ዳሽቦርድ' : 'Dashboard',
+      maintenance: lang === 'am' ? 'ጥገና' : 'Maintenance',
+      queue: lang === 'am' ? 'ሰልፍ' : 'Queue',
+      announcements: lang === 'am' ? 'ማስታወቂያዎች' : 'Announcements',
+      announcement: lang === 'am' ? 'ማስታወቂያዎች' : 'Announcements',
+      feedback: lang === 'am' ? 'አስተያየት' : 'Feedback',
+      users: lang === 'am' ? 'ተጠቃሚዎች' : 'Users',
+      institutions: lang === 'am' ? 'ተቋማት' : 'Institutions',
+      application: lang === 'am' ? 'ማመልከቻዎች' : 'Applications',
+      applications: lang === 'am' ? 'ማመልከቻዎች' : 'Applications',
+      status: lang === 'am' ? 'ሁኔታ' : 'Status',
+      reports: lang === 'am' ? 'ሪፖርቶች' : 'Reports',
+      analytics: lang === 'am' ? 'ትንታኔ' : 'Analytics',
+      approvals: lang === 'am' ? 'ማጽደቆች' : 'Approvals',
+      profile: lang === 'am' ? 'መገለጫ' : 'Profile',
+      my_profile: lang === 'am' ? 'የእኔ መገለጫ' : 'My Profile',
+      settings: lang === 'am' ? 'ቅንብሮች' : 'Settings',
+      'common.mesobcenter': lang === 'am' ? 'ሀዋሳ ሜሶብ ማዕከል' : 'Hawassa MESOB Center',
+      mesobcenter: lang === 'am' ? 'ሀዋሳ ሜሶብ ማዕከል' : 'Hawassa MESOB Center',
+    };
+
+    return new Proxy(i18nT, {
+      get(target, prop) {
+        if (typeof prop === 'string') {
+          if (prop in target) return target[prop];
+
+          const lowerProp = prop.toLowerCase();
+          if (lowerProp in KNOWN_LABELS) return KNOWN_LABELS[lowerProp];
+
+          const val = target(prop, { returnObjects: false });
+
+          // If translation key wasn't found in hierarchical namespaces, check flat baseline dictionary
+          if (val === prop || (typeof val === 'string' && val === prop)) {
+            const flatVal = translations[lang]?.[prop] || translations.en?.[prop];
+            if (flatVal !== undefined) {
+              if (Array.isArray(flatVal)) return flatVal;
+              if (typeof flatVal === 'object' && flatVal !== null) {
+                return KNOWN_LABELS[lowerProp] || flatVal.title || flatVal.label || undefined;
+              }
+              return flatVal;
+            }
+            return undefined;
+          }
+
+          // If i18next returned a plain object (e.g. namespace), NEVER pass a plain object to React JSX
+          if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+            return KNOWN_LABELS[lowerProp] || val.title || val.label || prop;
+          }
+
+          return val;
+        }
+        return target[prop];
+      },
+      apply(target, thisArg, argumentsList) {
+        const key = argumentsList[0];
+        const opts = argumentsList[1] || {};
+
+        if (typeof key === 'string') {
+          const lowerKey = key.toLowerCase();
+          if (lowerKey in KNOWN_LABELS) return KNOWN_LABELS[lowerKey];
+        }
+
+        const res = Reflect.apply(target, thisArg, [key, { returnObjects: false, ...opts }]);
+        if (res === key && typeof key === 'string') {
+          const lowerKey = key.toLowerCase();
+          const flatVal = translations[lang]?.[key] || translations.en?.[key];
+          if (flatVal !== undefined) {
+            if (Array.isArray(flatVal)) return flatVal;
+            if (typeof flatVal === 'object' && flatVal !== null) {
+              return KNOWN_LABELS[lowerKey] || flatVal.title || flatVal.label || key;
+            }
+            return flatVal;
+          }
+        }
+        if (typeof res === 'object' && res !== null && !Array.isArray(res) && !opts.returnObjects) {
+          const lowerKey = typeof key === 'string' ? key.toLowerCase() : '';
+          return KNOWN_LABELS[lowerKey] || res.title || res.label || (typeof key === 'string' ? key : '');
+        }
+        return res;
+      }
+    });
+  }, [i18nT, lang]);
+
   const getStatusLabel = (status) => getApplicationStatusLabel(status, lang);
   const getStaffNotes = (notes) => formatStaffNotes(notes, lang);
 
   return (
-    <AppContext.Provider value={{ isDark, toggleTheme, lang, switchLang, t, getStatusLabel, getStaffNotes }}>
+    <AppContext.Provider value={{ isDark, toggleTheme, lang, switchLang, t, i18n, getStatusLabel, getStaffNotes }}>
       {children}
     </AppContext.Provider>
   );
@@ -118,1341 +253,3 @@ export function formatStaffNotes(notes, lang = 'en') {
     label: lang === 'am' ? 'የሰራተኛ አስተያየት (በእንግሊዝኛ)' : 'Staff Review Notes'
   };
 }
-
-// ─────────────────────────────────────────────────────────────────
-// Translation constants extracted to avoid react-refresh warnings
-export const translations = {
-  en: {
-    // nav
-    nav_home: 'Home',
-    nav_about: 'About Us',
-    nav_organizations: 'Organizations',
-    nav_news: 'News',
-    nav_popular: 'Online Services',
-    nav_address: 'Address',
-    nav_contact: 'Contact',
-    nav_login: 'Login',
-
-    // hero
-    hero_title: 'HAWASSA MESOB SERVICE',
-    hero_subtitle: 'Modern Ethiopian Services for Organized Benefit.',
-    hero_desc: '47+ government services in one MESOB to make life simpler for you.',
-    hero_search: 'Search for Services and Institutions',
-    // about
-    about_heading1: 'Serving Our',
-    about_heading2: 'Community',
-    about_heading3: 'with Excellence',
-    about_body_home: 'In one Mesob Center, we bring together essential government services, resources, and information into one seamless digital platform. Whether you are applying for permits, accessing public records, or exploring social services, our customer-first hub is designed to make your experience faster, easier, and more transparent.',
-    about_btn1: 'Explore Services',
-    about_btn2: 'Learn More',
-    about_card1_title: 'Digital Services',
-    about_card1_desc: 'Apply for permits online',
-    about_card2_title: 'Customer Support',
-    about_card2_desc: '24/7 Dedicated Assistance',
-    about_card3_title: 'Quick Processing',
-    about_card3_desc: 'Fast and efficient service',
-
-    // about us page
-    about_page_title: 'About Us',
-    about_page_subtitle: 'Your trusted partner for seamless government services in Hawassa',
-    about_heading: 'About Hawassa MESOB',
-    about_body: 'Hawassa MESOB Service Center is a pioneering one-stop service platform that integrates multiple government and organizational services into a single, accessible location. We are dedicated to transforming the way residents access essential services by eliminating bureaucracy, reducing wait times, and enhancing service delivery through digital innovation.',
-    about_feature1_title: 'One-Stop Service',
-    about_feature1_desc: 'All essential services in one location',
-    about_feature2_title: 'Trusted Partners',
-    about_feature2_desc: '12+ government organizations',
-    about_feature3_title: 'Fast & Efficient',
-    about_feature3_desc: 'Streamlined processes for quick service',
-
-    // mission
-    mission_title: 'Our Mission',
-    mission_body: 'To establish a seamless, efficient, and secure one-stop service center in Hawassa where residents can access essential government and organizational services in a single location, reducing bureaucracy, improving service efficiency, and fostering trust between residents and service providers.',
-    mission_point1: 'Provide seamless access to essential government services in one convenient location',
-    mission_point2: 'Reduce bureaucratic barriers and simplify service delivery processes',
-    mission_point3: 'Ensure secure, efficient, and transparent service operations',
-    mission_point4: 'Build trust and strengthen relationships between residents and service providers',
-
-    // vision
-    vision_title: 'Our Vision',
-    vision_body: 'To become a leading digital and physical service hub in Hawassa, integrating multiple organizations into a single, efficient, and secure platform that transforms public service delivery, enhances resident satisfaction, and contributes to the advancement of one-stop service centers in Ethiopia.',
-    vision_goal1_title: 'Leading Service Hub',
-    vision_goal1_desc: 'Be the benchmark for integrated service delivery in Hawassa and Ethiopia',
-    vision_goal2_title: 'Digital Innovation',
-    vision_goal2_desc: 'Transform service delivery through cutting-edge digital solutions',
-    vision_goal3_title: 'Resident Satisfaction',
-    vision_goal3_desc: 'Achieve the highest levels of customer satisfaction and trust',
-
-    // organizations
-    org_title: 'SERVICE PROVIDER ORGANIZATIONS',
-    org_subtitle: 'Select an institution to view services, documents, fees, and processing time',
-    org_btn: 'Services',
-    org_modal_suffix: '– Services',
-    org_time_label: 'Processing Time',
-    org_fee_label: 'Service Fee',
-    org_docs_label: 'Documents Required',
-    org_official: 'Official page',
-
-    // news
-    news_title: 'Latest News',
-    news_subtitle: 'Government updates and announcements',
-    news_placeholder: 'Select a news article from the left to read',
-    news_back: '← Back to News',
-    news_read: 'min read',
-    // news items
-    news1_category: 'Government',
-    news1_title: 'MESOB Center Inauguration 2025',
-    news1_preview: 'Ethiopia Celebrates the Inauguration of the MESOB Center...',
-    news1_source: 'MESOB Communications',
-    news2_category: 'Government',
-    news2_title: 'Leadership Introduction Program 2026',
-    news2_preview: 'HAWASSA-MESOB Service launches new leadership program...',
-    news2_source: 'Government',
-    news3_category: 'Government',
-    news3_title: 'HAWASSA-MESOB Service Achieves 98.7% Customer Satisfaction',
-    news3_preview: 'Outstanding performance in customer satisfaction survey...',
-    news3_source: 'Government',
-
-    // videos
-    videos_title: 'News',
-    videos_subtitle: 'Featured videos and news highlights',
-    video1_title: 'MESOB Center Overview',
-    video1_desc: 'Learn about the services',
-    video2_title: 'How to Use MESOB',
-    video2_desc: 'Step-by-step guide',
-    video3_title: 'Sidama MESOB',
-    video3_desc: 'Sidama MESOB Center',
-    video4_title: 'Services Guide',
-    video4_desc: 'Available government services',
-
-    // popular services
-    pop_title: 'Online Services',
-    pop_subtitle: 'Access government online services quickly and easily',
-    pop_search: 'Search services (e.g. National ID, Passport...)',
-    pop_time: 'Processing Time',
-    pop_fee: 'Fee',
-    pop_apply: 'Apply Now',
-    // popular service items
-    svc1_title: 'National ID Registration',
-    svc1_org: 'National ID Program (NID)',
-    svc2_title: 'Business License',
-    svc2_org: 'Ministry of Trade',
-    svc3_title: 'Tax Clearance',
-    svc3_org: 'Ministry of Revenues',
-    svc4_title: 'SIM Card Registration',
-    svc4_org: 'Ethio Telecom',
-
-    // government services section
-    gov_title: 'Government Services',
-    gov_subtitle: 'Access government services quickly through our integrated digital platform, designed for customers, organizations, and businesses.',
-    gov_tag: 'OUR SERVICES',
-    gov_card1_title: 'Local Customers',
-    gov_card1_items: [
-      '2-Day Urgent Passport Renewal',
-      '5-Day Passport Renewal',
-      'Lost Passport Replacement',
-      'Damaged Passport Renewal',
-    ],
-    gov_card2_title: 'International & Diaspora',
-    gov_card2_items: [
-      'Temporary Residence Permit',
-      'Permanent Residence Card',
-      'Investment Visa',
-      'Ethiopian Origin ID Card',
-    ],
-    gov_card3_title: 'Business Services',
-    gov_card3_items: [
-      'Trade Document Authentication',
-      'Expatriate Work Permits',
-      'Investment & Work Visas',
-      'Educational Document Verification',
-    ],
-    gov_view_all: 'View All Services',
-    // government service page extras
-    gov_why_title: 'Why Choose MESOB?',
-    gov_why_body: 'MESOB Center brings all essential government services under one roof, eliminating the need to visit multiple offices. Save time, reduce hassle, and get your documents processed faster than ever.',
-    gov_stat1_label: 'Fast Processing',
-    gov_stat1_desc: 'Same-day to 5-day service',
-    gov_stat2_label: 'One Location',
-    gov_stat2_desc: 'All services in one place',
-    gov_stat3_label: 'Secure & Official',
-    gov_stat3_desc: 'Government certified',
-    gov_browse_btn: 'Browse Service Catalogue',
-    gov_back_btn: 'Back to Home',
-
-    // service catalogue page
-    cat_title: 'Service Catalogue',
-    cat_subtitle: 'Browse all services from every institution in one place',
-    cat_search_ph: 'Search service or institution...',
-    cat_no_results: 'No results found for',
-    cat_service: 'service',
-    cat_services: 'services',
-    cat_back: 'Back to Home',
-
-    // address
-    addr_title: 'HAWASSA-MESOB',
-    addr_place: 'Hawassa MESOB',
-    addr_street: 'Behind Saint Gebriel Church Hawassa, infront of immigration',
-    addr_city: 'Hawassa, Ethiopia',
-    addr_phone_label: 'Phone',
-    addr_hours_label: 'Working Hours',
-    addr_hours1: 'Monday - Friday: 8:30 AM - 5:30 PM',
-    addr_hours2: 'Saturday: 8:30 AM - 12:30 PM',
-    addr_directions: 'Get Directions on Google Maps →',
-
-    // contact
-    contact_title: 'Send Us a Message',
-    contact_desc: 'Have any questions or need assistance? Feel free to send us a message. Our team will get back to you as soon as possible.',
-    contact_email_label: 'Email',
-    contact_phone_label: 'Phone',
-    contact_name: 'Full Name',
-    contact_name_ph: 'e.g abebe kebede',
-    contact_tel: 'Phone Number',
-    contact_tel_ph: '09xxxxxxxx',
-    contact_email: 'Email Address',
-    contact_email_ph: 'e.g. abebe@gmail.com',
-    contact_subject: 'Subject',
-    contact_subject_ph: 'e.g. Passport Inquiry, Service Information ...',
-    contact_message: 'Your Message',
-    contact_message_ph: 'Write your message here...',
-    contact_send: 'Send Message',
-    contact_success: '✅ Thank you! Your message has been sent successfully.\n\nWe will reply to you soon.',
-
-    // footer
-    footer_tagline: 'The New Horizon of Service!',
-    footer_bilingual: 'የሃዋሳ መሶብ አገልግሎት  |  Hawassa Mesob Service',
-    footer_desc: 'Bringing government services closer to you.',
-    footer_quick: 'Quick Links',
-    footer_links: 'Quick Links',
-    footer_services: 'Services',
-    footer_support: 'Support',
-    footer_help: 'Help Center',
-    footer_faq: 'FAQ',
-    footer_privacy: 'Privacy Policy',
-    footer_contact: 'Contact',
-    footer_copy: '© 2026 HAWASSA MESOB. All rights reserved.',
-
-    // ========== DASHBOARD COMMON ==========
-    // Common dashboard elements
-    dashboard: 'Dashboard',
-    welcome: 'Welcome',
-    profile: 'Profile',
-    settings: 'Settings',
-    logout: 'Logout',
-    search: 'Search',
-    filter: 'Filter',
-    export: 'Export',
-    import: 'Import',
-    refresh: 'Refresh',
-    loading: 'Loading...',
-    no_data: 'No data available',
-    no_results: 'No results found',
-    view_all: 'View All',
-    view_details: 'View Details',
-    close: 'Close',
-    
-    // Actions
-    save: 'Save',
-    cancel: 'Cancel',
-    delete: 'Delete',
-    edit: 'Edit',
-    create: 'Create',
-    update: 'Update',
-    submit: 'Submit',
-    confirm: 'Confirm',
-    back: 'Back',
-    next: 'Next',
-    previous: 'Previous',
-    add: 'Add',
-    remove: 'Remove',
-    select: 'Select',
-    clear: 'Clear',
-    apply: 'Apply',
-    reset: 'Reset',
-    download: 'Download',
-    upload: 'Upload',
-    print: 'Print',
-    
-    // Status
-    active: 'Active',
-    inactive: 'Inactive',
-    pending: 'Pending',
-    approved: 'Approved',
-    rejected: 'Rejected',
-    completed: 'Completed',
-    in_progress: 'In Progress',
-    cancelled: 'Cancelled',
-    expired: 'Expired',
-    draft: 'Draft',
-    published: 'Published',
-    
-    // Common labels
-    name: 'Name',
-    email: 'Email',
-    phone: 'Phone',
-    address: 'Address',
-    date: 'Date',
-    time: 'Time',
-    description: 'Description',
-    title: 'Title',
-    type: 'Type',
-    category: 'Category',
-    priority: 'Priority',
-    status: 'Status',
-    role: 'Role',
-    actions: 'Actions',
-    details: 'Details',
-    information: 'Information',
-    required: 'Required',
-    optional: 'Optional',
-    
-    // Messages
-    success: 'Success!',
-    error: 'Error!',
-    warning: 'Warning!',
-    info: 'Information',
-    confirm_action: 'Are you sure you want to proceed?',
-    confirm_delete: 'Are you sure you want to delete this item?',
-    save_success: 'Saved successfully!',
-    save_error: 'Failed to save',
-    delete_success: 'Deleted successfully!',
-    delete_error: 'Failed to delete',
-    update_success: 'Updated successfully!',
-    update_error: 'Failed to update',
-    create_success: 'Created successfully!',
-    create_error: 'Failed to create',
-    
-    // ========== AUTHENTICATION ==========
-    login_title: 'Login',
-    signup_title: 'Sign Up',
-    login_subtitle: 'Sign in to your account',
-    signup_subtitle: 'Create a new account',
-    email_address: 'Email Address',
-    password: 'Password',
-    confirm_password: 'Confirm Password',
-    full_name: 'Full Name',
-    phone_number: 'Phone Number',
-    national_id: 'National ID',
-    remember_me: 'Remember me',
-    forgot_password: 'Forgot password?',
-    dont_have_account: "Don't have an account?",
-    already_have_account: 'Already have an account?',
-    sign_in: 'Sign In',
-    sign_up: 'Sign Up',
-    sign_out: 'Sign Out',
-    login_success: 'Login successful!',
-    login_error: 'Invalid email or password',
-    signup_success: 'Registration successful!',
-    signup_error: 'Registration failed',
-    
-    // ========== USERS & ROLES ==========
-    users: 'Users',
-    user_management: 'User Management',
-    add_user: 'Add User',
-    edit_user: 'Edit User',
-    delete_user: 'Delete User',
-    user_details: 'User Details',
-    user_list: 'User List',
-    total_users: 'Total Users',
-    active_users: 'Active Users',
-    super_admin: 'Super Admin',
-    mesob_manager: 'MESOB Manager',
-    institution_manager: 'Institution Manager',
-    employee: 'Employee',
-    ict_staff: 'Technician',
-    technician: 'Technician',
-    customer: 'Customer',
-    roles_permissions: 'Roles & Permissions',
-    
-    // ========== INSTITUTIONS ==========
-    institutions: 'Institutions',
-    institution: 'Institution',
-    institution_name: 'Institution Name',
-    institution_code: 'Institution Code',
-    institution_type: 'Institution Type',
-    add_institution: 'Add Institution',
-    edit_institution: 'Edit Institution',
-    institution_details: 'Institution Details',
-    total_institutions: 'Total Institutions',
-    
-    // ========== SERVICES ==========
-    services: 'Services',
-    service: 'Service',
-    service_name: 'Service Name',
-    service_code: 'Service Code',
-    service_type: 'Service Type',
-    service_category: 'Service Category',
-    add_service: 'Add Service',
-    edit_service: 'Edit Service',
-    service_details: 'Service Details',
-    total_services: 'Total Services',
-    service_fee: 'Service Fee',
-    processing_time: 'Processing Time',
-    required_documents: 'Required Documents',
-    service_description: 'Service Description',
-    
-    // ========== APPLICATIONS ==========
-    applications: 'Applications',
-    application: 'Application',
-    my_applications: 'My Applications',
-    application_number: 'Application Number',
-    application_date: 'Application Date',
-    
-    // ========== CUSTOMER DASHBOARD ==========
-    my_dashboard: 'My Dashboard',
-    customer_portal: 'Customer Portal',
-    welcome_back: 'Welcome back',
-    track_applications: 'Track your applications and apply for services at MESOB Center.',
-    active_applications: 'Active Applications',
-    completed_apps: 'Completed',
-    active_queues: 'Active Queues',
-    recent_applications: 'Recent Applications',
-    application_id: 'Application ID',
-    submitted: 'Submitted',
-    my_feedback: 'My Feedback',
-    apply_for_service: 'Apply for Service',
-    browse_services: 'Browse available services',
-    profile_documents: 'Profile & Documents',
-    application_status: 'Application Status',
-    application_type: 'Application Type',
-    submit_application: 'Submit Application',
-    track_application: 'Track Application',
-    view_application: 'View Application',
-    total_applications: 'Total Applications',
-    pending_applications: 'Pending Applications',
-    approved_applications: 'Approved Applications',
-    rejected_applications: 'Rejected Applications',
-    
-    // ========== QUEUE ==========
-    queue: 'Queue',
-    queue_number: 'Queue Number',
-    queue_status: 'Queue Status',
-    queue_management: 'Queue Management',
-    my_queue: 'My Queue',
-    current_queue: 'Current Queue',
-    waiting_queue: 'Waiting',
-    in_service: 'In Service',
-    queue_completed: 'Completed',
-    join_queue: 'Join Queue',
-    
-    // ========== MAINTENANCE ==========
-    maintenance: 'Maintenance',
-    maintenance_reports: 'Maintenance Reports',
-    maintenance_report: 'Maintenance Report',
-    submit_report: 'Submit Report',
-    report_issue: 'Report Issue',
-    issue_description: 'Issue Description',
-    issue_type: 'Issue Type',
-    issue_priority: 'Issue Priority',
-    assigned_to: 'Assigned To',
-    assign_technician: 'Assign Technician',
-    high_priority: 'High',
-    medium_priority: 'Medium',
-    low_priority: 'Low',
-    urgent: 'Urgent',
-    resolved: 'Resolved',
-    unresolved: 'Unresolved',
-    pending_review: 'Pending Review',
-    total_reports: 'Total Reports',
-    pending_reports: 'Pending Reports',
-    resolved_reports: 'Resolved Reports',
-    
-    // ========== TASKS ==========
-    tasks: 'Tasks',
-    my_tasks: 'My Tasks',
-    assigned_tasks: 'Assigned Tasks',
-    task_details: 'Task Details',
-    task_status: 'Task Status',
-    task_priority: 'Task Priority',
-    due_date: 'Due Date',
-    completed_tasks: 'Completed Tasks',
-    pending_tasks: 'Pending Tasks',
-    
-    // ========== DASHBOARD SECTIONS ==========
-    institution_monitoring: 'Institution Monitoring',
-    queue_monitoring: 'Queue Monitoring',
-    application_monitoring: 'Application Monitoring',
-    maintenance_oversight: 'Maintenance Oversight',
-    feedback_overview: 'Feedback Overview',
-    reports: 'Reports',
-    analytics: 'Analytics',
-    my_profile: 'My Profile',
-    institution_management: 'Institution Management',
-    system_settings: 'System Settings',
-    
-    // ========== ANNOUNCEMENTS ==========
-    announcements: 'Announcements',
-    announcement: 'Announcement',
-    create_announcement: 'Create Announcement',
-    edit_announcement: 'Edit Announcement',
-    announcement_title: 'Announcement Title',
-    announcement_content: 'Announcement Content',
-    announcement_type: 'Announcement Type',
-    public_announcement: 'Public',
-    internal_announcement: 'Internal',
-    system_announcement: 'System',
-    published_date: 'Published Date',
-    expires_on: 'Expires On',
-    
-    // ========== NOTIFICATIONS ==========
-    notifications: 'Notifications',
-    notification: 'Notification',
-    new_notifications: 'New Notifications',
-    mark_as_read: 'Mark as Read',
-    mark_all_read: 'Mark All as Read',
-    no_notifications: 'No notifications',
-    
-    // ========== FEEDBACK ==========
-    feedback: 'Feedback',
-    feedbacks: 'Feedbacks',
-    submit_feedback: 'Submit Feedback',
-    feedback_type: 'Feedback Type',
-    feedback_message: 'Feedback Message',
-    rating: 'Rating',
-    your_feedback: 'Your Feedback',
-    feedback_success: 'Thank you for your feedback!',
-    total_feedback: 'Total Feedback',
-    
-    // ========== STATISTICS ==========
-    statistics: 'Statistics',
-    overview: 'Overview',
-    total: 'Total',
-    today: 'Today',
-    this_week: 'This Week',
-    this_month: 'This Month',
-    this_year: 'This Year',
-    
-    // ========== FORMS ==========
-    form_validation_required: 'This field is required',
-    form_validation_email: 'Please enter a valid email',
-    form_validation_phone: 'Please enter a valid phone number',
-    form_validation_min_length: 'Minimum length is',
-    form_validation_max_length: 'Maximum length is',
-    form_validation_password_match: 'Passwords do not match',
-    form_validation_file_size: 'File size exceeds limit',
-    form_validation_file_type: 'Invalid file type',
-    
-    // ========== TABLE ==========
-    table_no_data: 'No data to display',
-    table_loading: 'Loading data...',
-    table_search: 'Search table...',
-    table_showing: 'Showing',
-    table_of: 'of',
-    table_entries: 'entries',
-    table_prev: 'Previous',
-    table_next: 'Next',
-    
-    // ========== PAGINATION ==========
-    page: 'Page',
-    rows_per_page: 'Rows per page',
-    first_page: 'First Page',
-    last_page: 'Last Page',
-    
-    // ========== ACCOUNT ==========
-    my_account: 'My Account',
-    account_settings: 'Account Settings',
-    change_password: 'Change Password',
-    current_password: 'Current Password',
-    new_password: 'New Password',
-    update_profile: 'Update Profile',
-    profile_photo: 'Profile Photo',
-    personal_information: 'Personal Information',
-
-    // ========== BILINGUAL APPLICATION TRACKING & CUSTOMER FLOWS ==========
-    missing_docs_warning: 'Your application is incomplete. Please provide the missing required documents and resubmit your application.',
-    status_submitted: 'Submitted',
-    status_under_review: 'Under Review',
-    status_needs_information: 'Needs Information',
-    status_approved: 'Approved',
-    status_in_progress: 'In Progress',
-    status_completed: 'Completed',
-    status_rejected: 'Rejected',
-    status_cancelled: 'Cancelled',
-    resubmit_application: 'Resubmit Application',
-    upload_missing_documents: 'Upload Missing Documents',
-    staff_review_notes: 'Staff Review Notes',
-    applicant_details: 'Applicant Details',
-    additional_information: 'Additional Information',
-    select_institution_subtitle: 'Select an institution to view available services',
-    search_institutions_services: 'Search institutions or services...',
-    no_institutions_found: 'No institutions found',
-    try_diff_search: 'Try a different search term',
-    services_available: 'services available',
-    visit_official_website: 'Visit Official Website',
-    no_services_available: 'No services available for this institution',
-    service_information: 'Service Information',
-    service_info_desc: 'Please prepare all necessary documents before applying. You can check with the institution for specific requirements.',
-    apply_for_this_service: 'Apply for this Service',
-    apply_for: 'Apply for',
-    complete_form_subtitle: 'Complete the form below to submit your application',
-    free: 'Free',
-    etb: 'ETB',
-    app_submitted_success: 'Application Submitted Successfully!',
-    app_ref_number_is: 'Your application reference number is:',
-    view_my_applications: 'View My Applications',
-    apply_another_service: 'Apply for Another Service',
-    back_to_applications: 'Back to Applications',
-    back_to_institutions: 'Back to Institutions',
-    back_to_service_details: 'Back to Service Details',
-    back_to_feedback: 'Back to My Feedback',
-    back_to_announcements: 'Back to Announcements',
-    back_to_search: 'Back to Search',
-    verified_account: 'Verified Account',
-    all_time_requests: 'All-time requests',
-    ticket_waiting: 'ticket waiting',
-    no_active_ticket: 'No active ticket',
-    no_apps_yet: 'No applications submitted yet',
-    no_apps_yet_desc: 'Submit applications for government services online and track each step in real time.',
-    reference_number: 'Reference Number',
-    submitted_date: 'Submitted Date',
-    last_updated: 'Last Updated',
-    save_changes: 'Save Changes',
-    date_of_birth: 'Date of Birth',
-    rate_this_service: 'Rate This Service',
-    feedback_not_available: 'Feedback is not available for this application as it is missing service information.',
-    rate_your_experience: 'Rate Your Experience',
-    how_rate_service: 'How would you rate the service received?',
-    poor: 'Poor',
-    good: 'Good',
-    very_good: 'Very Good',
-    excellent: 'Excellent',
-    fantastic: 'Fantastic',
-    add_comment_optional: 'Add a comment (optional)',
-    write_feedback_placeholder: 'Write your feedback here...',
-    your_token: 'Your Token',
-    now_serving: 'Now Serving',
-    estimated_wait: 'Estimated Wait',
-    minutes: 'minutes',
-    cancel_ticket: 'Cancel Ticket',
-    join_service_queue: 'Join a Service Queue',
-    get_ticket: 'Get Ticket',
-    select_institution: 'Select Institution',
-    select_service: 'Select Service',
-    active_customer_account: 'Active Customer Account',
-    registration_status: 'Registration:',
-    verified: 'Verified',
-    new_application: 'New Application',
-    all: 'All',
-    track_manage_applications: 'Track and manage your service applications',
-    app_number_col: 'Application ID',
-    service_col: 'Service',
-    institution_col: 'Institution',
-    status_col: 'Status',
-    submitted_col: 'Submitted',
-    updated_col: 'Last Updated',
-    actions_col: 'Actions',
-    submitting: 'Submitting...',
-    app_info_note: 'Please ensure you have all necessary documents ready for submission. You may be contacted by the institution for additional requirements.',
-    my_queue_title: 'My Queue',
-    my_queue_desc: 'Register for queues and track your token status.',
-    join_queue_btn: '+ Join a Queue',
-    tab_active: 'Active',
-    tab_history: 'History',
-    no_active_tickets: 'No active queue tickets',
-    no_active_tickets_desc: 'Click "+ Join a Queue" to register for a service queue.',
-    no_history_tickets: 'No queue history yet',
-    no_history_tickets_desc: 'Completed and cancelled queues will appear here.',
-    queue_info_banner: 'Queue Management: Join a service queue, receive a system-generated token, and track your position in real time. Your token number is assigned automatically.',
-    choose_institution_desc: 'Choose the institution you want to queue for.',
-    choose_service_at: 'Choose a service at',
-    confirm_queue_reg: 'Confirm Queue Registration',
-    review_confirm_queue: 'Review and confirm your queue registration.',
-    auto_token_note: 'Note: Your queue token will be generated automatically by the system. You cannot choose a token number.',
-    register_for_queue: 'Register for Queue',
-    token_generated_desc: 'Your token has been generated. Please wait for your number to be called.',
-    number_being_called: 'Your number is being called!',
-    proceed_counter: 'Please proceed to the service counter.',
-    service_completed_title: 'Service Completed',
-    service_completed_desc: 'Your queue session has been completed.',
-    people_ahead: 'People Ahead',
-    est_wait: 'Est. Wait',
-    ready_to_be_called: 'Ready to be called',
-    at_counter: 'At counter',
-    awaiting_counter: 'Awaiting counter',
-    ahead: 'Ahead',
-    registered: 'Registered',
-    called_at: 'Called At',
-    completed_at: 'Completed At',
-    cancelled_at: 'Cancelled At',
-    leave_queue: 'Leave Queue',
-    leaving: 'Leaving...',
-    cannot_submit_feedback: 'Cannot Submit Feedback',
-    cannot_submit_feedback_desc: 'This application is missing required service or institution information. Feedback can only be submitted for applications with valid service details.',
-    feedback_thank_you: 'Thank You!',
-    feedback_thank_you_desc: 'Your feedback helps us improve government services!',
-    feedback_satisfied_question: 'How satisfied are you with this service?',
-    additional_comments: 'Additional Comments (Optional)',
-    feedback_anonymous_note: 'Your feedback is anonymous and helps improve our services',
-    submit_rating: 'Submit Rating',
-    status_waiting: 'Waiting',
-    status_called: 'Called — Go to Counter!',
-    status_serving: 'Being Served',
-  },
-
-  am: {
-    // nav
-    nav_home: 'መነሻ',
-    nav_about: 'ስለ እኛ',
-    nav_organizations: 'ድርጅቶች',
-    nav_news: 'ዜና',
-    nav_popular: 'የመስመር ላይ አገልግሎቶች',
-    nav_address: 'አድራሻ',
-    nav_contact: 'ያግኙን',
-    nav_login: 'ግባ',
-
-    // hero
-    hero_title: 'የሃዋሳ መሶብ አገልግሎት',
-    hero_subtitle: 'ዘመናዊ የኢትዮጵያ አገልግሎቶች ለተደራጀ ጥቅም።',
-    hero_desc: '47+ የመንግሥት አገልግሎቶች በአንድ መሶብ ህይወትዎን ቀለል ለማድረግ።',
-    hero_search: 'አገልግሎቶችን እና ድርጅቶችን ይፈልጉ',
-
-    // about
-    about_heading1: 'ማህበረሰባችንን',
-    about_heading2: 'በብቃት',
-    about_heading3: 'እናገለግላለን',
-    about_body_home: 'በአንድ የመሶብ ማዕከል ውስጥ፣ አስፈላጊ የሆኑ የመንግሥት አገልግሎቶችን፣ ሀብቶችን እና መረጃዎችን ወደ አንድ ፕላትፎርም አዋህደናል። ፈቃዶችን ለማውጣት፣ የህዝብ መዝገቦችን ለማግኘት ወይም ማህበራዊ አገልግሎቶችን ለመጠቀም፣ ዜጋ ማዕከላዊ ፕላትፎርማችን ልምድዎን ፈጣን፣ ቀላል እና ግልፅ ያደርጋል።',
-    about_btn1: 'አገልግሎቶችን ይመልከቱ',
-    about_btn2: 'ተጨማሪ ይወቁ',
-    about_card1_title: 'ዲጂታል አገልግሎቶች',
-    about_card1_desc: 'ፈቃዶችን በኦንላይን ያመልክቱ',
-    about_card2_title: 'የዜጎች ድጋፍ',
-    about_card2_desc: '24/7 ተከታታይ ድጋፍ',
-    about_card3_title: 'ፈጣን ሂደት',
-    about_card3_desc: 'ፈጣን እና ቀልጣፋ አገልግሎት',
-
-    // about us page
-    about_page_title: 'ስለ እኛ',
-    about_page_subtitle: 'በሃዋሳ ውስጥ ለቀላል የመንግስት አገልግሎቶች የታመነ አጋርዎ',
-    about_heading: 'ስለ ሃዋሳ መሶብ',
-    about_body: 'የሃዋሳ መሶብ አገልግሎት ማዕከል ብዙ የመንግስት እና የድርጅት አገልግሎቶችን ወደ አንድ ቦታ የሚያዋህድ አዲስ አንድ-ማቆሚያ አገልግሎት መድረክ ነው። ነዋሪዎች አስፈላጊ አገልግሎቶችን የሚያገኙበትን መንገድ ለመለወጥ ቁርጠኞች ነን፤ ቢሮክራሲን በማስወገድ፣ የጥበቃ ጊዜን በመቀነስ እና በዲጂታል ፈጠራ የአገልግሎት አሰጣጥን በማሻሻል።',
-    about_feature1_title: 'አንድ-ማቆሚያ አገልግሎት',
-    about_feature1_desc: 'ሁሉም አስፈላጊ አገልግሎቶች በአንድ ቦታ',
-    about_feature2_title: 'የታመኑ አጋሮች',
-    about_feature2_desc: '12+ የመንግስት ድርጅቶች',
-    about_feature3_title: 'ፈጣን እና ቀልጣፋ',
-    about_feature3_desc: 'ለፈጣን አገልግሎት የተሻሻሉ ሂደቶች',
-
-    // mission
-    mission_title: 'ተልዕኮአችን',
-    mission_body: 'በሃዋሳ ውስጥ ነዋሪዎች አስፈላጊ የመንግስት እና የድርጅት አገልግሎቶችን በአንድ ቦታ ማግኘት የሚችሉበት፣ ቢሮክራሲን የሚቀንስ፣ የአገልግሎት ቅልጥፍናን የሚያሻሽል እና በነዋሪዎች እና አገልግሎት ሰጪዎች መካከል እምነትን የሚያሳድግ ቀላል፣ ቀልጣፋ እና ደህንነቱ የተጠበቀ አንድ-ማቆሚያ አገልግሎት ማዕከል ማቋቋም።',
-    mission_point1: 'አስፈላጊ የመንግስት አገልግሎቶችን በአንድ ምቹ ቦታ ቀላል መዳረሻ መስጠት',
-    mission_point2: 'ቢሮክራሲያዊ መሰናክሎችን መቀነስ እና የአገልግሎት አሰጣጥ ሂደቶችን ማቃለል',
-    mission_point3: 'ደህንነቱ የተጠበቀ፣ ቀልጣፋ እና ግልፅ የአገልግሎት ስራዎችን ማረጋገጥ',
-    mission_point4: 'እምነትን መገንባት እና በነዋሪዎች እና አገልግሎት ሰጪዎች መካከል ግንኙነቶችን ማጠናከር',
-
-    // vision
-    vision_title: 'ራዕያችን',
-    vision_body: 'ብዙ ድርጅቶችን ወደ አንድ ቀልጣፋ እና ደህንነቱ የተጠበቀ መድረክ በማዋሃድ የህዝብ አገልግሎት አሰጣጥን የሚለውጥ፣ የነዋሪዎችን እርካታ የሚያሻሽል እና በኢትዮጵያ ውስጥ አንድ-ማቆሚያ አገልግሎት ማዕከሎችን እድገት አስተዋጽኦ የማድረግ መሪ ዲጂታል እና አካላዊ አገልግሎት ማዕከል በሃዋሳ መሆን።',
-    vision_goal1_title: 'መሪ አገልግሎት ማዕከል',
-    vision_goal1_desc: 'በሃዋሳ እና በኢትዮጵያ ውስጥ ለተቀናጀ አገልግሎት አሰጣጥ መመዘኛ መሆን',
-    vision_goal2_title: 'ዲጂታል ፈጠራ',
-    vision_goal2_desc: 'በዘመናዊ ዲጂታል መፍትሄዎች አገልግሎት አሰጣጥን መለወጥ',
-    vision_goal3_title: 'የነዋሪዎች እርካታ',
-    vision_goal3_desc: 'ከፍተኛውን የዜጎች እርካታ እና እምነት ማሳካት',
-
-    // organizations
-    org_title: 'አገልግሎት ሰጪ ድርጅቶች',
-    org_subtitle: 'አገልግሎቶችን፣ ሰነዶችን፣ ክፍያዎችን እና የሂደት ጊዜ ለማየት ተቋም ይምረጡ',
-    org_btn: 'አገልግሎት',
-    org_modal_suffix: '– አገልግሎቶች',
-    org_time_label: 'የሂደት ጊዜ',
-    org_fee_label: 'አገልግሎት ክፍያ',
-    org_docs_label: 'የሚፈለጉ ሰነዶች',
-    org_official: 'ኦፊሴላዊ ገፅ',
-
-    // news
-    news_title: 'የቅርብ ጊዜ ዜናዎች',
-    news_subtitle: 'የመንግሥት ዝማኔዎች እና ማስታወቂያዎች',
-    news_placeholder: 'ለማንበብ ከግራ የዜና ጽሑፍ ይምረጡ',
-    news_back: '← ወደ ዜናዎች ተመለስ',
-    news_read: 'ደቂቃ ንባብ',
-    // news items
-    news1_category: 'መንግሥት',
-    news1_title: 'የመሶብ ማዕከል መመስረቻ 2025',
-    news1_preview: 'ኢትዮጵያ የመሶብ ማዕከልን መመስረት ታከብራለች...',
-    news1_source: 'የMESOB ኮሙኒኬሽን',
-    news2_category: 'መንግሥት',
-    news2_title: 'የአመራር ስልጠና ፕሮግራም 2026',
-    news2_preview: 'FDRE MESOB አዲስ የአመራር ፕሮግራም ጀምሯል...',
-    news2_source: 'መንግሥት',
-    news3_category: 'መንግሥት',
-    news3_title: 'FDRE MESOB 98.7% የዜጎች እርካታ አሳካ',
-    news3_preview: 'በዜጎች እርካታ ዳሰሳ ልዩ ውጤት...',
-    news3_source: 'መንግሥት',
-
-    // videos
-    videos_title: 'ዜና',
-    videos_subtitle: 'ዋና ዋና ቪዲዮዎች እና የዜና ምርጦች',
-    video1_title: 'የMESOB ማዕከል አጠቃላይ እይታ',
-    video1_desc: 'ስለ አገልግሎቶቹ ይወቁ',
-    video2_title: 'MESOBን እንዴት መጠቀም እንደሚቻል',
-    video2_desc: 'ደረጃ በደረጃ መመሪያ',
-    video3_title: 'የሲዳማ MESOB',
-    video3_desc: 'የሲዳማ MESOB ማዕከል',
-    video4_title: 'የአገልግሎቶች መመሪያ',
-    video4_desc: 'ያሉ የመንግሥት አገልግሎቶች',
-
-    // popular services
-    pop_title: 'የመስመር ላይ አገልግሎቶች',
-    pop_subtitle: 'የመንግሥት የመስመር ላይ አገልግሎቶችን በፍጥነት እና በቀላሉ ያግኙ',
-    pop_search: 'አገልግሎቶችን ይፈልጉ (ለምሳሌ፡ ብሔራዊ መታወቂያ፣ ፓስፖርት...)',
-    pop_time: 'የሂደት ጊዜ',
-    pop_fee: 'ክፍያ',
-    pop_apply: 'አሁን ያመልክቱ',
-    // popular service items
-    svc1_title: 'ብሔራዊ መታወቂያ ምዝገባ',
-    svc1_org: 'የብሔራዊ መታወቂያ ፕሮግራም',
-    svc2_title: 'የንግድ ፈቃድ',
-    svc2_org: 'የንግድ ሚኒስቴር',
-    svc3_title: 'የግብር ማጽጃ',
-    svc3_org: 'ገቢዎች ሚኒስቴር',
-    svc4_title: 'የሲም ካርድ ምዝገባ',
-    svc4_org: 'ኢትዮ ቴሌኮም',
-
-    // government services
-    gov_title: 'የመንግሥት አገልግሎቶች',
-    gov_subtitle: 'የተዋሃደ ዲጂታል ፕላትፎርማችን በኩል ለዜጎች፣ ለዓለም አቀፍ ደንበኞች እና ለንግድ ድርጅቶች።',
-    gov_tag: 'አገልግሎቶቻችን',
-    gov_card1_title: 'ለአካባቢ ደንበኞች',
-    gov_card1_items: [
-      'የ2 ቀን ፈጣን ፓስፖርት ታዛቢ',
-      'የ5 ቀን ፓስፖርት ታዛቢ',
-      'የጠፋ ፓስፖርት መተካት',
-      'የተበላሸ ፓስፖርት ታዛቢ',
-    ],
-    gov_card2_title: 'ለዓለም አቀፍ እና ዲያስፖራ',
-    gov_card2_items: [
-      'ጊዜያዊ የመኖሪያ ፈቃድ',
-      'ቋሚ የመኖሪያ ካርድ',
-      'የኢንቨስትመንት ቪዛ',
-      'የኢትዮጵያ ዝርያ መታወቂያ ካርድ',
-    ],
-    gov_card3_title: 'ለንግድ አገልግሎቶች',
-    gov_card3_items: [
-      'የንግድ ሰነድ ማረጋገጫ',
-      'የወጪ ሠራተኛ ፈቃዶች',
-      'የኢንቨስትመንት እና ሥራ ቪዛዎች',
-      'የትምህርት ሰነድ ማረጋገጫ',
-    ],
-    gov_view_all: 'ሁሉንም አገልግሎቶች ይመልከቱ',
-    // government service page extras
-    gov_why_title: 'ለምን MESOBን ይምረጡ?',
-    gov_why_body: 'MESOB ማዕከል ሁሉንም አስፈላጊ የመንግሥት አገልግሎቶች ከአንድ ቦታ ያቀርባል፤ ብዙ ቢሮዎችን መዞር አያስፈልግም። ጊዜ ይቆጥቡ፣ ድካምን ይቀንሱ እና ሰነዶችዎን ከበፊት በፍጥነት ያስሂዱ።',
-    gov_stat1_label: 'ፈጣን ሂደት',
-    gov_stat1_desc: 'ሁሉን ያካተተ የ1-5 ቀን አገልግሎት',
-    gov_stat2_label: 'አንድ ቦታ',
-    gov_stat2_desc: 'ሁሉም አገልግሎቶች በአንድ ቦታ',
-    gov_stat3_label: 'ደህንነቱ የተጠበቀ ኦፊሴላዊ',
-    gov_stat3_desc: 'በመንግሥት የተረጋገጠ',
-    gov_browse_btn: 'የአገልግሎት ካታሎግ ይፈልጉ',
-    gov_back_btn: 'ወደ መነሻ ተመለስ',
-
-    // service catalogue page
-    cat_title: 'የአገልግሎት ካታሎግ',
-    cat_subtitle: 'ሁሉንም የተቋማት አገልግሎቶች በአንድ ቦታ ይፈልጉ',
-    cat_search_ph: 'አገልግሎት ወይም ድርጅት ይፈልጉ...',
-    cat_no_results: 'ምንም ውጤት አልተገኘም፡',
-    cat_service: 'አገልግሎት',
-    cat_services: 'አገልግሎቶች',
-    cat_back: 'ወደ መነሻ ተመለስ',
-
-    // address
-    addr_title: 'ሃዋሳ-መሶብ',
-    addr_place: 'ሃዋሳ መሶብ',
-    addr_street: 'ከቅዱስ ገብርኤል ቤተ ክርስቲያን ጀርባ፣ ከኢሚግሬሽን ፊት ለፊት',
-    addr_city: 'ሃዋሳ፣ ኢትዮጵያ',
-    addr_phone_label: 'ስልክ',
-    addr_hours_label: 'የስራ ሰዓት',
-    addr_hours1: 'ሰኞ - አርብ፡ 8:30 AM - 5:30 PM',
-    addr_hours2: 'ቅዳሜ፡ 8:30 AM - 12:30 PM',
-    addr_directions: 'በGoogle Maps አቅጣጫ ያግኙ →',
-
-    // contact
-    contact_title: 'መልዕክት ይላኩልን',
-    contact_desc: 'ጥያቄ አለዎት ወይም እርዳታ ይፈልጋሉ? መልዕክት ይላኩልን። ቡድናችን በቶሎ ምላሽ ይሰጥዎታል።',
-    contact_email_label: 'ኢሜይል',
-    contact_phone_label: 'ስልክ',
-    contact_name: 'ሙሉ ስም',
-    contact_name_ph: 'ለምሳሌ አበበ ከበደ',
-    contact_tel: 'ስልክ ቁጥር',
-    contact_tel_ph: '09xxxxxxxx',
-    contact_email: 'ኢሜይል አድራሻ',
-    contact_email_ph: 'ለምሳሌ abebe@gmail.com',
-    contact_subject: 'ርዕሰ ጉዳይ',
-    contact_subject_ph: 'ለምሳሌ የፓስፖርት ጥያቄ...',
-    contact_message: 'መልዕክቶ',
-    contact_message_ph: 'መልዕክትዎን እዚህ ይፃፉ...',
-    contact_send: 'መልዕክት ይላኩ',
-    contact_success: '✅ አመሰግናለሁ! መልዕክትዎ በተሳካ ሁኔታ ተልኳል።\n\nብዙም ሳይቆይ ምላሽ እንሰጥዎታለን።',
-
-    // footer
-    footer_tagline: 'የአገልግሎት አዲስ አድማስ!',
-    footer_bilingual: 'የሃዋሳ መሶብ አገልግሎት  |  Hawassa Mesob Service',
-    footer_desc: 'የመንግሥት አገልግሎቶችን ወደ እርስዎ ያቀርባል።',
-    footer_quick: 'ፈጣን ማስፈንጠሪያዎች',
-    footer_links: 'ፈጣን ማስፈንጠሪያዎች',
-    footer_services: 'አገልግሎቶች',
-    footer_support: 'ድጋፍ',
-    footer_help: 'የእርዳታ ማዕከል',
-    footer_faq: 'ተደጋጋሚ ጥያቄዎች',
-    footer_privacy: 'የግላዊነት ፖሊሲ',
-    footer_contact: 'ያግኙን',
-    footer_copy: '© 2026 ሃዋሳ መሶብ። መብቱ በሕግ የተጠበቀ ነው።',
-
-    // ========== DASHBOARD COMMON ==========
-    dashboard: 'ዳሽቦርድ',
-    welcome: 'እንኳን ደህና መጡ',
-    profile: 'መገለጫ',
-    settings: 'ቅንብሮች',
-    logout: 'ውጣ',
-    search: 'ፈልግ',
-    filter: 'አጣራ',
-    export: 'ወደ ውጭ ላክ',
-    import: 'ከውጭ አስገባ',
-    refresh: 'አድስ',
-    loading: 'በመጫን ላይ...',
-    no_data: 'ምንም መረጃ የለም',
-    no_results: 'ምንም ውጤት አልተገኘም',
-    view_all: 'ሁሉንም ይመልከቱ',
-    view_details: 'ዝርዝሮችን ይመልከቱ',
-    close: 'ዝጋ',
-    
-    // Actions
-    save: 'አስቀምጥ',
-    cancel: 'ሰርዝ',
-    delete: 'ሰርዝ',
-    edit: 'አስተካክል',
-    create: 'ፍጠር',
-    update: 'አዘምን',
-    submit: 'አስገባ',
-    confirm: 'አረጋግጥ',
-    back: 'ተመለስ',
-    next: 'ቀጣይ',
-    previous: 'ቀዳሚ',
-    add: 'ጨምር',
-    remove: 'አስወግድ',
-    select: 'ምረጥ',
-    clear: 'አፅዳ',
-    apply: 'ተግብር',
-    reset: 'እንደ ነበር መልስ',
-    download: 'አውርድ',
-    upload: 'ጫን',
-    print: 'አትም',
-    
-    // Status
-    active: 'ንቁ',
-    inactive: 'ያልነቃ',
-    pending: 'በመጠባበቅ ላይ',
-    approved: 'የጸደቀ',
-    rejected: 'የተቀነበረ',
-    completed: 'የተጠናቀቀ',
-    in_progress: 'በሂደት ላይ',
-    cancelled: 'የተሰረዘ',
-    expired: 'ጊዜው ያለፈ',
-    draft: 'ረቂቅ',
-    published: 'የታተመ',
-    
-    // Common labels
-    name: 'ስም',
-    email: 'ኢሜይል',
-    phone: 'ስልክ',
-    address: 'አድራሻ',
-    date: 'ቀን',
-    time: 'ሰዓት',
-    description: 'መግለጫ',
-    title: 'ርዕስ',
-    type: 'ዓይነት',
-    category: 'ምድብ',
-    priority: 'ቅድሚያ',
-    status: 'ሁኔታ',
-    role: 'ሚና',
-    actions: 'ተግባራት',
-    details: 'ዝርዝሮች',
-    information: 'መረጃ',
-    required: 'የግድ',
-    optional: 'አማራጭ',
-    
-    // Messages
-    success: 'ተሳክቷል!',
-    error: 'ስህተት!',
-    warning: 'ማስጠንቀቂያ!',
-    info: 'መረጃ',
-    confirm_action: 'መቀጠል ይፈልጋሉ?',
-    confirm_delete: 'ይህን መሰረዝ ይፈልጋሉ?',
-    save_success: 'በተሳካ ሁኔታ ተቀምጧል!',
-    save_error: 'ማስቀመጥ አልተሳካም',
-    delete_success: 'በተሳካ ሁኔታ ተሰርዟል!',
-    delete_error: 'መሰረዝ አልተሳካም',
-    update_success: 'በተሳካ ሁኔታ ተሻሽሏል!',
-    update_error: 'ማሻሻል አልተሳካም',
-    create_success: 'በተሳካ ሁኔታ ተፈጥሯል!',
-    create_error: 'መፍጠር አልተሳካም',
-    
-    // ========== AUTHENTICATION ==========
-    login_title: 'ግባ',
-    signup_title: 'ተመዝገብ',
-    login_subtitle: 'ወደ መለያዎ ይግቡ',
-    signup_subtitle: 'አዲስ መለያ ይፍጠሩ',
-    email_address: 'የኢሜይል አድራሻ',
-    password: 'የይለፍ ቃል',
-    confirm_password: 'የይለፍ ቃል አረጋግጥ',
-    full_name: 'ሙሉ ስም',
-    phone_number: 'ስልክ ቁጥር',
-    national_id: 'የመታወቂያ ቁጥር',
-    remember_me: 'አስታውሰኝ',
-    forgot_password: 'የይለፍ ቃል ረሱ?',
-    dont_have_account: 'መለያ የለዎትም?',
-    already_have_account: 'ቀድሞውኑ መለያ አለዎት?',
-    sign_in: 'ግባ',
-    sign_up: 'ተመዝገብ',
-    sign_out: 'ውጣ',
-    login_success: 'መግባት ተሳክቷል!',
-    login_error: 'ልክ ያልሆነ ኢሜይል ወይም የይለፍ ቃል',
-    signup_success: 'ምዝገባ ተሳክቷል!',
-    signup_error: 'ምዝገባ አልተሳካም',
-    
-    // ========== USERS & ROLES ==========
-    users: 'ተጠቃሚዎች',
-    user_management: 'የተጠቃሚዎች አስተዳደር',
-    add_user: 'ተጠቃሚ ጨምር',
-    edit_user: 'ተጠቃሚ አስተካክል',
-    delete_user: 'ተጠቃሚ ሰርዝ',
-    user_details: 'የተጠቃሚ ዝርዝር',
-    user_list: 'የተጠቃሚዎች ዝርዝር',
-    total_users: 'ጠቅላላ ተጠቃሚዎች',
-    active_users: 'ንቁ ተጠቃሚዎች',
-    super_admin: 'ከፍተኛ አስተዳዳሪ',
-    mesob_manager: 'የመሶብ አስተዳዳሪ',
-    institution_manager: 'የተቋም አስተዳዳሪ',
-    employee: 'ሠራተኛ',
-    ict_staff: 'ቴክኒሻን',
-    technician: 'ቴክኒሻን',
-    customer: 'ደንበኛ',
-    roles_permissions: 'ሚናዎች እና ፈቃዶች',
-    
-    // ========== INSTITUTIONS ==========
-    institutions: 'ተቋማት',
-    institution: 'ተቋም',
-    institution_name: 'የተቋም ስም',
-    institution_code: 'የተቋም ኮድ',
-    institution_type: 'የተቋም ዓይነት',
-    add_institution: 'ተቋም ጨምር',
-    edit_institution: 'ተቋም አስተካክል',
-    institution_details: 'የተቋም ዝርዝር',
-    total_institutions: 'ጠቅላላ ተቋማት',
-    
-    // ========== SERVICES ==========
-    services: 'አገልግሎቶች',
-    service: 'አገልግሎት',
-    service_name: 'የአገልግሎት ስም',
-    service_code: 'የአገልግሎት ኮድ',
-    service_type: 'የአገልግሎት ዓይነት',
-    service_category: 'የአገልግሎት ምድብ',
-    add_service: 'አገልግሎት ጨምር',
-    edit_service: 'አገልግሎት አስተካክል',
-    service_details: 'የአገልግሎት ዝርዝር',
-    total_services: 'ጠቅላላ አገልግሎቶች',
-    service_fee: 'አገልግሎት ክፍያ',
-    processing_time: 'የማስኬጃ ጊዜ',
-    required_documents: 'የሚፈለጉ ሰነዶች',
-    service_description: 'የአገልግሎት መግለጫ',
-    
-    // ========== APPLICATIONS ==========
-    applications: 'ማመልከቻዎች',
-    application: 'ማመልከቻ',
-    my_applications: 'ማመልከቻዎቼ',
-    application_number: 'የማመልከቻ ቁጥር',
-    application_date: 'የማመልከቻ ቀን',
-    
-    // ========== CUSTOMER DASHBOARD ==========
-    my_dashboard: 'የኔ ዳሽቦርድ',
-    customer_portal: 'የደንበኛ መግቢያ',
-    welcome_back: 'እንደገና እንኳን ደህና መጡ',
-    track_applications: 'ማመልከቻዎችዎን ይከታተሉ እና በመሶብ ማዕከል አገልግሎቶችን ያመልክቱ።',
-    active_applications: 'ንቁ ማመልከቻዎች',
-    completed_apps: 'የተጠናቀቁ',
-    active_queues: 'ንቁ ወረፈቶች',
-    recent_applications: 'የቅርብ ጊዜ ማመልከቻዎች',
-    application_id: 'የማመልከቻ መለያ',
-    submitted: 'ቀርቧል',
-    my_feedback: 'ግብረመልሴ',
-    apply_for_service: 'ለአገልግሎት ማመልከቻ',
-    browse_services: 'የሚገኙ አገልግሎቶችን ያስሱ',
-    profile_documents: 'መገለጫ እና ሰነዶች',
-    application_status: 'የማመልከቻ ሁኔታ',
-    application_type: 'የማመልከቻ ዓይነት',
-    submit_application: 'ማመልከቻ አስገባ',
-    track_application: 'ማመልከቻ ተከታተል',
-    view_application: 'ማመልከቻ ይመልከቱ',
-    total_applications: 'ጠቅላላ ማመልከቻዎች',
-    pending_applications: 'በመጠባበቅ ላይ ያሉ ማመልከቻዎች',
-    approved_applications: 'የጸደቁ ማመልከቻዎች',
-    rejected_applications: 'የተቀነበሩ ማመልከቻዎች',
-    
-    // ========== QUEUE ==========
-    queue: 'ተራ',
-    queue_number: 'የተራ ቁጥር',
-    queue_status: 'የተራ ሁኔታ',
-    queue_management: 'የተራ አስተዳደር',
-    my_queue: 'ተራዬ',
-    current_queue: 'የአሁኑ ተራ',
-    waiting_queue: 'በመጠባበቅ ላይ',
-    in_service: 'በአገልግሎት ላይ',
-    queue_completed: 'የተጠናቀቀ',
-    join_queue: 'ተራ ተቀላቀል',
-    
-    // ========== MAINTENANCE ==========
-    maintenance: 'ጥገና',
-    maintenance_reports: 'የጥገና ሪፖርቶች',
-    maintenance_report: 'የጥገና ሪፖርት',
-    submit_report: 'ሪፖርት አስገባ',
-    report_issue: 'ችግር ሪፖርት አድርግ',
-    issue_description: 'የችግር መግለጫ',
-    issue_type: 'የችግር ዓይነት',
-    issue_priority: 'የችግር ቅድሚያ',
-    assigned_to: 'የተመደበለት',
-    assign_technician: 'ቴክኒሻን ምደባ',
-    high_priority: 'ከፍተኛ',
-    medium_priority: 'መካከለኛ',
-    low_priority: 'ዝቅተኛ',
-    urgent: 'አስቸኳይ',
-    resolved: 'የተፈታ',
-    unresolved: 'ያልተፈታ',
-    pending_review: 'በግምገማ ላይ',
-    total_reports: 'ጠቅላላ ሪፖርቶች',
-    pending_reports: 'በመጠባበቅ ላይ ያሉ ሪፖርቶች',
-    resolved_reports: 'የተፈቱ ሪፖርቶች',
-    
-    // ========== TASKS ==========
-    tasks: 'ተግባራት',
-    my_tasks: 'ተግባሮቼ',
-    assigned_tasks: 'የተመደቡ ተግባራት',
-    task_details: 'የተግባር ዝርዝር',
-    task_status: 'የተግባር ሁኔታ',
-    task_priority: 'የተግባር ቅድሚያ',
-    due_date: 'የመጨረሻ ቀን',
-    completed_tasks: 'የተጠናቀቁ ተግባራት',
-    pending_tasks: 'በመጠባበቅ ላይ ያሉ ተግባራት',
-    
-    // ========== DASHBOARD SECTIONS ==========
-    institution_monitoring: 'የተቋማት ክትትል',
-    queue_monitoring: 'የተራ ክትትል',
-    application_monitoring: 'የማመልከቻ ክትትል',
-    maintenance_oversight: 'የጥገና ክትትል',
-    feedback_overview: 'የግብረመልስ አጠቃላይ እይታ',
-    reports: 'ሪፖርቶች',
-    analytics: 'ትንተና',
-    my_profile: 'መገለጫዬ',
-    institution_management: 'የተቋማት አስተዳደር',
-    system_settings: 'የስርዓት ቅንብሮች',
-    
-    // ========== ANNOUNCEMENTS ==========
-    announcements: 'ማስታወቂያዎች',
-    announcement: 'ማስታወቂያ',
-    create_announcement: 'ማስታወቂያ ፍጠር',
-    edit_announcement: 'ማስታወቂያ አስተካክል',
-    announcement_title: 'የማስታወቂያ ርዕስ',
-    announcement_content: 'የማስታወቂያ ይዘት',
-    announcement_type: 'የማስታወቂያ ዓይነት',
-    public_announcement: 'ህዝባዊ',
-    internal_announcement: 'ውስጣዊ',
-    system_announcement: 'የስርዓት',
-    published_date: 'የታተመበት ቀን',
-    expires_on: 'ጊዜው የሚያልፍበት',
-    
-    // ========== NOTIFICATIONS ==========
-    notifications: 'ማሳሰቢያዎች',
-    notification: 'ማሳሰቢያ',
-    new_notifications: 'አዲስ ማሳሰቢያዎች',
-    mark_as_read: 'እንደተነበበ ምልክት አድርግ',
-    mark_all_read: 'ሁሉንም እንደተነበበ ምልክት አድርግ',
-    no_notifications: 'ማሳሰቢያዎች የሉም',
-    
-    // ========== FEEDBACK ==========
-    feedback: 'አስተያየት',
-    feedbacks: 'አስተያየቶች',
-    submit_feedback: 'አስተያየት ያስገቡ',
-    feedback_type: 'የአስተያየት ዓይነት',
-    feedback_message: 'የአስተያየት መልዕክት',
-    rating: 'ደረጃ',
-    your_feedback: 'አስተያየትዎ',
-    feedback_success: 'ለአስተያየትዎ እናመሰግናለን!',
-    total_feedback: 'ጠቅላላ አስተያየቶች',
-    
-    // ========== STATISTICS ==========
-    statistics: 'ስታትስቲክስ',
-    overview: 'አጠቃላይ እይታ',
-    total: 'ጠቅላላ',
-    today: 'ዛሬ',
-    this_week: 'በዚህ ሳምንት',
-    this_month: 'በዚህ ወር',
-    this_year: 'በዚህ ዓመት',
-    
-    // ========== FORMS ==========
-    form_validation_required: 'ይህ መረጃ ያስፈልጋል',
-    form_validation_email: 'እባክዎ ልክ ያለ ኢሜይል ያስገቡ',
-    form_validation_phone: 'እባክዎ ልክ ያለ ስልክ ቁጥር ያስገቡ',
-    form_validation_min_length: 'ዝቅተኛ ርዝመት',
-    form_validation_max_length: 'ከፍተኛ ርዝመት',
-    form_validation_password_match: 'የይለፍ ቃላት አይስማሙም',
-    form_validation_file_size: 'የፋይል መጠን ከገደቡ በላይ ነው',
-    form_validation_file_type: 'ልክ ያልሆነ የፋይል ዓይነት',
-    
-    // ========== TABLE ==========
-    table_no_data: 'ምንም መረጃ የለም',
-    table_loading: 'መረጃ በመጫን ላይ...',
-    table_search: 'ሰንጠረዥ ፈልግ...',
-    table_showing: 'በማሳየት ላይ',
-    table_of: 'ከ',
-    table_entries: 'ግቤቶች',
-    table_prev: 'ቀዳሚ',
-    table_next: 'ቀጣይ',
-    
-    // ========== PAGINATION ==========
-    page: 'ገጽ',
-    rows_per_page: 'ረድፎች በገጽ',
-    first_page: 'የመጀመሪያ ገጽ',
-    last_page: 'የመጨረሻ ገጽ',
-    
-    // ========== ACCOUNT ==========
-    my_account: 'መለያዬ',
-    account_settings: 'የመለያ ቅንብሮች',
-    change_password: 'የይለፍ ቃል ቀይር',
-    current_password: 'አሁኑ የይለፍ ቃል',
-    new_password: 'አዲስ የይለፍ ቃል',
-    update_profile: 'መገለጫ አዘምን',
-    profile_photo: 'የመገለጫ ፎቶ',
-    personal_information: 'የግል መረጃ',
-
-    // ========== BILINGUAL APPLICATION TRACKING & CUSTOMER FLOWS ==========
-    missing_docs_warning: 'ማመልከቻዎ ያልተሟላ ነው። እባክዎ የጎደሉትን አስፈላጊ ሰነዶች ያቅርቡና ማመልከቻዎን እንደገና ያስገቡ።',
-    status_submitted: 'ቀርቧል',
-    status_under_review: 'በግምገማ ላይ',
-    status_needs_information: 'ተጨማሪ መረጃ ያስፈልጋል',
-    status_approved: 'ጸድቋል',
-    status_in_progress: 'በሂደት ላይ',
-    status_completed: 'ተጠናቋል',
-    status_rejected: 'ውድቅ ተደርጓል',
-    status_cancelled: 'ተሰርዟል',
-    resubmit_application: 'ማመልከቻውን እንደገና አስገባ',
-    upload_missing_documents: 'የጎደሉ ሰነዶችን ስቀል',
-    staff_review_notes: 'የሰራተኛ ግምገማ ማስታወሻዎች',
-    applicant_details: 'የአመልካች ዝርዝር መረጃ',
-    additional_information: 'ተጨማሪ መረጃ',
-    select_institution_subtitle: 'አገልግሎቶችን ለማየት ተቋም ይምረጡ',
-    search_institutions_services: 'ተቋማትን ወይም አገልግሎቶችን ይፈልጉ...',
-    no_institutions_found: 'ምንም ተቋማት አልተገኙም',
-    try_diff_search: 'ሌላ የፍለጋ ቃል ይሞክሩ',
-    services_available: 'አገልግሎቶች ይገኛሉ',
-    visit_official_website: 'ኦፊሴላዊ ድህረ ገጽን ይጎብኙ',
-    no_services_available: 'ለዚህ ተቋም ምንም አገልግሎቶች አልተገኙም',
-    service_information: 'የአገልግሎት መረጃ',
-    service_info_desc: 'እባክዎ ከማመልከትዎ በፊት አስፈላጊ ሰነዶችን በሙሉ ያዘጋጁ። ለተጨማሪ መስፈርቶች ተቋሙን ማነጋገር ይችላሉ።',
-    apply_for_this_service: 'ለዚህ አገልግሎት ያመልክቱ',
-    apply_for: 'ለ',
-    complete_form_subtitle: 'ማመልከቻዎን ለማስገባት ከታች ያለውን ቅጽ ይሙሉ',
-    free: 'ነፃ',
-    etb: 'ብር',
-    app_submitted_success: 'ማመልከቻዎ በተሳካ ሁኔታ ቀርቧል!',
-    app_ref_number_is: 'የማመልከቻ መለያ ቁጥርዎ:',
-    view_my_applications: 'ማመልከቻዎቼን ይመልከቱ',
-    apply_another_service: 'ለሌላ አገልግሎት ያመልክቱ',
-    back_to_applications: 'ወደ ማመልከቻዎች ተመለስ',
-    back_to_institutions: 'ወደ ተቋማት ተመለስ',
-    back_to_service_details: 'ወደ አገልግሎት ዝርዝር ተመለስ',
-    back_to_feedback: 'ወደ አስተያየቶቼ ተመለስ',
-    back_to_announcements: 'ወደ ማስታወቂያዎች ተመለስ',
-    back_to_search: 'ወደ ፍለጋ ተመለስ',
-    verified_account: 'የተረጋገጠ መለያ',
-    all_time_requests: 'አጠቃላይ ጥያቄዎች',
-    ticket_waiting: 'ትኬት በመጠባበቅ ላይ',
-    no_active_ticket: 'ምንም ንቁ ትኬት የለም',
-    no_apps_yet: 'እስካሁን ምንም ማመልከቻ አልቀረበም',
-    no_apps_yet_desc: 'የመንግስት አገልግሎቶችን በመስመር ላይ ያመልክቱ እና እያንዳንዱን ደረጃ በቀጥታ ይከታተሉ።',
-    reference_number: 'የማመልከቻ ቁጥር',
-    submitted_date: 'የቀረበበት ቀን',
-    last_updated: 'የመጨረሻ ማሻሻያ',
-    save_changes: 'ለውጦችን መዝግብ',
-    date_of_birth: 'የትውልድ ቀን',
-    rate_this_service: 'ይህንን አገልግሎት ይገምግሙ',
-    feedback_not_available: 'ለዚህ ማመልከቻ የአገልግሎት መረጃ ስለጎደለ ግምገማ መስጠት አይቻልም።',
-    rate_your_experience: 'የአገልግሎት ልምድዎን ይገምግሙ',
-    how_rate_service: 'ያገኙትን አገልግሎት እንዴት ይገመግሙታል?',
-    poor: 'ዝቅተኛ',
-    good: 'ጥሩ',
-    very_good: 'በጣም ጥሩ',
-    excellent: 'ምርጥ',
-    fantastic: 'እጅግ በጣም ጥሩ',
-    add_comment_optional: 'አስተያየት ያክሉ (አስገዳጅ አይደለም)',
-    write_feedback_placeholder: 'አስተያየትዎን እዚህ ይፃፉ...',
-    your_token: 'የእርስዎ ትኬት ቁጥር',
-    now_serving: 'አሁን በማስተናገድ ላይ',
-    estimated_wait: 'የሚገመት የጥበቃ ጊዜ',
-    minutes: 'ደቂቃዎች',
-    cancel_ticket: 'ትኬት ሰርዝ',
-    join_service_queue: 'የአገልግሎት ተራ ይያዙ',
-    get_ticket: 'ትኬት ውሰድ',
-    select_institution: 'ተቋም ይምረጡ',
-    select_service: 'አገልግሎት ይምረጡ',
-    active_customer_account: 'ንቁ የደንበኛ መለያ',
-    registration_status: 'የምዝገባ ሁኔታ:',
-    verified: 'የተረጋገጠ',
-    new_application: 'አዲስ ማመልከቻ',
-    all: 'ሁሉም',
-    track_manage_applications: 'የአገልግሎት ማመልከቻዎችዎን ይከታተሉ እና ያስተዳድሩ',
-    app_number_col: 'የማመልከቻ መለያ',
-    service_col: 'አገልግሎት',
-    institution_col: 'ተቋም',
-    status_col: 'ሁኔታ',
-    submitted_col: 'የቀረበበት ቀን',
-    updated_col: 'የመጨረሻ ማሻሻያ',
-    actions_col: 'ተግባራት',
-    submitting: 'በማስገባት ላይ...',
-    app_info_note: 'እባክዎ ከማስገባትዎ በፊት አስፈላጊ የሆኑ ሰነዶችን በሙሉ ያዘጋጁ። ለተጨማሪ መስፈርቶች በተቋሙ በኩል ሊገናኙዎት ይችላሉ።',
-    my_queue_title: 'የእኔ ተራ',
-    my_queue_desc: 'ለተራ ይመዝገቡ እና የትኬትዎን ሁኔታ ይከታተሉ።',
-    join_queue_btn: '+ ተራ ይያዙ',
-    tab_active: 'ንቁ',
-    tab_history: 'ታሪክ',
-    no_active_tickets: 'ምንም ንቁ የተራ ትኬቶች የሉም',
-    no_active_tickets_desc: 'ለአገልግሎት ተራ ለመመዝገብ "+ ተራ ይያዙ" የሚለውን ይጫኑ።',
-    no_history_tickets: 'እስካሁን ምንም የተራ ታሪክ የለም',
-    no_history_tickets_desc: 'የተጠናቀቁ እና የተሰረዙ ተራዎች እዚህ ይታያሉ።',
-    queue_info_banner: 'የተራ አስተዳደር፡ ለአገልግሎት ተራ ይመዝገቡ፣ በሲስተሙ የተሰጠ ትኬት ይቀበሉ እና ደረጃዎን በቀጥታ ይከታተሉ። የትኬት ቁጥርዎ በራሱ የሚመደብ ነው።',
-    choose_institution_desc: 'ተራ መያዝ የሚፈልጉበትን ተቋም ይምረጡ።',
-    choose_service_at: 'አገልግሎት ይምረጡ በ',
-    confirm_queue_reg: 'የተራ ምዝገባን ያረጋግጡ',
-    review_confirm_queue: 'የተራ ምዝገባዎን ይገምግሙ እና ያረጋግጡ።',
-    auto_token_note: 'ማስታወሻ፡ የተራ ትኬትዎ በሲስተሙ በራሱ የሚዘጋጅ ነው። የትኬት ቁጥር መምረጥ አይቻልም።',
-    register_for_queue: 'ለተራ ይመዝገቡ',
-    token_generated_desc: 'ትኬትዎ ተዘጋጅቷል። እባክዎ ቁጥርዎ እስኪጠራ ድረስ ይጠብቁ።',
-    number_being_called: 'ቁጥርዎ እየተጠራ ነው!',
-    proceed_counter: 'እባክዎ ወደ አገልግሎት መስኮት ይሂዱ።',
-    service_completed_title: 'አገልግሎት ተጠናቋል',
-    service_completed_desc: 'የተራ አገልግሎትዎ ተጠናቋል።',
-    people_ahead: 'የቀደሙ ሰዎች',
-    est_wait: 'የሚገመት ቆይታ',
-    ready_to_be_called: 'ሊጠሩ ተዘጋጅተዋል',
-    at_counter: 'አሁን በመስኮት ላይ',
-    awaiting_counter: 'መስኮት በመጠበቅ ላይ',
-    ahead: 'የቀደሙ',
-    registered: 'የተመዘገበበት',
-    called_at: 'የተጠራበት ሰዓት',
-    completed_at: 'የተጠናቀቀበት ሰዓት',
-    cancelled_at: 'የተሰረዘበት ሰዓት',
-    leave_queue: 'ከተራ ይውጡ',
-    leaving: 'በመውጣት ላይ...',
-    cannot_submit_feedback: 'አስተያየት መስጠት አይቻልም',
-    cannot_submit_feedback_desc: 'ይህ ማመልከቻ አስፈላጊው የአገልግሎት ወይም የተቋም መረጃ የለውም። አስተያየት መስጠት የሚቻለው ትክክለኛ የአገልግሎት መረጃ ላላቸው ማመልከቻዎች ብቻ ነው።',
-    feedback_thank_you: 'እናመሰግናለን!',
-    feedback_thank_you_desc: 'አስተያየትዎ የመንግስት አገልግሎቶችን ለማሻሻል ያግዛል!',
-    feedback_satisfied_question: 'በዚህ አገልግሎት ምን ያህል ረክተዋል?',
-    additional_comments: 'ተጨማሪ አስተያየቶች (አስገዳጅ አይደለም)',
-    feedback_anonymous_note: 'አስተያየትዎ ስም-አልባ ሲሆን አገልግሎታችንን ለማሻሻል ይረዳል',
-    submit_rating: 'ደረጃውን መዝግብ',
-    status_waiting: 'በመጠባበቅ ላይ',
-    status_called: 'ተጠርቷል — ወደ መስኮት ይሂዱ!',
-    status_serving: 'በአገልግሎት ላይ',
-  },
-};
-
-

@@ -25,7 +25,7 @@ async function listAllUsers() {
   }
 
   const formatted = users.map((u, index) => {
-    const isInternal = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'].includes((u.role || '').toUpperCase());
+    const isInternal = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN'].includes((u.role || '').toUpperCase());
     const mustChange = u.must_change_password === true || u.metadata?.must_change_password === true;
     const isVerified = isInternal || u.email_verified === true || u.metadata?.email_verification?.verified === true || !u.metadata?.email_verification;
     const instName = u.institutions?.name_en || (u.institution_id ? u.institution_id : 'N/A');

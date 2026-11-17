@@ -155,7 +155,7 @@ function getRoleFromEmail(email) {
   if (email.includes('inst.manager') || email.includes('.manager')) return 'INSTITUTION_MANAGER';
   if (email.includes('employee')) return 'EMPLOYEE';
   if (email.includes('technician') || email.includes('ict')) return 'TECHNICIAN';
-  if (email.includes('customer') || email.includes('citizen')) return 'CUSTOMER';
+  if (email.includes('customer')) return 'CUSTOMER';
   return 'UNKNOWN';
 }
 

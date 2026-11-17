@@ -110,7 +110,7 @@ export function MaintenanceProvider({ children }) {
   useEffect(() => {
     // Check if user has permission to view maintenance reports
     const userRole = user?.role?.toUpperCase();
-    const canViewMaintenance = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'].includes(userRole);
+    const canViewMaintenance = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN'].includes(userRole);
     
     if (!canViewMaintenance) {
       console.log('=== MAINTENANCE CONTEXT: Skipping auto-load for role:', user?.role, '(no permission) ===');
@@ -220,8 +220,7 @@ export function MaintenanceProvider({ children }) {
       setError(null);
 
       const response = await api.post(`/maintenance/reports/${reportId}/assign`, {
-        technicianId,
-        ictStaffId: technicianId // backwards-compatibility
+        technicianId
       });
 
       if (response.success) {

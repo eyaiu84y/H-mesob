@@ -11,7 +11,7 @@ const router = express.Router();
  */
 router.post('/', 
   authenticate,
-  authorize('CUSTOMER', 'CITIZEN'),
+  authorize('CUSTOMER'),
   requireVerifiedCustomer,
   postApplication
 );
@@ -23,7 +23,7 @@ router.post('/',
  */
 router.post('/:id/resubmit', 
   authenticate,
-  authorize('CUSTOMER', 'CITIZEN'),
+  authorize('CUSTOMER'),
   requireVerifiedCustomer,
   postResubmitApplication
 );

@@ -19,8 +19,23 @@ export const authenticate = async (req, res, next) => {
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
-    // Verify token
-    const decoded = verifyToken(token);
+    // Verify token safely
+    let decoded;
+    try {
+      decoded = verifyToken(token);
+    } catch (err) {
+      return res.status(401).json({
+        success: false,
+        message: err.message || 'Invalid or expired token. Please login again.'
+      });
+    }
+
+    if (!decoded || !decoded.userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token payload. Please login again.'
+      });
+    }
 
     // Fetch user from database to ensure they still exist and are active
     const { data: user, error } = await supabase
@@ -89,17 +104,18 @@ export const authenticate = async (req, res, next) => {
 
     next();
   } catch (error) {
-    if (error.message === 'Token has expired') {
+    if (
+      error.name === 'JsonWebTokenError' ||
+      error.name === 'TokenExpiredError' ||
+      error.message === 'Token has expired' ||
+      error.message === 'Invalid token' ||
+      error.message?.includes('token') ||
+      error.message?.includes('jwt') ||
+      error.message?.includes('uuid')
+    ) {
       return res.status(401).json({
         success: false,
-        message: 'Token has expired. Please login again.'
-      });
-    }
-
-    if (error.message === 'Invalid token') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token. Please login again.'
+        message: 'Invalid or expired token. Please login again.'
       });
     }
 
@@ -125,12 +141,7 @@ export const authorize = (...allowedRoles) => {
     }
 
     const userRole = (req.user.role || '').toUpperCase();
-    const normalizedAllowed = allowedRoles.flatMap(r => {
-      const upper = (r || '').toUpperCase();
-      if (upper === 'TECHNICIAN' || upper === 'ICT_STAFF') return ['TECHNICIAN', 'ICT_STAFF'];
-      if (upper === 'CUSTOMER' || upper === 'CITIZEN') return ['CUSTOMER', 'CITIZEN'];
-      return [upper];
-    });
+    const normalizedAllowed = allowedRoles.map(r => (r || '').toUpperCase());
 
     if (!normalizedAllowed.includes(userRole)) {
       return res.status(403).json({
@@ -213,6 +224,8 @@ export const optionalAuth = async (req, res, next) => {
   }
 };
 
+import { isUserEmailVerified } from '../services/emailService.js';
+
 /**
  * Restricts customer access to actions that require verified email.
  * Applies strictly to CUSTOMER accounts that have not completed email verification.
@@ -226,12 +239,12 @@ export const requireVerifiedCustomer = (req, res, next) => {
   }
 
   const roleUpper = String(req.user.role || '').toUpperCase();
-  if (roleUpper === 'CUSTOMER' || roleUpper === 'CITIZEN') {
-    if (req.user.metadata?.email_verification?.verified === false) {
+  if (roleUpper === 'CUSTOMER') {
+    if (!isUserEmailVerified(req.user)) {
       return res.status(403).json({
         success: false,
         code: 'EMAIL_VERIFICATION_REQUIRED',
-        message: 'Email verification is required before submitting applications or joining queues. Please verify your email address.',
+        message: 'Email verification is required before joining queues or accessing services. Please verify your email address.',
         emailVerified: false
       });
     }

@@ -12,8 +12,7 @@ const VALID_ROLES = [
   'institution_manager',
   'employee',
   'technician',
-  'customer',
-  'ict_staff'
+  'customer'
 ];
 
 export function AuthProvider({ children }) {
@@ -132,14 +131,14 @@ export function AuthProvider({ children }) {
         return { success: false, message: "Invalid role." };
       }
       
-      const institutionRequiredRoles = ['institution_manager', 'employee', 'technician', 'ict_staff'];
+      const institutionRequiredRoles = ['institution_manager', 'employee', 'technician'];
       if (institutionRequiredRoles.includes(userData.role)) {
         if (!userData.institution?.trim()) {
           return { success: false, message: `Institution is required for ${ROLE_LABELS[userData.role]}.` };
         }
       }
       
-      const employeeIdRequiredRoles = ['institution_manager', 'employee', 'technician', 'ict_staff'];
+      const employeeIdRequiredRoles = ['institution_manager', 'employee', 'technician'];
       if (employeeIdRequiredRoles.includes(userData.role)) {
         if (!userData.employeeId?.trim()) {
           return { success: false, message: `Employee/Staff ID is required for ${ROLE_LABELS[userData.role]}.` };
@@ -274,6 +273,29 @@ export function AuthProvider({ children }) {
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to update user status'
+      };
+    }
+  }
+
+  async function deleteUser(userId) {
+    try {
+      const response = await api.delete(`/users/${userId}`);
+      if (!response.success) {
+        return {
+          success: false,
+          message: response.message || 'Failed to delete user'
+        };
+      }
+      await fetchUsers();
+      return {
+        success: true,
+        message: response.message || 'User deleted successfully'
+      };
+    } catch (error) {
+      console.error('Delete user error:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to delete user'
       };
     }
   }
@@ -468,7 +490,7 @@ export function AuthProvider({ children }) {
       }
       
       // Block staff role self-registration
-      const STAFF_ROLES = ['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'technician', 'ict_staff'];
+      const STAFF_ROLES = ['super_admin', 'mesob_manager', 'institution_manager', 'employee', 'technician'];
       if (STAFF_ROLES.includes(role)) {
         return { success: false, message: "Staff accounts can only be created by administrators." };
       }
@@ -530,6 +552,7 @@ export function AuthProvider({ children }) {
       createUser, 
       updateUser, 
       toggleUserStatus, 
+      deleteUser,
       isLoggedIn: !!user,
       loading,
       usersLoading
@@ -554,9 +577,6 @@ export const ROLE_ROUTES = {
   technician:           "/dashboard/technician",
   customer:             "/dashboard/customer",
 };
-// Legacy route aliases for compatibility (non-enumerable so Object.entries / Object.keys don't produce duplicate items)
-Object.defineProperty(ROLE_ROUTES, 'ict_staff', { value: '/dashboard/technician', enumerable: false, writable: true, configurable: true });
-Object.defineProperty(ROLE_ROUTES, 'citizen', { value: '/dashboard/customer', enumerable: false, writable: true, configurable: true });
 
 export const ROLE_LABELS = {
   super_admin:          "Super Admin",
@@ -566,9 +586,6 @@ export const ROLE_LABELS = {
   technician:           "Technician",
   customer:             "Customer",
 };
-// Legacy label aliases (non-enumerable so Object.entries / Object.keys don't produce duplicate items)
-Object.defineProperty(ROLE_LABELS, 'ict_staff', { value: 'Technician', enumerable: false, writable: true, configurable: true });
-Object.defineProperty(ROLE_LABELS, 'citizen', { value: 'Customer', enumerable: false, writable: true, configurable: true });
 
 // Internal staff roles manageable by administrators (Customer excluded as customers self-register)
 export const INTERNAL_ROLE_LABELS = {
@@ -578,7 +595,6 @@ export const INTERNAL_ROLE_LABELS = {
   employee:             "Employee",
   technician:           "Technician",
 };
-Object.defineProperty(INTERNAL_ROLE_LABELS, 'ict_staff', { value: 'Technician', enumerable: false, writable: true, configurable: true });
 
 export const ROLE_BADGE = {
   super_admin:          "bg-slate-100 text-slate-800 border border-slate-300 font-medium",
@@ -588,6 +604,3 @@ export const ROLE_BADGE = {
   technician:           "bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium",
   customer:             "bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium",
 };
-// Legacy aliases (non-enumerable)
-Object.defineProperty(ROLE_BADGE, 'ict_staff', { value: 'bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium', enumerable: false, writable: true, configurable: true });
-Object.defineProperty(ROLE_BADGE, 'citizen', { value: 'bg-blue-50 text-[#1e3a8a] border border-blue-200 font-medium', enumerable: false, writable: true, configurable: true });

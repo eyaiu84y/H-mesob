@@ -10,70 +10,72 @@ import { useFeedback } from '../../context/FeedbackContext';
 import { useServices } from '../../context/ServiceContext';
 import { useApp } from '../../context/AppContext';
 import { formatDisplayDate } from '../../utils/formatters';
+import { getLocalized, getServiceTitle, getServiceDescription, getInstitutionName, getServiceRequirements } from '../../utils/localizedContent';
 
 
 // ─── Plain Language Status Helper for Customers ─────────────────────
-function getPlainLanguageStatusInfo(status, lang) {
+function getPlainLanguageStatusInfo(status, t) {
+  if (!t) t = {};
   const norm = String(status || '').toUpperCase();
   if (norm.includes('SUBMIT')) {
     return {
-      badge: lang === 'am' ? 'ደርሷል' : 'Submitted',
+      badge: (t['cust_submitted'] || 'Submitted'),
       badgeClass: 'bg-blue-50 dark:bg-blue-950/40 text-[#1e3a8a] dark:text-blue-300 border-blue-200 dark:border-blue-800',
-      description: lang === 'am' ? 'ማመልከቻዎ ደርሷል፤ በቅርቡ ይመደባል' : 'Your application has been received.',
-      actionText: lang === 'am' ? 'ሁኔታ ተመልከት' : 'View Details',
+      description: (t['cust_your_application_has_been_received'] || 'Your application has been received.'),
+      actionText: (t['cust_view_details'] || 'View Details'),
       actionClass: 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/40 dark:hover:bg-blue-900/60 text-[#314ea1] dark:text-blue-300 border border-blue-200 dark:border-blue-700'
     };
   }
   if (norm.includes('REVIEW') || norm.includes('PROGRESS')) {
     return {
-      badge: lang === 'am' ? 'በግምገማ ላይ' : 'Under Review',
+      badge: (t['cust_under_review'] || 'Under Review'),
       badgeClass: 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-      description: lang === 'am' ? 'ባለሙያዎች ማመልከቻዎን እየፈተሹ ነው' : 'Staff are checking your application.',
-      actionText: lang === 'am' ? 'ሂደት ተከታተል' : 'Track Review',
+      description: (t['cust_staff_are_checking_your_application'] || 'Staff are checking your application.'),
+      actionText: (t['cust_track_review'] || 'Track Review'),
       actionClass: 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/40 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700'
     };
   }
   if (norm.includes('NEED') || norm.includes('DOC') || norm.includes('INFO')) {
     return {
-      badge: lang === 'am' ? 'እርምጃ ያስፈልጋል' : 'Action Needed',
+      badge: (t['cust_action_needed'] || 'Action Needed'),
       badgeClass: 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800 animate-pulse',
-      description: lang === 'am' ? 'እባክዎ የተጠየቀውን ተጨማሪ መረጃ ይስቀሉ' : 'Please provide requested information.',
-      actionText: lang === 'am' ? 'ሰነድ ይስቀሉ' : 'Provide Info',
+      description: (t['cust_please_provide_requested_information'] || 'Please provide requested information.'),
+      actionText: (t['cust_provide_info'] || 'Provide Info'),
       actionClass: 'bg-rose-600 hover:bg-rose-700 text-white shadow-xs font-bold'
     };
   }
   if (norm.includes('APPROV')) {
     return {
-      badge: lang === 'am' ? 'ጸድቋል' : 'Approved',
+      badge: (t['cust_approved'] || 'Approved'),
       badgeClass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-      description: lang === 'am' ? 'ማመልከቻዎ ጸድቋል፤ ወደ አገልግሎት መስኮት መሄድ ይችላሉ' : 'Approved — follow next steps.',
-      actionText: lang === 'am' ? 'ቀጣይ ደረጃዎች' : 'Next Steps',
+      description: (t['cust_approved_follow_next_steps'] || 'Approved — follow next steps.'),
+      actionText: (t['cust_next_steps'] || 'Next Steps'),
       actionClass: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs font-bold'
     };
   }
   if (norm.includes('COMPLET')) {
     return {
-      badge: lang === 'am' ? 'ተጠናቋል' : 'Completed',
+      badge: (t['cust_completed'] || 'Completed'),
       badgeClass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-      description: lang === 'am' ? 'አገልግሎትዎ በተሳካ ሁኔታ ተጠናቋል' : 'Your service has been completed.',
-      actionText: lang === 'am' ? 'ግብረመልስ ስጥ' : 'Rate Service',
+      description: (t['cust_your_service_has_been_completed'] || 'Your service has been completed.'),
+      actionText: (t['cust_rate_service'] || 'Rate Service'),
       actionClass: 'bg-violet-50 hover:bg-violet-100 dark:bg-violet-900/40 dark:hover:bg-violet-900/60 text-violet-800 dark:text-violet-300 border border-violet-200 dark:border-violet-700'
     };
   }
   if (norm.includes('REJECT')) {
     return {
-      badge: lang === 'am' ? 'ውድቅ ተደርጓል' : 'Rejected',
+      badge: (t['cust_rejected'] || 'Rejected'),
       badgeClass: 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800',
-      description: lang === 'am' ? 'አልጸደቀም፤ ምክንያቱን ለማንበብ ይጫኑ' : 'Not approved. Read reason provided.',
-      actionText: lang === 'am' ? 'ምክንያት ተመልከት' : 'View Reason',
+      description: (t['cust_not_approved_read_reason_provided'] || 'Not approved. Read reason provided.'),
+      actionText: (t['cust_view_reason'] || 'View Reason'),
       actionClass: 'bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-700 font-semibold'
     };
   }
   return {
     badge: status || 'Pending',
     badgeClass: 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600',
-    description: lang === 'am' ? 'በሂደት ላይ' : 'Application processing.',
-    actionText: lang === 'am' ? 'ዝርዝር ይመልከቱ' : 'View Details',
+    description: (t['cust_application_processing'] || 'Application processing.'),
+    actionText: (t['cust_view_details'] || 'View Details'),
     actionClass: 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200'
   };
 }
@@ -91,12 +93,13 @@ const toLocalEthiopianPhone = (phone) => {
 export default function CustomerDashboard() {
   const { user, updateUser, changePassword, verifyEmail, resendVerification, sendPhoneOTP, verifyPhoneOTP } = useAuth();
   const { t, lang } = useApp();
+  const i18nT = t;
   const { getActiveTickets } = useQueue();
   const { applications, getActiveApplications, getCompletedApplications } = useApplications();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [applyKey, setApplyKey] = useState(0);
   const [selectedApp, setSelectedApp] = useState(null);
-  const firstName = user?.name?.split(' ')[0] || t.customer || (lang === 'am' ? 'ደንበኛ' : 'Customer');
+  const firstName = user?.name?.split(' ')[0] || t.customer || ((t['cust_customer'] || 'Customer'));
   const activeQueueCount = getActiveTickets().length;
   
   // Get application counts
@@ -205,7 +208,7 @@ export default function CustomerDashboard() {
     if (profileForm.phone && profileForm.phone.includes('@')) {
       setProfileMsg({
         type: 'error',
-        text: lang === 'am' ? 'እባክዎ በስልክ ቁጥር ቦታ ትክክለኛ ስልክ ቁጥር ያስገቡ' : 'Please enter a valid phone number, not an email address.'
+        text: (t['cust_please_enter_a_valid_phone_number_not_an'] || 'Please enter a valid phone number, not an email address.')
       });
       return;
     }
@@ -224,19 +227,19 @@ export default function CustomerDashboard() {
       if (res && res.success) {
         setProfileMsg({
           type: 'success',
-          text: lang === 'am' ? 'የመገለጫ መረጃዎ በተሳካ ሁኔታ ተዘምኗል!' : 'Profile information updated successfully!'
+          text: (t['cust_profile_information_updated_successfully'] || 'Profile information updated successfully!')
         });
         setTimeout(() => setProfileMsg(null), 5000);
       } else {
         setProfileMsg({
           type: 'error',
-          text: res?.message || (lang === 'am' ? 'መገለጫ ማዘመን አልተሳካም።' : 'Failed to update profile.')
+          text: res?.message || ((t['cust_failed_to_update_profile'] || 'Failed to update profile.'))
         });
       }
     } catch (err) {
       setProfileMsg({
         type: 'error',
-        text: err?.response?.data?.message || err?.message || (lang === 'am' ? 'መገለጫ ማዘመን አልተሳካም።' : 'Failed to update profile.')
+        text: err?.response?.data?.message || err?.message || ((t['cust_failed_to_update_profile'] || 'Failed to update profile.'))
       });
     } finally {
       setProfileSaving(false);
@@ -260,7 +263,7 @@ export default function CustomerDashboard() {
     if (!emailVerifyCode.trim()) {
       setEmailVerifyMsg({
         type: 'error',
-        text: lang === 'am' ? 'እባክዎ ባለ 6-አሃዝ የማረጋገጫ ኮድ ያስገቡ' : 'Please enter the 6-digit verification code.'
+        text: (t['cust_please_enter_the_6_digit_verification_co'] || 'Please enter the 6-digit verification code.')
       });
       return;
     }
@@ -271,7 +274,7 @@ export default function CustomerDashboard() {
       if (res.success) {
         setEmailVerifyMsg({
           type: 'success',
-          text: res.message || (lang === 'am' ? 'ኢሜይል በተሳካ ሁኔታ ተረጋግጧል!' : 'Email verified successfully!')
+          text: res.message || ((t['cust_email_verified_successfully'] || 'Email verified successfully!'))
         });
         setTimeout(() => {
           setIsVerifyEmailModalOpen(false);
@@ -338,16 +341,14 @@ export default function CustomerDashboard() {
     if (!rawPhone) {
       setPhoneOtpMsg({
         type: 'error',
-        text: lang === 'am' ? 'እባክዎ በመጀመሪያ ስልክ ቁጥር ያስገቡ' : 'Please enter a valid phone number first.'
+        text: (t['cust_please_enter_a_valid_phone_number_first'] || 'Please enter a valid phone number first.')
       });
       return;
     }
     if (rawPhone.includes('@')) {
       setPhoneOtpMsg({
         type: 'error',
-        text: lang === 'am'
-          ? 'በስልክ ቁጥር ቦታ ኢሜይል ገብቷል። እባክዎ ትክክለኛ የኢትዮጵያ ሞባይል ስልክ ቁጥር ያስገቡ (ለምሳሌ፡ 09... ወይም 07...)'
-          : 'An email address is entered in the phone field. Please enter a valid Ethiopian mobile number (e.g. 09... or 07...).'
+        text: (t['cust_an_email_address_is_entered_in_the_phone'] || 'An email address is entered in the phone field. Please enter a valid Ethiopian mobile number (e.g. 09... or 07...).')
       });
       return;
     }
@@ -358,9 +359,7 @@ export default function CustomerDashboard() {
     if (!isEthPhone) {
       setPhoneOtpMsg({
         type: 'error',
-        text: lang === 'am'
-          ? 'ትክክለኛ ያልሆነ የኢትዮጵያ ስልክ ቁጥር። እባክዎ ትክክለኛ የኢትዮ ቴሌኮም ወይም የሳፋሪኮም ቁጥር ያስገቡ (ለምሳሌ፡ 09... ወይም 07...)'
-          : 'Invalid Ethiopian mobile phone number. Please enter a valid Ethio Telecom or Safaricom number (e.g., 09... or 07...).'
+        text: (t['cust_invalid_ethiopian_mobile_phone_number_pl'] || 'Invalid Ethiopian mobile phone number. Please enter a valid Ethio Telecom or Safaricom number (e.g., 09... or 07...).')
       });
       return;
     }
@@ -400,7 +399,7 @@ export default function CustomerDashboard() {
     if (!phoneOtpCode.trim()) {
       setPhoneOtpMsg({
         type: 'error',
-        text: lang === 'am' ? 'እባክዎ ባለ 6-አሃዝ የማረጋገጫ ኮድ ያስገቡ' : 'Please enter the 6-digit OTP.'
+        text: (t['cust_please_enter_the_6_digit_otp'] || 'Please enter the 6-digit OTP.')
       });
       return;
     }
@@ -411,7 +410,7 @@ export default function CustomerDashboard() {
       if (res.success) {
         setPhoneOtpMsg({
           type: 'success',
-          text: res.message || (lang === 'am' ? 'ስልክ ቁጥር በተሳካ ሁኔታ ተረጋግጧል!' : 'Phone verified successfully!')
+          text: res.message || ((t['cust_phone_verified_successfully'] || 'Phone verified successfully!'))
         });
         setPhoneOtpSent(false);
         setPhoneOtpCode('');
@@ -447,21 +446,21 @@ export default function CustomerDashboard() {
     if (!passwordForm.current) {
       setPasswordMsg({
         type: 'error',
-        text: lang === 'am' ? 'እባክዎ አሁን ያለዎትን የይለፍ ቃል ያስገቡ።' : 'Please enter your current password.'
+        text: (t['cust_please_enter_your_current_password'] || 'Please enter your current password.')
       });
       return;
     }
     if (!passwordForm.newPass || passwordForm.newPass.length < 8) {
       setPasswordMsg({
         type: 'error',
-        text: lang === 'am' ? 'አዲሱ የይለፍ ቃል ቢያንስ 8 ፊደላት መሆን አለበት።' : 'New password must be at least 8 characters.'
+        text: (t['cust_new_password_must_be_at_least_8_characte'] || 'New password must be at least 8 characters.')
       });
       return;
     }
     if (passwordForm.newPass !== passwordForm.confirm) {
       setPasswordMsg({
         type: 'error',
-        text: lang === 'am' ? 'አዲሶቹ የይለፍ ቃሎች አይመሳሰሉም።' : 'New passwords do not match.'
+        text: (t['cust_new_passwords_do_not_match'] || 'New passwords do not match.')
       });
       return;
     }
@@ -472,20 +471,20 @@ export default function CustomerDashboard() {
       if (res && res.success) {
         setPasswordMsg({
           type: 'success',
-          text: lang === 'am' ? 'የይለፍ ቃል በተሳካ ሁኔታ ተቀይሯል!' : 'Password updated successfully!'
+          text: (t['cust_password_updated_successfully'] || 'Password updated successfully!')
         });
         setPasswordForm({ current: '', newPass: '', confirm: '' });
         setTimeout(() => setPasswordMsg(null), 5000);
       } else {
         setPasswordMsg({
           type: 'error',
-          text: res?.message || (lang === 'am' ? 'የይለፍ ቃል መቀየር አልተሳካም።' : 'Failed to change password.')
+          text: res?.message || ((t['cust_failed_to_change_password'] || 'Failed to change password.'))
         });
       }
     } catch (err) {
       setPasswordMsg({
         type: 'error',
-        text: err?.response?.data?.message || err?.message || (lang === 'am' ? 'የይለፍ ቃል መቀየር አልተሳካም።' : 'Failed to change password.')
+        text: err?.response?.data?.message || err?.message || ((t['cust_failed_to_change_password'] || 'Failed to change password.'))
       });
     } finally {
       setPasswordSaving(false);
@@ -498,7 +497,7 @@ export default function CustomerDashboard() {
     if (!file) return;
     setUploadError(null);
     if (file.size > 5 * 1024 * 1024) {
-      setUploadError(lang === 'am' ? 'የፋይሉ መጠን ከ 5MB መብለጥ የለበትም።' : 'File size cannot exceed 5MB.');
+      setUploadError((t['cust_file_size_cannot_exceed_5mb'] || 'File size cannot exceed 5MB.'));
       return;
     }
     setUploadFile(file);
@@ -513,7 +512,7 @@ export default function CustomerDashboard() {
   const handleUploadSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!uploadFile) {
-      setUploadError(lang === 'am' ? 'እባክዎ የሚሰቀል ፋይል ይምረጡ።' : 'Please select a file to upload.');
+      setUploadError((t['cust_please_select_a_file_to_upload'] || 'Please select a file to upload.'));
       return;
     }
     setUploading(true);
@@ -546,10 +545,10 @@ export default function CustomerDashboard() {
       setIsUploadModalOpen(false);
       setUploadFile(null);
       setUploadFilePreview(null);
-      setUploadSuccessMsg(lang === 'am' ? 'ሰነዱ በተሳካ ሁኔታ ተሰቅሏል!' : 'Document uploaded and attached successfully!');
+      setUploadSuccessMsg((t['cust_document_uploaded_and_attached_successfu'] || 'Document uploaded and attached successfully!'));
       setTimeout(() => setUploadSuccessMsg(null), 5000);
     } catch (err) {
-      setUploadError(err?.message || (lang === 'am' ? 'ሰነድ መጫን አልተሳካም።' : 'Failed to upload document.'));
+      setUploadError(err?.message || ((t['cust_failed_to_upload_document'] || 'Failed to upload document.')));
     } finally {
       setUploading(false);
     }
@@ -557,7 +556,7 @@ export default function CustomerDashboard() {
 
   // Document Delete Handler
   const handleDeleteDocument = async (docId) => {
-    if (!window.confirm(lang === 'am' ? 'ይህንን ሰነድ ማስወገድ እርግጠኛ ነዎት?' : 'Are you sure you want to remove this document?')) {
+    if (!window.confirm((t['cust_are_you_sure_you_want_to_remove_this_doc'] || 'Are you sure you want to remove this document?'))) {
       return;
     }
     const updatedDocs = documents.filter(d => d.id !== docId);
@@ -604,7 +603,7 @@ export default function CustomerDashboard() {
         }
       }))}
       letter="C"
-      subtitle={t.customer_portal || (lang === 'am' ? 'የደንበኛ መግቢያ' : 'Customer Portal')}
+      subtitle={t.customer_portal || ((t['cust_customer_portal'] || 'Customer Portal'))}
     >
       {/* My Dashboard Section */}
       {activeSection === 'dashboard' && (
@@ -617,19 +616,17 @@ export default function CustomerDashboard() {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative z-10">
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#f4b51a] border border-[#f4b51a]/30 text-xs font-semibold mb-3 backdrop-blur-xs">
-                  <span>Hawassa MESOB Portal</span>
+                  <span>{lang === 'am' ? 'የሃዋሳ መሶብ ፖርታል' : 'Hawassa MESOB Portal'}</span>
                   <span>•</span>
                   <span className="text-blue-100 font-normal">
-                    {lang === 'am' ? 'የህዝብ አገልግሎቶች' : 'Public Services'}
+                    {(t['cust_public_services'] || (lang === 'am' ? 'የህዝብ አገልግሎቶች' : 'Public Services'))}
                   </span>
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
                   {t.welcome_back}, {firstName}!
                 </h2>
                 <p className="text-blue-100 text-sm sm:text-base mt-1.5 max-w-xl leading-relaxed">
-                  {lang === 'am' 
-                    ? 'አገልግሎቶችን ያመልክቱ፣ ማመልከቻዎችን ይከታተሉ እና የወረፋ ሁኔታዎን በአንድ ቦታ ያረጋግጡ።' 
-                    : 'Apply for public services, track your applications, and check your queue status in one place.'}
+                  {(t['cust_apply_for_public_services_track_your_app'] || 'Apply for public services, track your applications, and check your queue status in one place.')}
                 </p>
               </div>
 
@@ -639,22 +636,22 @@ export default function CustomerDashboard() {
                     <>
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                       <span className="font-semibold text-white">
-                        {t.verified_account || (lang === 'am' ? 'የተረጋገጠ መለያ' : 'Verified Customer Account')}
+                        {t.verified_account || ((t['cust_verified_customer_account'] || 'Verified Customer Account'))}
                       </span>
                     </>
                   ) : (
                     <>
                       <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                       <span className="font-semibold text-amber-200">
-                        {lang === 'am' ? 'ኢሜይል ማረጋገጫ ይጠብቃል' : 'Email Verification Pending'}
+                        {(t['cust_email_verification_pending'] || 'Email Verification Pending')}
                       </span>
                     </>
                   )}
                   <span>•</span>
-                  <span>{lang === 'am' ? 'ሃዋሳ፣ ሲዳማ' : 'Hawassa, Sidama'}</span>
+                  <span>{(t['cust_hawassa_sidama'] || 'Hawassa, Sidama')}</span>
                 </div>
                 <p className="text-xs text-blue-100 font-medium">
-                  {lang === 'am' ? 'በቀላሉ ከታች ያሉትን ዋና ተግባራት ይምረጡ' : 'Select an action below to get started'}
+                  {(t['cust_select_an_action_below_to_get_started'] || 'Select an action below to get started')}
                 </p>
               </div>
             </div>
@@ -667,12 +664,10 @@ export default function CustomerDashboard() {
                 <span className="text-2xl shrink-0">⚠️</span>
                 <div>
                   <h4 className="font-bold text-sm sm:text-base text-amber-900 dark:text-amber-100">
-                    {lang === 'am' ? 'የኢሜይል ማረጋገጫ ያስፈልጋል' : 'Email Verification Required'}
+                    {(t['cust_email_verification_required'] || 'Email Verification Required')}
                   </h4>
                   <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-300/90 mt-0.5">
-                    {lang === 'am' 
-                      ? 'የህዝብ አገልግሎቶችን ለማመልከት እና ወረፋ ለመያዝ እባክዎ ኢሜይልዎን ያረጋግጡ። የማረጋገጫ ኮድ ወደ ተመዘገበው Gmail ተልኳል።' 
-                      : 'To submit public service applications and join queues, please verify your email address. A verification link and code was sent to your registered Gmail address.'}
+                    {(t['cust_to_submit_public_service_applications_an'] || 'To submit public service applications and join queues, please verify your email address. A verification link and code was sent to your registered Gmail address.')}
                   </p>
                 </div>
               </div>
@@ -681,7 +676,7 @@ export default function CustomerDashboard() {
                   onClick={() => setIsVerifyEmailModalOpen(true)}
                   className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
                 >
-                  {lang === 'am' ? 'አሁን አረጋግጥ' : 'Verify Email Now'}
+                  {(t['cust_verify_email_now'] || 'Verify Email Now')}
                 </button>
               </div>
             </div>
@@ -703,16 +698,14 @@ export default function CustomerDashboard() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] font-extrabold uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full">
-                          {lang === 'am' ? 'የእርስዎ ተራ ደርሷል!' : "It's your turn!"}
+                          {(t['cust_it_s_your_turn'] || "It's your turn!")}
                         </span>
                         <span className="text-xs text-emerald-100 font-mono">
                           Ticket #{currentTicket.token}
                         </span>
                       </div>
                       <h3 className="text-lg sm:text-xl font-extrabold mt-1 text-white">
-                        {lang === 'am'
-                          ? `እባክዎ ወዲያውኑ ወደ መስኮት ${currentTicket.counterNumber || currentTicket.counter || '1'} ይሂዱ`
-                          : `Please go to Counter #${currentTicket.counterNumber || currentTicket.counter || '1'}`}
+                        {i18nT('queue.goToCounterPrompt', { counter: currentTicket.counterNumber || currentTicket.counter || '1', defaultValue: `Please go to Counter #${currentTicket.counterNumber || currentTicket.counter || '1'}` })}
                       </h3>
                       <p className="text-emerald-100/90 text-xs mt-0.5">
                         {currentTicket.serviceName || 'Public Service Counter'} • {currentTicket.institutionName || 'MESOB Center'}
@@ -723,7 +716,7 @@ export default function CustomerDashboard() {
                     onClick={() => setActiveSection('queue')}
                     className="px-5 py-2.5 bg-white text-emerald-800 rounded-xl font-bold text-xs hover:bg-emerald-50 transition cursor-pointer shrink-0 shadow-sm"
                   >
-                    {lang === 'am' ? 'የወረፋ ማያ ይመልከቱ →' : 'View Queue Screen →'}
+                    {(t['cust_view_queue_screen'] || 'View Queue Screen →')}
                   </button>
                 </div>
               );
@@ -738,19 +731,17 @@ export default function CustomerDashboard() {
                   <div>
                     <div className="flex items-center gap-2 mb-0.5">
                       <span className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 px-2 py-0.5 rounded">
-                        {lang === 'am' ? 'ንቁ የወረፋ ትኬት' : 'Active Queue Ticket'}
+                        {(t['cust_active_queue_ticket'] || 'Active Queue Ticket')}
                       </span>
                       <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">
                         #{currentTicket.token}
                       </span>
                     </div>
                     <p className="text-sm font-bold text-slate-900 dark:text-white">
-                      {currentTicket.serviceName || (lang === 'am' ? 'የህዝብ አገልግሎት' : 'Public Service')}
+                      {currentTicket.serviceName || ((t['cust_public_service'] || 'Public Service'))}
                     </p>
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                      {lang === 'am'
-                        ? `ከእርስዎ በፊት ${currentTicket.peopleAhead || 0} ሰዎች አሉ። የተገመተ የጥበቃ ጊዜ: ${currentTicket.estimatedWaitMinutes ? `ወደ ${currentTicket.estimatedWaitMinutes} ደቂቃ` : 'ጥቂት ደቂቃዎች'}`
-                        : `People ahead of you: ${currentTicket.peopleAhead || 0} • Estimated wait: ${currentTicket.estimatedWaitMinutes ? `About ${currentTicket.estimatedWaitMinutes} minutes` : 'A few minutes'}`}
+                      {i18nT('queue.peopleAheadNotice', { count: currentTicket.peopleAhead || 0, wait: currentTicket.estimatedWaitMinutes ? i18nT('queue.aboutMinutes', { count: currentTicket.estimatedWaitMinutes }) : i18nT('queue.fewMinutes') })}
                     </p>
                   </div>
                 </div>
@@ -759,7 +750,7 @@ export default function CustomerDashboard() {
                     onClick={() => setActiveSection('queue')}
                     className="px-4 py-2 bg-[#314ea1] hover:bg-[#253d82] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer flex items-center gap-1.5"
                   >
-                    <span>{lang === 'am' ? 'የወረፋዬን ሁኔታ ተመልከት' : 'Check My Queue'}</span>
+                    <span>{(t['cust_check_my_queue'] || 'Check My Queue')}</span>
                     <span>→</span>
                   </button>
                 </div>
@@ -771,10 +762,10 @@ export default function CustomerDashboard() {
           <div>
             <div className="flex items-center justify-between mb-3.5">
               <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                {lang === 'am' ? 'ዋና ተግባራት' : 'What would you like to do?'}
+                {(t['cust_what_would_you_like_to_do'] || 'What would you like to do?')}
               </h3>
               <span className="text-xs text-slate-400">
-                {lang === 'am' ? 'ፈጣን አገልግሎቶች' : 'Quick Actions'}
+                {(t['cust_quick_actions'] || 'Quick Actions')}
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -790,14 +781,14 @@ export default function CustomerDashboard() {
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-[#314ea1] dark:group-hover:text-blue-400 transition-colors">
-                    {lang === 'am' ? 'አገልግሎት ያመልክቱ' : 'Apply for a Service'}
+                    {(t['cust_apply_for_a_service'] || 'Apply for a Service')}
                   </h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                    {lang === 'am' ? 'አዲስ የህዝብ አገልግሎት ማመልከቻ በቀላሉ ይጀምሩ' : 'Start a new service application'}
+                    {(t['cust_start_a_new_service_application'] || 'Start a new service application')}
                   </p>
                 </div>
                 <span className="mt-3 text-xs font-bold text-[#314ea1] dark:text-blue-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                  {lang === 'am' ? 'ማመልከቻ ጀምር' : 'Start Application'} →
+                  {(t['cust_start_application'] || 'Start Application')} →
                 </span>
               </button>
 
@@ -813,14 +804,14 @@ export default function CustomerDashboard() {
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">
-                    {lang === 'am' ? 'ማመልከቻዎቼን ይከታተሉ' : 'Check My Applications'}
+                    {(t['cust_check_my_applications'] || 'Check My Applications')}
                   </h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                    {lang === 'am' ? 'የገመገማ ሂደትን፣ የውሳኔ ሁኔታን እና ደረጃዎችን ይከታተሉ' : 'See progress of submitted applications'}
+                    {(t['cust_see_progress_of_submitted_applications'] || 'See progress of submitted applications')}
                   </p>
                 </div>
                 <span className="mt-3 text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                  {lang === 'am' ? 'ሁኔታን ፈትሽ' : 'View Progress'} ({activeApplications}) →
+                  {(t['cust_view_progress'] || 'View Progress')} ({activeApplications}) →
                 </span>
               </button>
 
@@ -836,14 +827,14 @@ export default function CustomerDashboard() {
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-amber-700 dark:group-hover:text-amber-300 transition-colors">
-                    {lang === 'am' ? 'የቀጥታ ወረፋዬን ይመልከቱ' : 'Check My Queue'}
+                    {(t['cust_check_my_queue'] || 'Check My Queue')}
                   </h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                    {lang === 'am' ? 'ትኬትዎን፣ ከፊትዎ ያሉ ሰዎችን እና የሚጠበቅ ጊዜ ይመልከቱ' : 'View ticket, people ahead & waiting time'}
+                    {(t['cust_view_ticket_people_ahead_waiting_time'] || 'View ticket, people ahead & waiting time')}
                   </p>
                 </div>
                 <span className="mt-3 text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                  {lang === 'am' ? 'ወረፋ ይክፈቱ' : 'Live Ticket Status'} →
+                  {(t['cust_live_ticket_status'] || 'Live Ticket Status')} →
                 </span>
               </button>
 
@@ -859,14 +850,14 @@ export default function CustomerDashboard() {
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-violet-700 dark:group-hover:text-violet-300 transition-colors">
-                    {lang === 'am' ? 'የአገልግሎት ግብረመልስ' : 'View My Feedback'}
+                    {(t['cust_view_my_feedback'] || 'View My Feedback')}
                   </h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                    {lang === 'am' ? 'የተጠናቀቁ አገልግሎቶችን ይገምግሙ ወይም አስተያየት ይስጡ' : 'Review or submit feedback when eligible'}
+                    {(t['cust_review_or_submit_feedback_when_eligible'] || 'Review or submit feedback when eligible')}
                   </p>
                 </div>
                 <span className="mt-3 text-xs font-bold text-violet-700 dark:text-violet-300 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                  {lang === 'am' ? 'ግብረመልስ ስጥ' : 'Rate & Review'} →
+                  {(t['cust_rate_review'] || 'Rate & Review')} →
                 </span>
               </button>
             </div>
@@ -876,10 +867,10 @@ export default function CustomerDashboard() {
           <div>
             <div className="flex items-center justify-between mb-3.5">
               <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                {lang === 'am' ? 'የአገልግሎት ሁኔታ ማጠቃለያ' : 'Summary of Your Account'}
+                {(t['cust_summary_of_your_account'] || 'Summary of Your Account')}
               </h3>
               <span className="text-xs text-slate-400">
-                {lang === 'am' ? 'ቅጽበታዊ ሁኔታ' : 'Live Counts'}
+                {(t['cust_live_counts'] || 'Live Counts')}
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -887,7 +878,7 @@ export default function CustomerDashboard() {
               <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/90 dark:border-slate-700 border-t-3 border-t-blue-500 shadow-xs hover:border-blue-400 transition-all relative overflow-hidden">
                 <div className="flex items-center justify-between mb-2.5">
                   <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
-                    {lang === 'am' ? 'በሂደት ላይ ያሉ' : 'Applications in Progress'}
+                    {(t['cust_applications_in_progress'] || 'Applications in Progress')}
                   </span>
                   <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#314ea1] dark:text-blue-300 border border-blue-100 dark:border-blue-800 flex items-center justify-center">
                     <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -898,7 +889,7 @@ export default function CustomerDashboard() {
                 <p className="text-3xl font-extrabold text-[#1e3a8a] dark:text-blue-400">{activeApplications}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                  <span>{lang === 'am' ? 'በማዘጋጃ ቤት ባለሙያዎች በግምገማ ላይ ያሉ' : 'Currently being processed or reviewed'}</span>
+                  <span>{(t['cust_currently_being_processed_or_reviewed'] || 'Currently being processed or reviewed')}</span>
                 </p>
               </div>
 
@@ -906,7 +897,7 @@ export default function CustomerDashboard() {
               <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/90 dark:border-slate-700 border-t-3 border-t-emerald-500 shadow-xs hover:border-emerald-400 transition-all relative overflow-hidden">
                 <div className="flex items-center justify-between mb-2.5">
                   <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
-                    {lang === 'am' ? 'የተጠናቀቁ አገልግሎቶች' : 'Completed Services'}
+                    {(t['cust_completed_services'] || 'Completed Services')}
                   </span>
                   <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800 flex items-center justify-center">
                     <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -917,7 +908,7 @@ export default function CustomerDashboard() {
                 <p className="text-3xl font-extrabold text-emerald-700 dark:text-emerald-400">{completedApplications}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                  <span>{lang === 'am' ? 'በተሳካ ሁኔታ የተጠናቀቁ ማመልከቻዎች' : 'Confirmed as completed services'}</span>
+                  <span>{(t['cust_confirmed_as_completed_services'] || 'Confirmed as completed services')}</span>
                 </p>
               </div>
 
@@ -928,7 +919,7 @@ export default function CustomerDashboard() {
               >
                 <div className="flex items-center justify-between mb-2.5">
                   <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors">
-                    {lang === 'am' ? 'የእኔ ንቁ ወረፋ' : 'My Active Queue'}
+                    {(t['cust_my_active_queue'] || 'My Active Queue')}
                   </span>
                   <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-100 dark:border-amber-800 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
                     <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -940,8 +931,8 @@ export default function CustomerDashboard() {
                 <p className="text-xs text-amber-800 dark:text-amber-300 font-medium mt-1.5 flex items-center justify-between">
                   <span>
                     {activeQueueCount > 0 
-                      ? (lang === 'am' ? `${activeQueueCount} ትኬት በመጠባበቅ ላይ` : `${activeQueueCount} ticket waiting`)
-                      : (lang === 'am' ? 'አሁን ንቁ ወረፋ የለም' : 'No active queue entry')}
+                      ? i18nT('queue.activeTicketWaitingCount', { count: activeQueueCount, defaultValue: `${activeQueueCount} ticket waiting` })
+                      : ((t['cust_no_active_queue_entry'] || 'No active queue entry'))}
                   </span>
                   <span className="group-hover:translate-x-1 transition-transform">→</span>
                 </p>
@@ -951,7 +942,7 @@ export default function CustomerDashboard() {
               <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/90 dark:border-slate-700 border-t-3 border-t-indigo-500 shadow-xs hover:border-slate-300 dark:hover:border-slate-600 transition-all relative overflow-hidden">
                 <div className="flex items-center justify-between mb-2.5">
                   <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
-                    {lang === 'am' ? 'ጠቅላላ ማመልከቻዎች' : 'Total Applications'}
+                    {(t['cust_total_applications'] || 'Total Applications')}
                   </span>
                   <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 flex items-center justify-center">
                     <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -962,7 +953,7 @@ export default function CustomerDashboard() {
                 <p className="text-3xl font-extrabold text-slate-900 dark:text-white">{applications.length}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
-                  <span>{lang === 'am' ? 'በዚህ መለያ የተደረጉ አጠቃላይ ጥያቄዎች' : 'All-time submitted applications'}</span>
+                  <span>{(t['cust_all_time_submitted_applications'] || 'All-time submitted applications')}</span>
                 </p>
               </div>
             </div>
@@ -974,7 +965,7 @@ export default function CustomerDashboard() {
               <div className="flex items-center gap-2.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-[#2563eb]" />
                 <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                  {lang === 'am' ? 'የቅርብ ጊዜ ማመልከቻዎች' : 'Track Recent Applications'}
+                  {(t['cust_track_recent_applications'] || 'Track Recent Applications')}
                 </h3>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/40 text-[#1e3a8a] dark:text-blue-300 border border-blue-200/60 dark:border-blue-800">
                   {applications.length}
@@ -984,7 +975,7 @@ export default function CustomerDashboard() {
                 onClick={() => setActiveSection('applications')}
                 className="text-xs sm:text-sm font-semibold text-[#2563eb] dark:text-blue-400 hover:underline flex items-center gap-1 group cursor-pointer"
               >
-                <span>{lang === 'am' ? 'ሁሉንም ይመልከቱ' : 'View All Applications'}</span>
+                <span>{(t['cust_view_all_applications'] || 'View All Applications')}</span>
                 <span className="group-hover:translate-x-0.5 transition-transform">→</span>
               </button>
             </div>
@@ -997,12 +988,10 @@ export default function CustomerDashboard() {
                   </svg>
                 </div>
                 <p className="font-bold text-slate-800 dark:text-slate-100 text-base">
-                  {lang === 'am' ? 'እስካሁን የቀረበ ማመልከቻ የለም' : 'No applications submitted yet'}
+                  {(t['cust_no_applications_submitted_yet'] || 'No applications submitted yet')}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto leading-relaxed">
-                  {lang === 'am' 
-                    ? 'ለማዘጋጃ ቤት አገልግሎቶች በመስመር ላይ ያመልክቱ እና እያንዳንዱን ደረጃ ይከታተሉ።' 
-                    : 'Submit an application online and track each review step in real time without visiting in person.'}
+                  {(t['cust_submit_an_application_online_and_track_e'] || 'Submit an application online and track each review step in real time without visiting in person.')}
                 </p>
                 <button
                   onClick={() => setActiveSection('apply')}
@@ -1011,7 +1000,7 @@ export default function CustomerDashboard() {
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
                   </svg>
-                  <span>{lang === 'am' ? 'አሁን አገልግሎት ያመልክቱ' : 'Apply for a Service Now'}</span>
+                  <span>{(t['cust_apply_for_a_service_now'] || 'Apply for a Service Now')}</span>
                 </button>
               </div>
             ) : (
@@ -1021,18 +1010,18 @@ export default function CustomerDashboard() {
                   <table className="data-table w-full">
                     <thead>
                       <tr className="bg-slate-50/80 dark:bg-slate-900/60 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider border-b border-slate-200/80 dark:border-slate-700">
-                        <th className="px-5 py-3.5 text-left">{lang === 'am' ? 'የአገልግሎት ስም' : 'Service & Reference'}</th>
-                        <th className="px-5 py-3.5 text-left">{lang === 'am' ? 'ተቋም' : 'Institution'}</th>
-                        <th className="px-5 py-3.5 text-left">{lang === 'am' ? 'የቀረበበት ቀን' : 'Application Date'}</th>
-                        <th className="px-5 py-3.5 text-left">{lang === 'am' ? 'የአሁኑ ሁኔታ' : 'Current Status'}</th>
-                        <th className="px-5 py-3.5 text-right">{lang === 'am' ? 'ቀጣይ እርምጃ' : 'Next Action'}</th>
+                        <th className="px-5 py-3.5 text-left">{(t['cust_service_reference'] || 'Service & Reference')}</th>
+                        <th className="px-5 py-3.5 text-left">{(t['cust_institution'] || 'Institution')}</th>
+                        <th className="px-5 py-3.5 text-left">{(t['cust_application_date'] || 'Application Date')}</th>
+                        <th className="px-5 py-3.5 text-left">{(t['cust_current_status'] || 'Current Status')}</th>
+                        <th className="px-5 py-3.5 text-right">{(t['cust_next_action'] || 'Next Action')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
                       {applications.slice(0, 5).map(app => {
-                        const displayService = lang === 'am' ? (app.serviceName_am || app.service_am || app.service) : app.service;
-                        const displayInstitution = lang === 'am' ? (app.institutionName_am || app.institution_am || app.institution) : app.institution;
-                        const statusInfo = getPlainLanguageStatusInfo(app.status, lang);
+                        const displayService = getServiceTitle(app, lang) || app.service;
+                        const displayInstitution = getInstitutionName(app, lang) || app.institution;
+                        const statusInfo = getPlainLanguageStatusInfo(app.status, t);
                         const cleanRef = app.id ? `#${String(app.id).replace(/-/g, '').slice(0, 8).toUpperCase()}` : '#APP-REF';
 
                         return (
@@ -1085,9 +1074,9 @@ export default function CustomerDashboard() {
                 {/* Mobile Cards View */}
                 <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700 p-3 space-y-3">
                   {applications.slice(0, 5).map(app => {
-                    const displayService = lang === 'am' ? (app.serviceName_am || app.service_am || app.service) : app.service;
-                    const displayInstitution = lang === 'am' ? (app.institutionName_am || app.institution_am || app.institution) : app.institution;
-                    const statusInfo = getPlainLanguageStatusInfo(app.status, lang);
+                    const displayService = getServiceTitle(app, lang) || app.service;
+                    const displayInstitution = getInstitutionName(app, lang) || app.institution;
+                    const statusInfo = getPlainLanguageStatusInfo(app.status, t);
                     const cleanRef = app.id ? `#${String(app.id).replace(/-/g, '').slice(0, 8).toUpperCase()}` : '#APP-REF';
 
                     return (
@@ -1140,10 +1129,10 @@ export default function CustomerDashboard() {
               </div>
               <div>
                 <h4 className="font-bold text-slate-900 dark:text-white text-base">
-                  {lang === 'am' ? 'የመሶብ የህዝብ አገልግሎቶች እንዴት ይሰራሉ?' : 'How Hawassa MESOB Services Work (3 Simple Steps)'}
+                  {(t['cust_how_hawassa_mesob_services_work_3_simple'] || 'How Hawassa MESOB Services Work (3 Simple Steps)')}
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {lang === 'am' ? 'ለደንበኞች የቀለለ እና ግልጽ የአገልግሎት አሰጣጥ' : 'Simple, transparent, and queue-free municipal public services'}
+                  {(t['cust_simple_transparent_and_queue_free_munici'] || 'Simple, transparent, and queue-free municipal public services')}
                 </p>
               </div>
             </div>
@@ -1152,36 +1141,30 @@ export default function CustomerDashboard() {
               <div className="p-3.5 bg-white dark:bg-slate-900/60 rounded-xl border border-blue-100 dark:border-slate-700">
                 <div className="font-bold text-[#314ea1] dark:text-blue-400 mb-1 flex items-center gap-1.5">
                   <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/60 flex items-center justify-center text-[11px]">1</span>
-                  <span>{lang === 'am' ? 'አገልግሎት ይምረጡ' : 'Choose a Service'}</span>
+                  <span>{(t['cust_choose_a_service'] || 'Choose a Service')}</span>
                 </div>
                 <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                  {lang === 'am' 
-                    ? 'ከመጀመርዎ በፊት አስፈላጊ መስፈርቶችን፣ ሰነዶችን እና የክፍያ መጠኖችን በቀላሉ ይመልከቱ።' 
-                    : 'Browse official requirements, documents, and fees before applying.'}
+                  {(t['cust_browse_official_requirements_documents_a'] || 'Browse official requirements, documents, and fees before applying.')}
                 </p>
               </div>
 
               <div className="p-3.5 bg-white dark:bg-slate-900/60 rounded-xl border border-blue-100 dark:border-slate-700">
                 <div className="font-bold text-[#314ea1] dark:text-blue-400 mb-1 flex items-center gap-1.5">
                   <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/60 flex items-center justify-center text-[11px]">2</span>
-                  <span>{lang === 'am' ? 'በመስመር ላይ ይከታተሉ' : 'Track Online'}</span>
+                  <span>{(t['cust_track_online'] || 'Track Online')}</span>
                 </div>
                 <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                  {lang === 'am' 
-                    ? 'የማመልከቻዎን ሁኔታ በማንኛውም ጊዜ ይከታተሉ፤ ባለሙያዎች ማብራሪያ ከጠየቁ ወዲያውኑ ያስገቡ።' 
-                    : 'Check your application status anytime; staff will review and update each milestone live.'}
+                  {(t['cust_check_your_application_status_anytime_st'] || 'Check your application status anytime; staff will review and update each milestone live.')}
                 </p>
               </div>
 
               <div className="p-3.5 bg-white dark:bg-slate-900/60 rounded-xl border border-blue-100 dark:border-slate-700">
                 <div className="font-bold text-[#314ea1] dark:text-blue-400 mb-1 flex items-center gap-1.5">
                   <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/60 flex items-center justify-center text-[11px]">3</span>
-                  <span>{lang === 'am' ? 'ተራዎ ሲደርስ ብቻ ይሂዱ' : 'Go to Counter When Called'}</span>
+                  <span>{(t['cust_go_to_counter_when_called'] || 'Go to Counter When Called')}</span>
                 </div>
                 <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                  {lang === 'am' 
-                    ? 'በሰልፍ መቆም አያስፈልግም፤ ትኬትዎ ሲጠራ ወይም ሲጸድቅ በቀጥታ ወደ ተመደበው መስኮት ይሂዱ።' 
-                    : 'No need to stand in long queues; receive a live ticket and proceed only when your counter is ready.'}
+                  {(t['cust_no_need_to_stand_in_long_queues_receive_'] || 'No need to stand in long queues; receive a live ticket and proceed only when your counter is ready.')}
                 </p>
               </div>
             </div>
@@ -1201,7 +1184,7 @@ export default function CustomerDashboard() {
 
       {/* My Queue Section */}
       {activeSection === 'queue' && (
-        <QueueManagement />
+        <QueueManagement onVerifyEmail={() => setIsVerifyEmailModalOpen(true)} />
       )}
 
       {/* Apply for Service Section */}
@@ -1219,10 +1202,10 @@ export default function CustomerDashboard() {
         <div className="space-y-6">
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
-              {t.profile_documents || (lang === 'am' ? 'መገለጫ እና ሰነዶች' : 'Profile & Documents')}
+              {t.profile_documents || ((t['cust_profile_documents'] || 'Profile & Documents'))}
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {lang === 'am' ? 'የግል መረጃዎን እና የተሰቀሉ ሰነዶችን ያስተዳድሩ።' : 'Manage your personal information and uploaded documents.'}
+              {(t['cust_manage_your_personal_information_and_upl'] || 'Manage your personal information and uploaded documents.')}
             </p>
           </div>
 
@@ -1247,10 +1230,10 @@ export default function CustomerDashboard() {
                 <h3 className="font-bold text-slate-900 dark:text-white mb-4 text-base flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#314ea1]" />
-                    <span>{t.personal_information || (lang === 'am' ? 'የግል መረጃ' : 'Personal Information')}</span>
+                    <span>{t.personal_information || ((t['cust_personal_information'] || 'Personal Information'))}</span>
                   </div>
                   <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/60 px-2.5 py-1 rounded-lg">
-                    {lang === 'am' ? 'የተረጋገጠ መታወቂያ' : 'Verified ID'}
+                    {(t['cust_verified_id'] || 'Verified ID')}
                   </span>
                 </h3>
 
@@ -1281,7 +1264,7 @@ export default function CustomerDashboard() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
-                        {t.full_name || (lang === 'am' ? 'ሙሉ ስም' : 'Full Name')} <span className="text-rose-500">*</span>
+                        {t.full_name || ((t['cust_full_name'] || 'Full Name'))} <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -1294,12 +1277,12 @@ export default function CustomerDashboard() {
                     <div>
                       <div className="flex justify-between items-center mb-1.5">
                         <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
-                          {t.email || (lang === 'am' ? 'ኢሜይል' : 'Email')}
+                          {t.email || ((t['cust_email'] || 'Email'))}
                         </label>
                         <div className="flex items-center gap-1.5">
                           {user?.emailVerified !== false ? (
                             <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full">
-                              <span>✓</span> {lang === 'am' ? 'የተረጋገጠ' : 'Verified'}
+                              <span>✓</span> {(t['cust_verified'] || 'Verified')}
                             </span>
                           ) : (
                             <button
@@ -1307,11 +1290,11 @@ export default function CustomerDashboard() {
                               onClick={() => setIsVerifyEmailModalOpen(true)}
                               className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-amber-700 bg-amber-50 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full hover:bg-amber-100 transition cursor-pointer"
                             >
-                              <span>⚠</span> {lang === 'am' ? 'አረጋግጥ' : 'Verify Now'}
+                              <span>⚠</span> {(t['cust_verify_now'] || 'Verify Now')}
                             </button>
                           )}
                           <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
-                            {lang === 'am' ? 'የማይቀየር' : 'Read-only'}
+                            {(t['cust_read_only'] || 'Read-only')}
                           </span>
                         </div>
                       </div>
@@ -1327,15 +1310,15 @@ export default function CustomerDashboard() {
                     <div>
                       <div className="flex justify-between items-center mb-1.5">
                         <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
-                          {t.phone || (lang === 'am' ? 'ስልክ ቁጥር' : 'Phone Number')}
+                          {t.phone || ((t['cust_phone_number'] || 'Phone Number'))}
                         </label>
                         {user?.phoneVerified ? (
                           <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full">
-                            <span>✓</span> {lang === 'am' ? 'የተረጋገጠ' : 'Verified'}
+                            <span>✓</span> {(t['cust_verified'] || 'Verified')}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-amber-700 bg-amber-50 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
-                            <span>⚠</span> {lang === 'am' ? 'ያልተረጋገጠ' : 'Unverified'}
+                            <span>⚠</span> {(t['cust_unverified'] || 'Unverified')}
                           </span>
                         )}
                       </div>
@@ -1352,9 +1335,7 @@ export default function CustomerDashboard() {
                             if (val.includes('@')) {
                               setPhoneOtpMsg({
                                 type: 'error',
-                                text: lang === 'am'
-                                  ? 'በስልክ ቁጥር ቦታ ኢሜይል አይፈቀድም። እባክዎ ትክክለኛ የሞባይል ስልክ ቁጥር ያስገቡ (ለምሳሌ፡ 09... ወይም 07...)'
-                                  : 'Email addresses are not allowed in the phone field. Please enter a valid Ethiopian mobile phone number (e.g. 09... or 07...).'
+                                text: (t['cust_email_addresses_are_not_allowed_in_the_p'] || 'Email addresses are not allowed in the phone field. Please enter a valid Ethiopian mobile phone number (e.g. 09... or 07...).')
                               });
                               return;
                             }
@@ -1374,7 +1355,7 @@ export default function CustomerDashboard() {
                             disabled={phoneOtpLoading || phoneOtpCooldown > 0}
                             className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-[#1e3a8a] dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer disabled:opacity-50"
                           >
-                            {phoneOtpLoading ? 'Sending...' : phoneOtpCooldown > 0 ? `${phoneOtpCooldown}s` : (lang === 'am' ? 'በSMS አረጋግጥ' : 'Verify SMS')}
+                            {phoneOtpLoading ? 'Sending...' : phoneOtpCooldown > 0 ? `${phoneOtpCooldown}s` : ((t['cust_verify_sms'] || 'Verify SMS'))}
                           </button>
                         )}
                       </div>
@@ -1383,7 +1364,7 @@ export default function CustomerDashboard() {
                       {phoneOtpSent && !user?.phoneVerified && (
                         <div className="mt-2.5 p-3 rounded-xl bg-blue-50/60 dark:bg-slate-900/60 border border-blue-200/80 dark:border-slate-700 space-y-2">
                           <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-                            {lang === 'am' ? 'ባለ 6-አሃዝ የSMS ማረጋገጫ ኮድ ያስገቡ:' : 'Enter 6-digit SMS verification code:'}
+                            {(t['cust_enter_6_digit_sms_verification_code'] || 'Enter 6-digit SMS verification code:')}
                           </p>
                           <div className="flex gap-2">
                             <input
@@ -1400,7 +1381,7 @@ export default function CustomerDashboard() {
                               disabled={phoneOtpLoading || phoneOtpCode.length < 6}
                               className="px-4 py-1.5 bg-[#1e3a8a] text-white rounded-lg text-xs font-bold hover:bg-[#172554] transition disabled:opacity-50 cursor-pointer"
                             >
-                              {phoneOtpLoading ? 'Verifying...' : (lang === 'am' ? 'አረጋግጥ' : 'Verify')}
+                              {phoneOtpLoading ? 'Verifying...' : ((t['cust_verify'] || 'Verify'))}
                             </button>
                           </div>
                         </div>
@@ -1415,7 +1396,7 @@ export default function CustomerDashboard() {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
-                        {t.date_of_birth || (lang === 'am' ? 'የትውልድ ቀን' : 'Date of Birth')}
+                        {t.date_of_birth || ((t['cust_date_of_birth'] || 'Date of Birth'))}
                       </label>
                       <input
                         type="date"
@@ -1427,13 +1408,13 @@ export default function CustomerDashboard() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
-                      {t.address || (lang === 'am' ? 'አድራሻ' : 'Address')}
+                      {t.address || ((t['cust_address'] || 'Address'))}
                     </label>
                     <textarea
                       rows="2"
                       value={profileForm.address}
                       onChange={(e) => setProfileForm(f => ({ ...f, address: e.target.value }))}
-                      placeholder={lang === 'am' ? 'ሀዋሳ፣ ክፍለ ከተማ፣ ቀበሌ...' : 'Hawassa, Subcity, Kebele, House No...'}
+                      placeholder={(t['cust_hawassa_subcity_kebele_house_no'] || 'Hawassa, Subcity, Kebele, House No...')}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 dark:text-slate-100 text-sm transition"
                     />
                   </div>
@@ -1449,10 +1430,10 @@ export default function CustomerDashboard() {
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                           </svg>
-                          <span>{lang === 'am' ? 'በመመዝገብ ላይ...' : 'Saving...'}</span>
+                          <span>{(t['cust_saving'] || 'Saving...')}</span>
                         </>
                       ) : (
-                        <span>{t.save_changes || (lang === 'am' ? 'ለውጦችን መዝግብ' : 'Save Changes')}</span>
+                        <span>{t.save_changes || ((t['cust_save_changes'] || 'Save Changes'))}</span>
                       )}
                     </button>
                     <button
@@ -1460,7 +1441,7 @@ export default function CustomerDashboard() {
                       disabled={profileSaving}
                       className="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition text-sm font-medium cursor-pointer"
                     >
-                      {t.cancel || (lang === 'am' ? 'ሰርዝ' : 'Cancel')}
+                      {t.cancel || ((t['cust_cancel'] || 'Cancel'))}
                     </button>
                   </div>
                 </div>
@@ -1470,7 +1451,7 @@ export default function CustomerDashboard() {
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/90 dark:border-slate-700 p-6 shadow-xs">
                 <h3 className="font-bold text-slate-900 dark:text-white mb-4 text-base flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#f4b51a]" />
-                  <span>{t.change_password || (lang === 'am' ? 'የይለፍ ቃል ቀይር' : 'Change Password')}</span>
+                  <span>{t.change_password || ((t['cust_change_password'] || 'Change Password'))}</span>
                 </h3>
 
                 {/* Password Message Banner */}
@@ -1499,7 +1480,7 @@ export default function CustomerDashboard() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
-                      {t.current_password || (lang === 'am' ? 'አሁን ያለው የይለፍ ቃል' : 'Current Password')} <span className="text-rose-500">*</span>
+                      {t.current_password || ((t['cust_current_password'] || 'Current Password'))} <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="password"
@@ -1512,25 +1493,25 @@ export default function CustomerDashboard() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
-                        {t.new_password || (lang === 'am' ? 'አዲስ የይለፍ ቃል' : 'New Password')} <span className="text-rose-500">*</span>
+                        {t.new_password || ((t['cust_new_password'] || 'New Password'))} <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="password"
                         value={passwordForm.newPass}
                         onChange={(e) => setPasswordForm(f => ({ ...f, newPass: e.target.value }))}
-                        placeholder={lang === 'am' ? 'ቢያንስ 8 ፊደላት' : 'Min. 8 characters'}
+                        placeholder={(t['cust_min_8_characters'] || 'Min. 8 characters')}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 dark:text-slate-100 text-sm transition"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
-                        {t.confirm_password || (lang === 'am' ? 'አዲሱን የይለፍ ቃል ያረጋግጡ' : 'Confirm New Password')} <span className="text-rose-500">*</span>
+                        {t.confirm_password || ((t['cust_confirm_new_password'] || 'Confirm New Password'))} <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="password"
                         value={passwordForm.confirm}
                         onChange={(e) => setPasswordForm(f => ({ ...f, confirm: e.target.value }))}
-                        placeholder={lang === 'am' ? 'አዲሱን ይለፍ ቃል ይድገሙ' : 'Repeat new password'}
+                        placeholder={(t['cust_repeat_new_password'] || 'Repeat new password')}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 dark:text-slate-100 text-sm transition"
                       />
                     </div>
@@ -1547,10 +1528,10 @@ export default function CustomerDashboard() {
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                           </svg>
-                          <span>{lang === 'am' ? 'በማዘመን ላይ...' : 'Updating Password...'}</span>
+                          <span>{(t['cust_updating_password'] || 'Updating Password...')}</span>
                         </>
                       ) : (
-                        <span>{lang === 'am' ? 'የይለፍ ቃል አዘምን' : 'Update Password'}</span>
+                        <span>{(t['cust_update_password'] || 'Update Password')}</span>
                       )}
                     </button>
                   </div>
@@ -1565,17 +1546,17 @@ export default function CustomerDashboard() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#314ea1]" />
-                    <span>{lang === 'am' ? 'የተሰቀሉ ሰነዶች' : 'Uploaded Documents'}</span>
+                    <span>{(t['cust_uploaded_documents'] || 'Uploaded Documents')}</span>
                   </h3>
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/40 text-[#314ea1] dark:text-blue-300">
-                    {documents.length} {lang === 'am' ? 'ሰነዶች' : 'files'}
+                    {documents.length} {(t['cust_files'] || 'files')}
                   </span>
                 </div>
 
                 {documents.length === 0 ? (
                   <div className="text-center py-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {lang === 'am' ? 'ምንም የተሰቀለ ሰነድ የለም' : 'No documents uploaded yet'}
+                      {(t['cust_no_documents_uploaded_yet'] || 'No documents uploaded yet')}
                     </p>
                   </div>
                 ) : (
@@ -1612,7 +1593,7 @@ export default function CustomerDashboard() {
                               className="px-2.5 py-1 text-xs font-semibold text-[#314ea1] dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-lg transition cursor-pointer"
                               title="View Document"
                             >
-                              {lang === 'am' ? 'ይመልከቱ' : 'View'}
+                              {(t['cust_view'] || 'View')}
                             </button>
                             <button
                               onClick={() => handleDeleteDocument(doc.id)}
@@ -1640,7 +1621,7 @@ export default function CustomerDashboard() {
                   <svg className="w-4 h-4 text-[#314ea1] dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  <span>{lang === 'am' ? '+ አዲስ ሰነድ ይስቀሉ' : '+ Upload New Document'}</span>
+                  <span>{(t['cust_upload_new_document'] || '+ Upload New Document')}</span>
                 </button>
               </div>
 
@@ -1657,31 +1638,31 @@ export default function CustomerDashboard() {
                   </div>
                   <div>
                     <p className="text-xs text-blue-200 uppercase tracking-wide">
-                      {lang === 'am' ? 'የመለያ ሁኔታ' : 'Account Status'}
+                      {(t['cust_account_status'] || 'Account Status')}
                     </p>
                     <p className="text-lg font-bold text-white">
-                      {t.active_customer_account || (lang === 'am' ? 'ንቁ የደንበኛ መለያ' : 'Active Customer Account')}
+                      {t.active_customer_account || ((t['cust_active_customer_account'] || 'Active Customer Account'))}
                     </p>
                   </div>
                 </div>
                 <div className="space-y-2.5 text-sm pt-3 border-t border-white/10">
                   <div className="flex justify-between items-center">
                     <span className="text-blue-100/90 text-xs">
-                      {t.registration_status || (lang === 'am' ? 'የምዝገባ ሁኔታ:' : 'Registration:')}
+                      {t.registration_status || ((t['cust_registration'] || 'Registration:'))}
                     </span>
                     <span className="font-semibold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-md text-xs border border-emerald-400/30">
-                      {t.verified || (lang === 'am' ? 'የተረጋገጠ' : 'Verified')}
+                      {t.verified || ((t['cust_verified'] || 'Verified'))}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-blue-100/90 text-xs">
-                      {t.total_applications || (lang === 'am' ? 'ጠቅላላ ማመልከቻዎች:' : 'Total Applications:')}
+                      {t.total_applications || ((t['cust_total_applications'] || 'Total Applications:'))}
                     </span>
                     <span className="font-bold text-white text-xs">{applications.length}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-blue-100/90 text-xs">
-                      {t.completed_apps || (lang === 'am' ? 'የተጠናቀቁ:' : 'Completed:')}
+                      {t.completed_apps || ((t['cust_completed'] || 'Completed:'))}
                     </span>
                     <span className="font-bold text-emerald-300 text-xs">{completedApplications}</span>
                   </div>
@@ -1760,26 +1741,26 @@ export default function CustomerDashboard() {
                           </div>
                         </div>
                         <span className="px-2.5 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 rounded-full border border-emerald-300 dark:border-emerald-700">
-                          ✓ {previewDoc.status || 'VERIFIED ARCHIVE'}
+                          ✓ {previewDoc.status || (lang === 'am' ? 'የተረጋገጠ ሰነድ' : 'VERIFIED ARCHIVE')}
                         </span>
                       </div>
 
                       {/* Document Details Grid */}
                       <div className="grid grid-cols-2 gap-4 text-xs mb-6">
                         <div className="p-3 bg-white dark:bg-slate-800/80 rounded-lg border border-slate-200 dark:border-slate-700">
-                          <span className="text-slate-400 block mb-1 uppercase font-semibold">Document Title</span>
+                          <span className="text-slate-400 block mb-1 uppercase font-semibold">{t.document_title || (lang === 'am' ? 'የሰነዱ ርዕስ' : 'Document Title')}</span>
                           <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{previewDoc.name}</span>
                         </div>
                         <div className="p-3 bg-white dark:bg-slate-800/80 rounded-lg border border-slate-200 dark:border-slate-700">
-                          <span className="text-slate-400 block mb-1 uppercase font-semibold">Category</span>
-                          <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{previewDoc.category || 'General'}</span>
+                          <span className="text-slate-400 block mb-1 uppercase font-semibold">{t.category || (lang === 'am' ? 'ምድብ' : 'Category')}</span>
+                          <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{previewDoc.category || (lang === 'am' ? 'አጠቃላይ' : 'General')}</span>
                         </div>
                         <div className="p-3 bg-white dark:bg-slate-800/80 rounded-lg border border-slate-200 dark:border-slate-700">
-                          <span className="text-slate-400 block mb-1 uppercase font-semibold">Record Holder</span>
-                          <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{user?.name || 'Customer'}</span>
+                          <span className="text-slate-400 block mb-1 uppercase font-semibold">{t.record_holder || (lang === 'am' ? 'የመዝገብ ባለቤት' : 'Record Holder')}</span>
+                          <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{user?.name || (lang === 'am' ? 'ደንበኛ' : 'Customer')}</span>
                         </div>
                         <div className="p-3 bg-white dark:bg-slate-800/80 rounded-lg border border-slate-200 dark:border-slate-700">
-                          <span className="text-slate-400 block mb-1 uppercase font-semibold">Security Hash / Ref</span>
+                          <span className="text-slate-400 block mb-1 uppercase font-semibold">{t.security_hash || (lang === 'am' ? 'የደህንነት መለያ ቁጥር' : 'Security Hash / Ref')}</span>
                           <span className="font-mono text-slate-700 dark:text-slate-300">HAW-MESOB-{previewDoc.id.toUpperCase().slice(-8)}</span>
                         </div>
                       </div>
@@ -1791,10 +1772,10 @@ export default function CustomerDashboard() {
                         </div>
                         <div className="text-xs">
                           <p className="font-bold text-[#1e3a8a] dark:text-blue-300">
-                            Officially Authenticated Electronic Record
+                            {lang === 'am' ? 'በይፋ የተረጋገጠ ኤሌክትሮኒክ ሰነድ' : 'Officially Authenticated Electronic Record'}
                           </p>
                           <p className="text-slate-600 dark:text-slate-400">
-                            This document has been verified against the Hawassa MESOB customer database and is valid for all municipal public service applications.
+                            {lang === 'am' ? 'ይህ ሰነድ ከሃዋሳ መሶብ የደንበኞች ዳታቤዝ ጋር የተረጋገጠ ሲሆን ለማዘጋጃ ቤት የህዝብ አገልግሎት ማመልከቻዎች በሙሉ ህጋዊ ነው።' : 'This document has been verified against the Hawassa MESOB customer database and is valid for all municipal public service applications.'}
                           </p>
                         </div>
                       </div>
@@ -1829,7 +1810,7 @@ export default function CustomerDashboard() {
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                       </svg>
-                      <span>{lang === 'am' ? 'አውርድ' : 'Download'}</span>
+                      <span>{(t['cust_download'] || 'Download')}</span>
                     </button>
                     <button
                       onClick={() => window.print()}
@@ -1838,14 +1819,14 @@ export default function CustomerDashboard() {
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                       </svg>
-                      <span>{lang === 'am' ? 'አትም' : 'Print'}</span>
+                      <span>{(t['cust_print'] || 'Print')}</span>
                     </button>
                   </div>
                   <button
                     onClick={() => setPreviewDoc(null)}
                     className="px-5 py-2 bg-[#314ea1] hover:bg-[#253d82] text-white rounded-xl text-xs font-semibold transition cursor-pointer"
                   >
-                    {lang === 'am' ? 'ዝጋ' : 'Close'}
+                    {(t['cust_close'] || 'Close')}
                   </button>
                 </div>
               </div>
@@ -1859,10 +1840,10 @@ export default function CustomerDashboard() {
                 <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
                   <div>
                     <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                      {lang === 'am' ? 'አዲስ ሰነድ ይስቀሉ' : 'Upload New Document'}
+                      {(t['cust_upload_new_document'] || 'Upload New Document')}
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      {lang === 'am' ? 'ሰነድዎን ከመገለጫዎ ጋር ያያይዙ' : 'Attach supporting documents to your customer profile.'}
+                      {(t['cust_attach_supporting_documents_to_your_cust'] || 'Attach supporting documents to your customer profile.')}
                     </p>
                   </div>
                   <button
@@ -1891,27 +1872,27 @@ export default function CustomerDashboard() {
                   {/* Category Selection */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
-                      {lang === 'am' ? 'የሰነድ ዓይነት' : 'Document Category'} <span className="text-rose-500">*</span>
+                      {(t['cust_document_category'] || 'Document Category')} <span className="text-rose-500">*</span>
                     </label>
                     <select
                       value={uploadCategory}
                       onChange={(e) => setUploadCategory(e.target.value)}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none"
                     >
-                      <option value="National ID">National ID / Kebele ID</option>
-                      <option value="Passport Photo">Passport Photo</option>
-                      <option value="Birth Certificate">Birth Certificate</option>
-                      <option value="Proof of Residence">Proof of Residence</option>
-                      <option value="Educational Certificate">Educational Certificate</option>
-                      <option value="Power of Attorney">Power of Attorney</option>
-                      <option value="Other Document">Other Document</option>
+                      <option value="National ID">{lang === 'am' ? 'ብሔራዊ መታወቂያ / የቀበሌ መታወቂያ' : 'National ID / Kebele ID'}</option>
+                      <option value="Passport Photo">{lang === 'am' ? 'የፓስፖርት ፎቶ' : 'Passport Photo'}</option>
+                      <option value="Birth Certificate">{lang === 'am' ? 'የልደት ምስክር ወረቀት' : 'Birth Certificate'}</option>
+                      <option value="Proof of Residence">{lang === 'am' ? 'የነዋሪነት ማረጋገጫ' : 'Proof of Residence'}</option>
+                      <option value="Educational Certificate">{lang === 'am' ? 'የትምህርት ማስረጃ' : 'Educational Certificate'}</option>
+                      <option value="Power of Attorney">{lang === 'am' ? 'የውክልና ስልጣን' : 'Power of Attorney'}</option>
+                      <option value="Other Document">{lang === 'am' ? 'ሌላ ሰነድ' : 'Other Document'}</option>
                     </select>
                   </div>
 
                   {/* File Dropzone */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
-                      {lang === 'am' ? 'ፋይል ይምረጡ' : 'Select File'} <span className="text-rose-500">*</span>
+                      {(t['cust_select_file'] || 'Select File')} <span className="text-rose-500">*</span>
                     </label>
                     <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-[#314ea1] dark:hover:border-blue-400 rounded-xl cursor-pointer bg-slate-50/50 dark:bg-slate-900/50 hover:bg-blue-50/30 transition text-center group">
                       <input
@@ -1929,7 +1910,7 @@ export default function CustomerDashboard() {
                             {uploadFile.name}
                           </p>
                           <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {(uploadFile.size / 1024).toFixed(0)} KB • {lang === 'am' ? 'ለመቀየር ይጫኑ' : 'Click to change file'}
+                            {(uploadFile.size / 1024).toFixed(0)} KB • {(t['cust_click_to_change_file'] || 'Click to change file')}
                           </p>
                         </div>
                       ) : (
@@ -1938,7 +1919,7 @@ export default function CustomerDashboard() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                           </svg>
                           <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                            {lang === 'am' ? 'ፋይል ለመምረጥ እዚህ ይጫኑ' : 'Click to choose file or drag & drop'}
+                            {(t['cust_click_to_choose_file_or_drag_drop'] || 'Click to choose file or drag & drop')}
                           </p>
                           <p className="text-xs text-slate-500 dark:text-slate-400">
                             PDF, PNG, JPG (Max 5MB)
@@ -1961,7 +1942,7 @@ export default function CustomerDashboard() {
                     disabled={uploading}
                     className="px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-600 transition cursor-pointer"
                   >
-                    {lang === 'am' ? 'ሰርዝ' : 'Cancel'}
+                    {(t['cust_cancel'] || 'Cancel')}
                   </button>
                   <button
                     onClick={handleUploadSubmit}
@@ -1974,10 +1955,10 @@ export default function CustomerDashboard() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                         </svg>
-                        <span>{lang === 'am' ? 'በመጫን ላይ...' : 'Uploading & Saving...'}</span>
+                        <span>{(t['cust_uploading_saving'] || 'Uploading & Saving...')}</span>
                       </>
                     ) : (
-                      <span>{lang === 'am' ? 'ሰነድ ጫን' : 'Upload Document'}</span>
+                      <span>{(t['cust_upload_document'] || 'Upload Document')}</span>
                     )}
                   </button>
                 </div>
@@ -2000,7 +1981,7 @@ export default function CustomerDashboard() {
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                      {lang === 'am' ? 'የኢሜይል ማረጋገጫ' : 'Verify Your Email'}
+                      {(t['cust_verify_your_email'] || 'Verify Your Email')}
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       {user?.email}
@@ -2016,9 +1997,7 @@ export default function CustomerDashboard() {
               </div>
 
               <p className="text-xs text-slate-600 dark:text-slate-300 mb-4 leading-relaxed">
-                {lang === 'am'
-                  ? 'ባለ 6-አሃዝ የማረጋገጫ ኮድ ወደ ተመዘገበው Gmail ተልኳል። እባክዎ ኮዱን ከታች ያስገቡ።'
-                  : 'A 6-digit verification code was sent to your registered Gmail address. Enter it below to activate all customer services.'}
+                {(t['cust_a_6_digit_verification_code_was_sent_to_'] || 'A 6-digit verification code was sent to your registered Gmail address. Enter it below to activate all customer services.')}
               </p>
 
               {emailVerifyMsg && (
@@ -2034,7 +2013,7 @@ export default function CustomerDashboard() {
               <form onSubmit={handleVerifyEmail} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
-                    {lang === 'am' ? 'የማረጋገጫ ኮድ (6 አሃዞች)' : '6-Digit Verification Code'}
+                    {(t['cust_6_digit_verification_code'] || '6-Digit Verification Code')}
                   </label>
                   <input
                     type="text"
@@ -2056,7 +2035,7 @@ export default function CustomerDashboard() {
                   >
                     {emailResendCooldown > 0
                       ? `Resend in ${emailResendCooldown}s`
-                      : (lang === 'am' ? 'አዲስ ኮድ ላክ' : 'Resend Code')}
+                      : ((t['cust_resend_code'] || 'Resend Code'))}
                   </button>
 
                   <div className="flex gap-2">
@@ -2065,14 +2044,14 @@ export default function CustomerDashboard() {
                       onClick={() => setIsVerifyEmailModalOpen(false)}
                       className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer"
                     >
-                      {lang === 'am' ? 'ዝጋ' : 'Close'}
+                      {(t['cust_close'] || 'Close')}
                     </button>
                     <button
                       type="submit"
                       disabled={emailVerifyLoading || emailVerifyCode.length < 6}
                       className="px-5 py-2 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] text-white rounded-xl text-xs font-bold hover:from-[#253d82] hover:to-[#172554] transition shadow-xs disabled:opacity-50 cursor-pointer"
                     >
-                      {emailVerifyLoading ? (lang === 'am' ? 'በማረጋገጥ ላይ...' : 'Verifying...') : (lang === 'am' ? 'አረጋግጥ' : 'Verify')}
+                      {emailVerifyLoading ? ((t['cust_verifying'] || 'Verifying...')) : ((t['cust_verify'] || 'Verify'))}
                     </button>
                   </div>
                 </div>
@@ -2097,13 +2076,13 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
 
   const handleResubmit = async (app) => {
     const docName = window.prompt(
-      lang === 'am' ? 'እባክዎ የተስተካከለውን ሰነድ ስም ወይም ፋይል መግለጫ ያስገቡ:' : 'Enter corrected document name or description (e.g. National_ID_Corrected.pdf):',
+      (t['cust_enter_corrected_document_name_or_descrip'] || 'Enter corrected document name or description (e.g. National_ID_Corrected.pdf):'),
       'Corrected_Document.pdf'
     );
     if (!docName || !docName.trim()) return;
 
     const notes = window.prompt(
-      lang === 'am' ? 'ተጨማሪ ማብራሪያ (አማራጭ):' : 'Additional resubmission note (optional):',
+      (t['cust_additional_resubmission_note_optional'] || 'Additional resubmission note (optional):'),
       'Corrected documents uploaded by customer'
     ) || '';
 
@@ -2115,13 +2094,13 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
         notes.trim()
       );
       if (result.success) {
-        alert(lang === 'am' ? 'ማመልከቻዎ በተሳካ ሁኔታ እንደገና ቀርቧል!' : 'Application resubmitted successfully!');
+        alert((t['cust_application_resubmitted_successfully'] || 'Application resubmitted successfully!'));
       } else {
         alert(result.message || 'Failed to resubmit application');
       }
     } catch (err) {
       console.error('Resubmit error:', err);
-      alert('An error occurred during resubmission');
+      alert(lang === 'am' ? 'እንደገና በማስገባት ወቅት ስህተት ተከስቷል' : 'An error occurred during resubmission');
     } finally {
       setResubmitting(false);
     }
@@ -2141,12 +2120,12 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
       });
 
   const filterOptions = [
-    { key: 'All', label: t.all || (lang === 'am' ? 'ሁሉም' : 'All') },
-    { key: 'Submitted', label: t.status_submitted || (lang === 'am' ? 'ቀርቧል' : 'Submitted') },
-    { key: 'Under Review', label: t.status_under_review || (lang === 'am' ? 'በግምገማ ላይ' : 'Under Review') },
-    { key: 'Approved', label: t.status_approved || (lang === 'am' ? 'ጸድቋል' : 'Approved') },
-    { key: 'Completed', label: t.status_completed || (lang === 'am' ? 'ተጠናቋል' : 'Completed') },
-    { key: 'Rejected', label: t.status_rejected || (lang === 'am' ? 'ውድቅ ተደርጓል' : 'Rejected') },
+    { key: 'All', label: t.all || ((t['cust_all'] || 'All')) },
+    { key: 'Submitted', label: t.status_submitted || ((t['cust_submitted'] || 'Submitted')) },
+    { key: 'Under Review', label: t.status_under_review || ((t['cust_under_review'] || 'Under Review')) },
+    { key: 'Approved', label: t.status_approved || ((t['cust_approved'] || 'Approved')) },
+    { key: 'Completed', label: t.status_completed || ((t['cust_completed'] || 'Completed')) },
+    { key: 'Rejected', label: t.status_rejected || ((t['cust_rejected'] || 'Rejected')) },
   ];
 
   // Application detail view
@@ -2157,8 +2136,8 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
       return null;
     }
 
-    const displayService = lang === 'am' ? (app.serviceName_am || app.service_am || app.service) : app.service;
-    const displayInstitution = lang === 'am' ? (app.institutionName_am || app.institution_am || app.institution) : app.institution;
+    const displayService = getServiceTitle(app, lang) || app.service;
+    const displayInstitution = getInstitutionName(app, lang) || app.institution;
     const isNeedsInfo = String(app.status).toUpperCase().includes('NEED') || String(app.status).toUpperCase().includes('PENDING_DOC');
     const isRejected = String(app.status).toUpperCase().includes('REJECT');
 
@@ -2172,7 +2151,7 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
-            {t.back_to_applications || (lang === 'am' ? 'ወደ ማመልከቻዎች ተመለስ' : 'Back to Applications')}
+            {t.back_to_applications || ((t['cust_back_to_applications'] || 'Back to Applications'))}
           </button>
         </div>
 
@@ -2183,7 +2162,7 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
               <div className="text-2xl mt-0.5">⚠️</div>
               <div className="flex-1">
                 <h4 className="text-sm font-bold text-amber-900 mb-1">
-                  {t.status_needs_information || (lang === 'am' ? 'ተጨማሪ መረጃ ያስፈልጋል' : 'Needs Information')}
+                  {t.status_needs_information || ((t['cust_needs_information'] || 'Needs Information'))}
                 </h4>
                 <p className="text-sm text-amber-800 leading-relaxed font-medium">
                   {app.reviewNotes || app.notes || t.missing_docs_warning}
@@ -2194,7 +2173,7 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
                     disabled={resubmitting}
                     className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
                   >
-                    {resubmitting ? (lang === 'am' ? 'በማስገባት ላይ...' : 'Submitting...') : (lang === 'am' ? 'የተስተካከለ ሰነድ አስገባ' : 'Upload Required Documents')}
+                    {resubmitting ? ((t['cust_submitting'] || 'Submitting...')) : ((t['cust_upload_required_documents'] || 'Upload Required Documents'))}
                   </button>
                 </div>
               </div>
@@ -2209,15 +2188,13 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
               <div className="text-2xl mt-0.5">🛑</div>
               <div className="flex-1">
                 <h4 className="text-sm font-bold text-rose-900 mb-1">
-                  {lang === 'am' ? 'ማመልከቻው ውድቅ ተደርጓል' : 'Application Decision: Rejected'}
+                  {(t['cust_application_decision_rejected'] || 'Application Decision: Rejected')}
                 </h4>
                 <p className="text-sm text-rose-800 leading-relaxed font-medium">
-                  <strong>{lang === 'am' ? 'ምክንያት:' : 'Reason:'}</strong> {app.reviewNotes || app.notes || app.rejectionReason || 'Application rejected by reviewing staff.'}
+                  <strong>{(t['cust_reason'] || 'Reason:')}</strong> {app.reviewNotes || app.notes || app.rejectionReason || 'Application rejected by reviewing staff.'}
                 </p>
                 <p className="text-xs text-rose-700 mt-2">
-                  {lang === 'am'
-                    ? 'ውድቅ የተደረገ ማመልከቻ እንደ ተጠናቀቀ አይቆጠርም። ሰነዶችን አስተካክለው እንደገና ማስገባት ወይም አዲስ ማመልከቻ መጀመር ይችላሉ።'
-                    : 'A rejected application does not count as completed. You may correct your documents and resubmit, or submit a replacement application.'}
+                  {(t['cust_a_rejected_application_does_not_count_as'] || 'A rejected application does not count as completed. You may correct your documents and resubmit, or submit a replacement application.')}
                 </p>
                 <div className="mt-4 flex gap-3 flex-wrap">
                   <button
@@ -2225,13 +2202,13 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
                     disabled={resubmitting}
                     className="px-4 py-2 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
                   >
-                    {resubmitting ? (lang === 'am' ? 'በማስገባት ላይ...' : 'Submitting...') : (t.resubmit_application || (lang === 'am' ? 'ማመልከቻውን እንደገና አስገባ' : 'Resubmit Application'))}
+                    {resubmitting ? ((t['cust_submitting'] || 'Submitting...')) : (t.resubmit_application || ((t['cust_resubmit_application'] || 'Resubmit Application')))}
                   </button>
                   <button
                     onClick={() => setActiveSection('apply')}
                     className="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
                   >
-                    {lang === 'am' ? 'አዲስ ምትክ ማመልከቻ ጀምር' : 'New Replacement Application'}
+                    {(t['cust_new_replacement_application'] || 'New Replacement Application')}
                   </button>
                 </div>
               </div>
@@ -2264,25 +2241,25 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                  {t.app_number_col || (lang === 'am' ? 'የማመልከቻ መለያ' : 'Application ID')}
+                  {t.app_number_col || ((t['cust_application_id'] || 'Application ID'))}
                 </p>
                 <p className="font-semibold text-slate-900 font-mono text-sm">{app.id}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                  {t.reference_number || (lang === 'am' ? 'የማመልከቻ ቁጥር' : 'Reference Number')}
+                  {t.reference_number || ((t['cust_reference_number'] || 'Reference Number'))}
                 </p>
                 <p className="font-semibold text-[#1e3a8a] font-mono text-sm">{app.referenceNumber}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                  {t.submitted_date || (lang === 'am' ? 'የቀረበበት ቀን' : 'Submitted Date')}
+                  {t.submitted_date || ((t['cust_submitted_date'] || 'Submitted Date'))}
                 </p>
                 <p className="font-medium text-slate-800 text-sm">{app.submittedDate}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                  {t.last_updated || (lang === 'am' ? 'የመጨረሻ ማሻሻያ' : 'Last Updated')}
+                  {t.last_updated || ((t['cust_last_updated'] || 'Last Updated'))}
                 </p>
                 <p className="font-medium text-slate-800 text-sm">{app.lastUpdated}</p>
               </div>
@@ -2293,7 +2270,7 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
               <div className="border-t border-slate-100 pt-6">
                 <h3 className="font-bold text-slate-900 mb-2 text-sm flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-rose-500" />
-                  <span>{t.staff_review_notes || (lang === 'am' ? 'የሰራተኛ ግምገማ ማስታወሻዎች' : 'Staff Review Notes')}</span>
+                  <span>{t.staff_review_notes || ((t['cust_staff_review_notes'] || 'Staff Review Notes'))}</span>
                 </h3>
                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-700 leading-relaxed font-mono">
                   {getStaffNotes(app.notes || app.rejectionReason || app.reviewNotes || app.feedback)}
@@ -2305,23 +2282,23 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
               <div className="border-t border-slate-100 pt-6">
                 <h3 className="font-bold text-slate-900 mb-4 text-sm flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#314ea1]" />
-                  <span>{t.applicant_details || (lang === 'am' ? 'የአመልካች ዝርዝር መረጃ' : 'Applicant Details')}</span>
+                  <span>{t.applicant_details || ((t['cust_applicant_details'] || 'Applicant Details'))}</span>
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">{t.full_name || (lang === 'am' ? 'ሙሉ ስም' : 'Full Name')}</p>
+                    <p className="text-xs text-slate-500 mb-1">{t.full_name || ((t['cust_full_name'] || 'Full Name'))}</p>
                     <p className="font-medium text-slate-900 text-sm">{app.applicantDetails.fullName}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">{t.email || (lang === 'am' ? 'ኢሜይል' : 'Email')}</p>
+                    <p className="text-xs text-slate-500 mb-1">{t.email || ((t['cust_email'] || 'Email'))}</p>
                     <p className="font-medium text-slate-900 text-sm">{app.applicantDetails.email}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">{t.phone || (lang === 'am' ? 'ስልክ ቁጥር' : 'Phone')}</p>
+                    <p className="text-xs text-slate-500 mb-1">{t.phone || ((t['cust_phone'] || 'Phone'))}</p>
                     <p className="font-medium text-slate-900 text-sm">{app.applicantDetails.phone}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">{t.address || (lang === 'am' ? 'አድራሻ' : 'Address')}</p>
+                    <p className="text-xs text-slate-500 mb-1">{t.address || ((t['cust_address'] || 'Address'))}</p>
                     <p className="font-medium text-slate-900 text-sm">{app.applicantDetails.address || 'N/A'}</p>
                   </div>
                 </div>
@@ -2332,7 +2309,7 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
               <div className="border-t border-slate-100 pt-6">
                 <h3 className="font-bold text-slate-900 mb-2 text-sm flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#f4b51a]" />
-                  <span>{t.additional_information || (lang === 'am' ? 'ተጨማሪ መረጃ' : 'Additional Information')}</span>
+                  <span>{t.additional_information || ((t['cust_additional_information'] || 'Additional Information'))}</span>
                 </h3>
                 <p className="text-sm text-slate-700 leading-relaxed">{app.additionalInfo}</p>
               </div>
@@ -2343,7 +2320,7 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
               <div className="border-t border-slate-100 pt-6">
                 <h3 className="font-bold text-slate-900 mb-4 text-sm flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>{t.rate_this_service || (lang === 'am' ? 'ይህንን አገልግሎት ይገምግሙ' : 'Rate This Service')}</span>
+                  <span>{t.rate_this_service || ((t['cust_rate_this_service'] || 'Rate This Service'))}</span>
                 </h3>
                 <FeedbackRating
                   applicationId={app.id}
@@ -2364,9 +2341,7 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <span>
-                      {t.feedback_not_available || (lang === 'am' 
-                        ? 'ለዚህ ማመልከቻ የአገልግሎት መረጃ ስለጎደለ ግምገማ መስጠት አይቻልም።' 
-                        : 'Feedback is not available for this application as it is missing service information.')}
+                      {t.feedback_not_available || ((t['cust_feedback_is_not_available_for_this_appli'] || 'Feedback is not available for this application as it is missing service information.'))}
                     </span>
                   </p>
                 </div>
@@ -2384,10 +2359,10 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
       <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900 mb-1">
-            {t.my_applications || (lang === 'am' ? 'ማመልከቻዎቼ' : 'My Applications')}
+            {t.my_applications || ((t['cust_my_applications'] || 'My Applications'))}
           </h2>
           <p className="text-sm text-slate-500">
-            {t.track_manage_applications || (lang === 'am' ? 'የአገልግሎት ማመልከቻዎችዎን ይከታተሉ እና ያስተዳድሩ' : 'Track and manage your service applications')}
+            {t.track_manage_applications || ((t['cust_track_and_manage_your_service_applicatio'] || 'Track and manage your service applications'))}
           </p>
         </div>
         <button
@@ -2397,7 +2372,7 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
           </svg>
-          {t.new_application || (lang === 'am' ? 'አዲስ ማመልከቻ' : 'New Application')}
+          {t.new_application || ((t['cust_new_application'] || 'New Application'))}
         </button>
       </div>
 
@@ -2457,20 +2432,20 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
                       </svg>
                     </div>
                     <p className="font-semibold text-slate-700 text-sm">
-                      {lang === 'am' ? 'ምንም ማመልከቻዎች አልተገኙም' : 'No applications found'}
+                      {(t['cust_no_applications_found'] || 'No applications found')}
                     </p>
                     <p className="text-xs text-slate-500 mt-1">
                       {statusFilter === 'All' 
-                        ? (lang === 'am' ? 'የመጀመሪያ ማመልከቻዎን ለማስገባት "አዲስ ማመልከቻ" የሚለውን ይጫኑ' : 'Click "New Application" to submit your first application')
-                        : (lang === 'am' ? 'በዚህ ሁኔታ ውስጥ ምንም ማመልከቻ የለም' : `No applications with this status`)
+                        ? ((t['cust_click_new_application_to_submit_your_fir'] || 'Click "New Application" to submit your first application'))
+                        : (t['cust_no_applications_with_this_status'] || 'No applications with this status')
                       }
                     </p>
                   </td>
                 </tr>
               ) : (
                 filteredApps.map(app => {
-                  const displayService = lang === 'am' ? (app.serviceName_am || app.service_am || app.service) : app.service;
-                  const displayInstitution = lang === 'am' ? (app.institutionName_am || app.institution_am || app.institution) : app.institution;
+                  const displayService = getServiceTitle(app, lang) || app.service;
+                  const displayInstitution = getInstitutionName(app, lang) || app.institution;
                   return (
                     <tr key={app.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="px-5 py-3.5 font-medium text-slate-900 text-sm font-mono">{app.id}</td>
@@ -2495,7 +2470,7 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
                           onClick={() => setSelectedApp(app.id)}
                           className="text-[#314ea1] hover:text-[#1e3a8a] text-sm font-semibold cursor-pointer"
                         >
-                          {lang === 'am' ? 'ዝርዝር ይመልከቱ' : 'View Details'}
+                          {(t['cust_view_details'] || 'View Details')}
                         </button>
                       </td>
                     </tr>
@@ -2513,6 +2488,7 @@ function MyApplicationsSection({ applications, setActiveSection, selectedApp: ex
 // ─── Apply for Service Section Component ──────────────────────────
 function ApplyForServiceSection({ user, setActiveSection }) {
   const { t, lang, getStatusLabel } = useApp();
+  const i18nT = t;
   const { createApplication } = useApplications();
   const { institutions, getServicesByInstitution, loading: servicesLoading } = useServices();
   const [selectedInstitution, setSelectedInstitution] = useState(null);
@@ -2581,15 +2557,15 @@ function ApplyForServiceSection({ user, setActiveSection }) {
   const validateForm = () => {
     const errors = {};
     if (!formData.fullName.trim()) {
-      errors.fullName = lang === 'am' ? 'ሙሉ ስም ያስፈልጋል' : 'Full name is required';
+      errors.fullName = (t['cust_full_name_is_required'] || 'Full name is required');
     }
     if (!formData.email.trim()) {
-      errors.email = lang === 'am' ? 'ኢሜይል ያስፈልጋል' : 'Email is required';
+      errors.email = (t['cust_email_is_required'] || 'Email is required');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = lang === 'am' ? 'እባክዎ ልክ ያለ ኢሜይል ያስገቡ' : 'Invalid email format';
+      errors.email = (t['cust_invalid_email_format'] || 'Invalid email format');
     }
     if (!formData.phone.trim()) {
-      errors.phone = lang === 'am' ? 'ስልክ ቁጥር ያስፈልጋል' : 'Phone number is required';
+      errors.phone = (t['cust_phone_number_is_required'] || 'Phone number is required');
     }
     
     setFormErrors(errors);
@@ -2638,18 +2614,17 @@ function ApplyForServiceSection({ user, setActiveSection }) {
       } else if (result.isDuplicate && result.existingApplication) {
         const refNum = result.existingApplication.applicationNumber || result.existingApplication.referenceNumber;
         const status = result.existingApplication.status;
-        alert(
-          lang === 'am'
-            ? `ለዚህ አገልግሎት ንቁ ወይም የተጠናቀቀ ማመልከቻ ቀድሞውኑ አለዎት (መለያ: ${refNum}፣ ሁኔታ: ${status})። ተደጋጋሚ ምዝገባ አይፈቀድም።`
-            : `An active or completed registration already exists for this service (Reference: ${refNum}, Status: ${status}). Duplicate registrations are not permitted.`
-        );
+        const duplicateMsg = lang === 'am'
+          ? `ለዚህ አገልግሎት ንቁ ወይም የተጠናቀቀ ምዝገባ ቀደም ሲል አለ (መለያ: ${refNum}፣ ሁኔታ: ${status})። ተደጋጋሚ ምዝገባ አይፈቀድም።`
+          : `An active or completed registration already exists for this service (Reference: ${refNum}, Status: ${status}). Duplicate registrations are not permitted.`;
+        alert(duplicateMsg);
       } else {
-        alert(result.message || (lang === 'am' ? 'ማመልከቻውን ማስገባት አልተሳካም። እባክዎ እንደገና ይሞክሩ።' : 'Failed to submit application. Please try again.'));
+        alert(result.message || ((t['cust_failed_to_submit_application_please_try_'] || 'Failed to submit application. Please try again.')));
       }
 
     } catch (err) {
       console.error('Failed to submit application:', err);
-      alert(lang === 'am' ? 'ማመልከቻውን ማስገባት አልተሳካም። እባክዎ እንደገና ይሞክሩ።' : 'Failed to submit application. Please try again.');
+      alert((t['cust_failed_to_submit_application_please_try_'] || 'Failed to submit application. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -2657,12 +2632,8 @@ function ApplyForServiceSection({ user, setActiveSection }) {
 
   // Success confirmation view
   if (submissionSuccess) {
-    const sService = lang === 'am' 
-      ? (submissionSuccess.serviceName_am || submissionSuccess.service_am || submissionSuccess.service) 
-      : submissionSuccess.service;
-    const sInstitution = lang === 'am' 
-      ? (submissionSuccess.institutionName_am || submissionSuccess.institution_am || submissionSuccess.institution) 
-      : submissionSuccess.institution;
+    const sService = getServiceTitle(submissionSuccess, lang) || submissionSuccess.service;
+    const sInstitution = getInstitutionName(submissionSuccess, lang) || submissionSuccess.institution;
 
     return (
       <div className="max-w-2xl mx-auto">
@@ -2673,19 +2644,19 @@ function ApplyForServiceSection({ user, setActiveSection }) {
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            {t.app_submitted_success || (lang === 'am' ? 'ማመልከቻዎ በተሳካ ሁኔታ ቀርቧል!' : 'Application Submitted Successfully!')}
+            {t.app_submitted_success || ((t['cust_application_submitted_successfully'] || 'Application Submitted Successfully!'))}
           </h2>
           <p className="text-gray-600 mb-6">
-            {lang === 'am' ? 'ማመልከቻዎ ደርሶናል፤ በሂደት ላይ ይገኛል።' : 'Your application has been received and is being processed.'}
+            {(t['cust_your_application_has_been_received_and_i'] || 'Your application has been received and is being processed.')}
           </p>
           
           <div className="bg-blue-50 rounded-xl p-6 mb-6">
             <p className="text-sm text-gray-600 mb-2">
-              {t.app_ref_number_is || (lang === 'am' ? 'የማመልከቻ መለያ ቁጥርዎ:' : 'Your Reference Number:')}
+              {t.app_ref_number_is || ((t['cust_your_reference_number'] || 'Your Reference Number:'))}
             </p>
             <p className="text-3xl font-bold text-blue-600">{submissionSuccess.referenceNumber}</p>
             <p className="text-xs text-gray-500 mt-2">
-              {lang === 'am' ? 'እባክዎ ይህን መለያ ቁጥር ለማመልከቻ ክትትል ያስቀምጡ' : 'Please save this reference number for tracking'}
+              {(t['cust_please_save_this_reference_number_for_tr'] || 'Please save this reference number for tracking')}
             </p>
           </div>
 
@@ -2713,7 +2684,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
               onClick={() => setActiveSection('applications')}
               className="px-6 py-3 bg-[#1e3a8a] text-white rounded-xl hover:bg-[#172554] transition font-semibold text-sm cursor-pointer shadow-xs"
             >
-              {t.view_my_applications || (lang === 'am' ? 'ማመልከቻዎቼን ይመልከቱ' : 'View My Applications')}
+              {t.view_my_applications || ((t['cust_view_my_applications'] || 'View My Applications'))}
             </button>
             <button
               onClick={() => {
@@ -2723,7 +2694,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
               }}
               className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium text-sm cursor-pointer"
             >
-              {t.apply_another_service || (lang === 'am' ? 'ለሌላ አገልግሎት ያመልክቱ' : 'Submit Another')}
+              {t.apply_another_service || ((t['cust_submit_another'] || 'Submit Another'))}
             </button>
           </div>
         </div>
@@ -2733,12 +2704,8 @@ function ApplyForServiceSection({ user, setActiveSection }) {
 
   // Application form modal
   if (showApplicationForm && selectedService && selectedInstitution) {
-    const serviceName = lang === 'am' 
-      ? (selectedService.name_am || selectedService.title_am || selectedService.name || selectedService.title_en)
-      : (selectedService.name || selectedService.title_en || 'Service');
-    const instName = lang === 'am'
-      ? (selectedInstitution.name_am || selectedInstitution.name_en)
-      : (selectedInstitution.name_en || selectedInstitution.name || 'Institution');
+    const serviceName = getServiceTitle(selectedService, lang) || selectedService.name || 'Service';
+    const instName = getInstitutionName(selectedInstitution, lang) || selectedInstitution.name || 'Institution';
 
     return (
       <>
@@ -2750,7 +2717,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
-            {t.back_to_service_details || (lang === 'am' ? 'ወደ አገልግሎት ዝርዝር ተመለስ' : 'Back to Service Details')}
+            {t.back_to_service_details || ((t['cust_back_to_service_details'] || 'Back to Service Details'))}
           </button>
         </div>
 
@@ -2765,7 +2732,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                    {t.full_name || (lang === 'am' ? 'ሙሉ ስም' : 'Full Name')} <span className="text-rose-500">*</span>
+                    {t.full_name || ((t['cust_full_name'] || 'Full Name'))} <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -2773,14 +2740,14 @@ function ApplyForServiceSection({ user, setActiveSection }) {
                     value={formData.fullName}
                     onChange={handleInputChange}
                     className={`w-full px-3.5 py-2.5 rounded-xl border ${formErrors.fullName ? 'border-rose-300 ring-2 ring-rose-100' : 'border-slate-300'} bg-white focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 placeholder:text-slate-400 text-sm`}
-                    placeholder={lang === 'am' ? 'ሙሉ ስምዎን ያስገቡ' : 'Enter your full name'}
+                    placeholder={(t['cust_enter_your_full_name'] || 'Enter your full name')}
                   />
                   {formErrors.fullName && <p className="text-xs text-rose-600 mt-1">{formErrors.fullName}</p>}
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                    {t.email || (lang === 'am' ? 'ኢሜይል' : 'Email')} <span className="text-rose-500">*</span>
+                    {t.email || ((t['cust_email'] || 'Email'))} <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="email"
@@ -2797,7 +2764,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                    {t.phone || (lang === 'am' ? 'ስልክ ቁጥር' : 'Phone Number')} <span className="text-rose-500">*</span>
+                    {t.phone || ((t['cust_phone_number'] || 'Phone Number'))} <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="tel"
@@ -2812,7 +2779,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                    {t.address || (lang === 'am' ? 'አድራሻ' : 'Address')}
+                    {t.address || ((t['cust_address'] || 'Address'))}
                   </label>
                   <input
                     type="text"
@@ -2820,14 +2787,14 @@ function ApplyForServiceSection({ user, setActiveSection }) {
                     value={formData.address}
                     onChange={handleInputChange}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 placeholder:text-slate-400 text-sm"
-                    placeholder={lang === 'am' ? 'አድራሻዎ' : 'Your address'}
+                    placeholder={(t['cust_your_address'] || 'Your address')}
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                  {t.additional_information || (lang === 'am' ? 'ተጨማሪ መረጃ' : 'Additional Information')}
+                  {t.additional_information || ((t['cust_additional_information'] || 'Additional Information'))}
                 </label>
                 <textarea
                   name="additionalInfo"
@@ -2835,7 +2802,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
                   onChange={handleInputChange}
                   rows="4"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none text-slate-900 text-sm"
-                  placeholder={lang === 'am' ? 'ተጨማሪ መረጃ ወይም ልዩ መስፈርቶች ካሉ እዚህ ይጻፉ...' : 'Any additional information or special requirements...'}
+                  placeholder={(t['cust_any_additional_information_or_special_re'] || 'Any additional information or special requirements...')}
                 />
               </div>
 
@@ -2844,25 +2811,44 @@ function ApplyForServiceSection({ user, setActiveSection }) {
                   <span className="text-xl">⚠️</span>
                   <div>
                     <p className="text-xs font-bold text-amber-900 uppercase">
-                      {lang === 'am' ? 'የኢሜይል ማረጋገጫ ያስፈልጋል' : 'Email Verification Required'}
+                      {(t['cust_email_verification_required'] || 'Email Verification Required')}
                     </p>
                     <p className="text-xs text-amber-800 mt-0.5">
-                      {lang === 'am'
-                        ? 'ማመልከቻ ለማስገባት እባክዎ መጀመሪያ ኢሜይልዎን ያረጋግጡ።'
-                        : 'Please verify your registered email address before submitting service applications.'}
+                      {(t['cust_please_verify_your_registered_email_addr'] || 'Please verify your registered email address before submitting service applications.')}
                     </p>
                   </div>
                 </div>
               )}
 
+              {(() => {
+                const reqDocs = getServiceRequirements(selectedService, lang);
+                if (!reqDocs || reqDocs.length === 0) return null;
+                return (
+                  <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-4">
+                    <p className="text-xs font-bold text-blue-900 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      {t.required_documents || 'Required Documents Checklist:'}
+                    </p>
+                    <ul className="text-xs sm:text-sm text-blue-950 space-y-1 pl-1">
+                      {reqDocs.map((doc, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className="text-blue-600 font-bold mt-0.5">✓</span>
+                          <span>{doc}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
+
               <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-4">
                 <p className="text-xs font-semibold text-amber-900 uppercase tracking-wide mb-1">
-                  {lang === 'am' ? 'የማመልከቻ መረጃ:' : 'Application Information:'}
+                  {(t['cust_application_information'] || 'Application Information:')}
                 </p>
                 <p className="text-xs sm:text-sm text-amber-800 leading-relaxed">
-                  {t.app_info_note || (lang === 'am' 
-                    ? 'እባክዎ ከማስገባትዎ በፊት አስፈላጊ የሆኑ ሰነዶችን በሙሉ ያዘጋጁ። ለተጨማሪ መስፈርቶች በተቋሙ በኩል ሊገናኙዎት ይችላሉ።' 
-                    : 'Please ensure you have all necessary documents ready for submission. You may be contacted by the institution for additional requirements.')}
+                  {t.app_info_note || ((t['cust_please_ensure_you_have_all_necessary_doc'] || 'Please ensure you have all necessary documents ready for submission. You may be contacted by the institution for additional requirements.'))}
                 </p>
               </div>
 
@@ -2873,15 +2859,15 @@ function ApplyForServiceSection({ user, setActiveSection }) {
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-[#314ea1] to-[#1e3a8a] hover:from-[#253d82] hover:to-[#172554] text-white rounded-xl shadow-xs transition font-semibold text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {user?.emailVerified === false 
-                    ? (lang === 'am' ? 'ኢሜይል ማረጋገጥ ያስፈልጋል' : 'Email Verification Required')
-                    : isSubmitting ? (t.submitting || 'Submitting...') : (t.submit_application || (lang === 'am' ? 'ማመልከቻ አስገባ' : 'Submit Application'))}
+                    ? ((t['cust_email_verification_required'] || 'Email Verification Required'))
+                    : isSubmitting ? (t.submitting || 'Submitting...') : (t.submit_application || ((t['cust_submit_application'] || 'Submit Application')))}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowApplicationForm(false)}
                   className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition font-medium text-sm cursor-pointer"
                 >
-                  {t.cancel || (lang === 'am' ? 'ሰርዝ' : 'Cancel')}
+                  {t.cancel || ((t['cust_cancel'] || 'Cancel'))}
                 </button>
               </div>
             </form>
@@ -2893,15 +2879,9 @@ function ApplyForServiceSection({ user, setActiveSection }) {
 
   // Service details view
   if (selectedService && selectedInstitution) {
-    const serviceName = lang === 'am' 
-      ? (selectedService.name_am || selectedService.title_am || selectedService.name || selectedService.title_en)
-      : (selectedService.name || selectedService.title_en || 'Service');
-    const instName = lang === 'am'
-      ? (selectedInstitution.name_am || selectedInstitution.name_en)
-      : (selectedInstitution.name_en || selectedInstitution.name || 'Institution');
-    const serviceDesc = lang === 'am'
-      ? (selectedService.description_am || selectedService.description)
-      : selectedService.description;
+    const serviceName = getServiceTitle(selectedService, lang) || selectedService.name || 'Service';
+    const instName = getInstitutionName(selectedInstitution, lang) || selectedInstitution.name || 'Institution';
+    const serviceDesc = getServiceDescription(selectedService, lang) || selectedService.description;
 
     return (
       <>
@@ -2913,7 +2893,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
-            {lang === 'am' ? 'ወደ አገልግሎቶች ተመለስ' : 'Back to Services'}
+            {(t['cust_back_to_services'] || 'Back to Services')}
           </button>
         </div>
 
@@ -2929,7 +2909,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
                 <div>
                   <h3 className="font-bold text-slate-900 mb-2 text-sm flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#314ea1]" />
-                    <span>{t.description || (lang === 'am' ? 'መግለጫ' : 'Description')}</span>
+                    <span>{t.description || ((t['cust_description'] || 'Description'))}</span>
                   </h3>
                   <p className="text-sm text-slate-700 leading-relaxed">{serviceDesc}</p>
                 </div>
@@ -2938,16 +2918,16 @@ function ApplyForServiceSection({ user, setActiveSection }) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-4">
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                    {t.processing_time || (lang === 'am' ? 'የማስኬጃ ጊዜ' : 'Processing Time')}
+                    {t.processing_time || ((t['cust_processing_time'] || 'Processing Time'))}
                   </p>
                   <p className="font-bold text-[#1e3a8a] text-base">{selectedService.processing_time || 'N/A'}</p>
                 </div>
                 <div className="bg-emerald-50/70 border border-emerald-100 rounded-xl p-4">
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                    {t.service_fee || (lang === 'am' ? 'የአገልግሎት ክፍያ' : 'Service Fee')}
+                    {t.service_fee || ((t['cust_service_fee'] || 'Service Fee'))}
                   </p>
                   <p className="font-bold text-emerald-800 text-base">
-                    {selectedService.fee_amount ? `${selectedService.fee_amount} ${t.etb || 'ETB'}` : (t.free || (lang === 'am' ? 'ነፃ' : 'Free'))}
+                    {selectedService.fee_amount ? `${selectedService.fee_amount} ${t.etb || 'ETB'}` : (t.free || ((t['cust_free'] || 'Free')))}
                   </p>
                 </div>
               </div>
@@ -2955,13 +2935,25 @@ function ApplyForServiceSection({ user, setActiveSection }) {
               <div>
                 <h3 className="font-bold text-slate-900 mb-2 text-sm flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#f4b51a]" />
-                  <span>{t.service_information || (lang === 'am' ? 'የአገልግሎት መረጃ' : 'Service Information')}</span>
+                  <span>{t.required_documents || 'Required Documents'}</span>
                 </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  {t.service_info_desc || (lang === 'am' 
-                    ? 'እባክዎ ከማመልከትዎ በፊት አስፈላጊ ሰነዶችን በሙሉ ያዘጋጁ። ለተጨማሪ መስፈርቶች ተቋሙን ማነጋገር ይችላሉ።' 
-                    : 'Please prepare all necessary documents before applying. You can check with the institution for specific requirements.')}
-                </p>
+                {(() => {
+                  const reqDocs = getServiceRequirements(selectedService, lang);
+                  return reqDocs && reqDocs.length > 0 ? (
+                    <ul className="space-y-2 mt-2 bg-slate-50 border border-slate-200/80 rounded-xl p-4">
+                      {reqDocs.map((doc, idx) => (
+                        <li key={idx} className="text-sm text-slate-700 flex items-start gap-2">
+                          <span className="text-[#314ea1] font-bold mt-0.5">•</span>
+                          <span>{doc}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-slate-500 italic">
+                      {t.no_documents_required || 'No specific documents required'}
+                    </p>
+                  );
+                })()}
               </div>
 
               <div className="border-t border-slate-100 pt-6">
@@ -2972,7 +2964,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  {t.apply_for_this_service || (lang === 'am' ? 'ለዚህ አገልግሎት ያመልክቱ' : 'Apply for this Service')}
+                  {t.apply_for_this_service || ((t['cust_apply_for_this_service'] || 'Apply for this Service'))}
                 </button>
               </div>
             </div>
@@ -2983,9 +2975,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
   }
 
   if (selectedInstitution) {
-    const instName = lang === 'am'
-      ? (selectedInstitution.name_am || selectedInstitution.name_en)
-      : (selectedInstitution.name_en || selectedInstitution.name);
+    const instName = getInstitutionName(selectedInstitution);
 
     return (
       <>
@@ -2997,7 +2987,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
-            {t.back_to_institutions || (lang === 'am' ? 'ወደ ተቋማት ተመለስ' : 'Back to Institutions')}
+            {t.back_to_institutions || ((t['cust_back_to_institutions'] || 'Back to Institutions'))}
           </button>
         </div>
 
@@ -3011,7 +3001,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
             <div>
               <h2 className="text-xl font-bold text-slate-900">{instName}</h2>
               <p className="text-xs sm:text-sm text-slate-500">
-                {institutionServices.length} {t.services_available || (lang === 'am' ? 'አገልግሎቶች ይገኛሉ' : 'services available')}
+                {institutionServices.length} {t.services_available || ((t['cust_services_available'] || 'services available'))}
               </p>
             </div>
           </div>
@@ -3026,7 +3016,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
-                {t.visit_official_website || (lang === 'am' ? 'ኦፊሴላዊ ድህረ ገጽን ይጎብኙ' : 'Visit Official Website')}
+                {t.visit_official_website || ((t['cust_visit_official_website'] || 'Visit Official Website'))}
               </a>
             </div>
           )}
@@ -3035,13 +3025,11 @@ function ApplyForServiceSection({ user, setActiveSection }) {
         <div className="space-y-3">
           {institutionServices.length === 0 ? (
             <div className="text-center py-8 text-slate-500 bg-white rounded-2xl border border-slate-200/90 p-8">
-              {t.no_services_available || (lang === 'am' ? 'ለዚህ ተቋም ምንም አገልግሎቶች አልተገኙም' : 'No services available for this institution')}
+              {t.no_services_available || ((t['cust_no_services_available_for_this_instituti'] || 'No services available for this institution'))}
             </div>
           ) : (
             institutionServices.map((service) => {
-              const svcName = lang === 'am' 
-                ? (service.name_am || service.title_am || service.name || service.title_en)
-                : (service.name || service.title_en);
+              const svcName = getServiceTitle(service, lang) || service.name;
 
               return (
                 <div
@@ -3065,7 +3053,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
                           <svg className="w-4 h-4 text-[#314ea1]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          {service.fee_amount ? `${service.fee_amount} ${t.etb || 'ETB'}` : (t.free || (lang === 'am' ? 'ነፃ' : 'Free'))}
+                          {service.fee_amount ? `${service.fee_amount} ${t.etb || 'ETB'}` : (t.free || ((t['cust_free'] || 'Free')))}
                         </span>
                       </div>
                     </div>
@@ -3087,10 +3075,10 @@ function ApplyForServiceSection({ user, setActiveSection }) {
     <>
       <div className="mb-6">
         <h2 className="text-xl font-bold text-slate-900 mb-1">
-          {t.apply_for_service || (lang === 'am' ? 'ለአገልግሎት ማመልከቻ' : 'Apply for a Service')}
+          {t.apply_for_service || ((t['cust_apply_for_a_service'] || 'Apply for a Service'))}
         </h2>
         <p className="text-sm text-slate-500">
-          {t.select_institution_subtitle || (lang === 'am' ? 'አገልግሎቶችን ለማየት ተቋም ይምረጡ' : 'Select an institution to view available services')}
+          {t.select_institution_subtitle || ((t['cust_select_an_institution_to_view_available_'] || 'Select an institution to view available services'))}
         </p>
       </div>
 
@@ -3101,7 +3089,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t.search_institutions_services || (lang === 'am' ? 'ተቋማትን ወይም አገልግሎቶችን ይፈልጉ...' : 'Search institutions or services...')}
+            placeholder={t.search_institutions_services || ((t['cust_search_institutions_or_services'] || 'Search institutions or services...'))}
             className="w-full px-4 py-3 pl-11 rounded-2xl border border-slate-300 bg-white text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none shadow-2xs text-sm"
           />
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3114,7 +3102,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
       {servicesLoading ? (
         <div className="col-span-full text-center text-slate-500 py-12">
           <div className="animate-pulse">
-            {lang === 'am' ? 'ተቋማትን በመጫን ላይ...' : 'Loading institutions...'}
+            {(t['cust_loading_institutions'] || 'Loading institutions...')}
           </div>
         </div>
       ) : (
@@ -3122,16 +3110,16 @@ function ApplyForServiceSection({ user, setActiveSection }) {
           {filteredInstitutions.length === 0 ? (
             <div className="col-span-full text-center text-slate-400 py-12 bg-white rounded-2xl border border-slate-200/90 p-8">
               <p className="font-semibold text-slate-600">
-                {t.no_institutions_found || (lang === 'am' ? 'ምንም ተቋማት አልተገኙም' : 'No institutions found')}
+                {t.no_institutions_found || ((t['cust_no_institutions_found'] || 'No institutions found'))}
               </p>
               <p className="text-xs text-slate-400 mt-1">
-                {t.try_diff_search || (lang === 'am' ? 'ሌላ የፍለጋ ቃል ይሞክሩ' : 'Try a different search term')}
+                {t.try_diff_search || ((t['cust_try_a_different_search_term'] || 'Try a different search term'))}
               </p>
             </div>
           ) : (
             filteredInstitutions.map(inst => {
               const instServices = getServicesByInstitution(inst.id);
-              const instName = lang === 'am' ? (inst.name_am || inst.name_en) : (inst.name_en || inst.name);
+              const instName = getInstitutionName(inst, lang) || inst.name;
 
               return (
                 <div
@@ -3160,7 +3148,7 @@ function ApplyForServiceSection({ user, setActiveSection }) {
                   <h3 className="font-bold text-slate-900 group-hover:text-[#314ea1] transition-colors mb-2 text-center text-base">{instName}</h3>
                   <div className="text-center">
                     <span className="text-xs font-semibold text-[#1e3a8a] bg-blue-50/80 border border-blue-200/70 px-3 py-1 rounded-full text-center inline-block">
-                      {instServices.length} {t.services || (lang === 'am' ? 'አገልግሎቶች' : (instServices.length === 1 ? 'service' : 'services'))}
+                      {instServices.length} {instServices.length === 1 ? (lang === 'am' ? 'አገልግሎት' : 'service') : (lang === 'am' ? 'አገልግሎቶች' : 'services')}
                     </span>
                   </div>
                 </div>
@@ -3217,7 +3205,7 @@ function MyFeedbackSection() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
-            {t.back_to_feedback || (lang === 'am' ? 'ወደ አስተያየቶቼ ተመለስ' : 'Back to My Feedback')}
+            {t.back_to_feedback || ((t['cust_back_to_my_feedback'] || 'Back to My Feedback'))}
           </button>
         </div>
 
@@ -3239,7 +3227,7 @@ function MyFeedbackSection() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                  {t.rating || (lang === 'am' ? 'ደረጃ' : 'Rating')}
+                  {t.rating || ((t['cust_rating'] || 'Rating'))}
                 </p>
                 <p className="font-bold text-slate-900 text-sm">
                   {getRatingStars(feedback.rating)} {feedback.rating}/5 — {getRatingMeaning(feedback.rating)}
@@ -3247,23 +3235,23 @@ function MyFeedbackSection() {
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                  {lang === 'am' ? 'ምንጭ' : 'Source'}
+                  {(t['cust_source'] || 'Source')}
                 </p>
                 <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
                   feedback.source === 'WEBSITE' ? 'bg-blue-50 text-[#1e3a8a] border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200'
                 }`}>
-                  {feedback.source === 'WEBSITE' ? (lang === 'am' ? 'ድህረ ገጽ' : 'Website Portal') : 'Telegram Bot'}
+                  {feedback.source === 'WEBSITE' ? ((t['cust_website_portal'] || 'Website Portal')) : 'Telegram Bot'}
                 </span>
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                  {t.submitted || (lang === 'am' ? 'የቀረበበት ቀን' : 'Submitted')}
+                  {t.submitted || ((t['cust_submitted'] || 'Submitted'))}
                 </p>
                 <p className="font-medium text-slate-800 text-sm">{formatDisplayDate(feedback.created_at, lang)}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                  {t.time || (lang === 'am' ? 'ሰዓት' : 'Time')}
+                  {t.time || ((t['cust_time'] || 'Time'))}
                 </p>
                 <p className="font-medium text-slate-800 text-sm">{new Date(feedback.created_at).toLocaleTimeString()}</p>
               </div>
@@ -3273,7 +3261,7 @@ function MyFeedbackSection() {
               <div className="border-t border-slate-100 pt-6">
                 <h3 className="font-bold text-slate-900 mb-2 text-sm flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#f4b51a]" />
-                  <span>{lang === 'am' ? 'የእርስዎ አስተያየት' : 'Your Feedback Comment'}</span>
+                  <span>{(t['cust_your_feedback_comment'] || 'Your Feedback Comment')}</span>
                 </h3>
                 <p className="text-sm text-slate-700 leading-relaxed bg-slate-50/70 p-4 rounded-xl border border-slate-100">{feedback.comment}</p>
               </div>
@@ -3289,16 +3277,16 @@ function MyFeedbackSection() {
     <>
       <div className="mb-6">
         <h2 className="text-xl font-bold text-slate-900 mb-1">
-          {t.my_feedback || (lang === 'am' ? 'የኔ አስተያየቶች' : 'My Feedback')}
+          {t.my_feedback || ((t['cust_my_feedback'] || 'My Feedback'))}
         </h2>
         <p className="text-sm text-slate-500">
-          {lang === 'am' ? 'የአገልግሎት ደረጃ አሰጣጥዎን እና የአስተያየት ታሪክዎን ይመልከቱ' : 'View your service ratings and feedback history'}
+          {(t['cust_view_your_service_ratings_and_feedback_h'] || 'View your service ratings and feedback history')}
         </p>
       </div>
 
       {loading && myFeedback.length === 0 && (
         <div className="text-center py-8 text-slate-500">
-          {lang === 'am' ? 'አስተያየቶችን በመጫን ላይ...' : 'Loading your feedback...'}
+          {(t['cust_loading_your_feedback'] || 'Loading your feedback...')}
         </div>
       )}
 
@@ -3310,10 +3298,10 @@ function MyFeedbackSection() {
             </svg>
           </div>
           <p className="font-semibold text-slate-700 text-sm">
-            {lang === 'am' ? 'እስካሁን ምንም አስተያየት አልቀረበም' : 'No feedback submitted yet'}
+            {(t['cust_no_feedback_submitted_yet'] || 'No feedback submitted yet')}
           </p>
           <p className="text-xs text-slate-500 mt-1">
-            {lang === 'am' ? 'አገልግሎት ከጨረሱ በኋላ ልምድዎን እዚህ ደረጃ መስጠት ይችላሉ።' : 'After completing a service, you can rate your experience here.'}
+            {(t['cust_after_completing_a_service_you_can_rate_'] || 'After completing a service, you can rate your experience here.')}
           </p>
         </div>
       )}
@@ -3333,7 +3321,7 @@ function MyFeedbackSection() {
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold border ${
                       feedback.source === 'WEBSITE' ? 'bg-blue-50 text-[#1e3a8a] border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200'
                     }`}>
-                      {feedback.source === 'WEBSITE' ? (lang === 'am' ? 'ድህረ ገጽ' : 'Website') : 'Telegram'}
+                      {feedback.source === 'WEBSITE' ? ((t['cust_website'] || 'Website')) : 'Telegram'}
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 mb-2">{feedback.institution_name}</p>
@@ -3376,7 +3364,7 @@ function CustomerAnnouncements() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
-            {t.back_to_announcements || (lang === 'am' ? 'ወደ ማስታወቂያዎች ተመለስ' : 'Back to Announcements')}
+            {t.back_to_announcements || ((t['cust_back_to_announcements'] || 'Back to Announcements'))}
           </button>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
@@ -3384,7 +3372,7 @@ function CustomerAnnouncements() {
             <h2 className="text-lg font-bold text-slate-900">{ann.title}</h2>
             {ann.is_active && (
               <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 flex-shrink-0">
-                {t.active || (lang === 'am' ? 'ንቁ' : 'Active')}
+                {t.active || ((t['cust_active'] || 'Active'))}
               </span>
             )}
           </div>
@@ -3400,16 +3388,16 @@ function CustomerAnnouncements() {
     <>
       <div className="mb-6">
         <h2 className="text-xl font-bold text-slate-900 mb-1">
-          {t.announcements || (lang === 'am' ? 'ማስታወቂያዎች' : 'Announcements')}
+          {t.announcements || ((t['cust_announcements'] || 'Announcements'))}
         </h2>
         <p className="text-sm text-slate-500">
-          {lang === 'am' ? 'ከመሶብ ማዕከል የቅርብ ጊዜ ዝመናዎች እና ማሳሰቢያዎች።' : 'Latest updates and notices from MESOB Center.'}
+          {(t['cust_latest_updates_and_notices_from_mesob_ce'] || 'Latest updates and notices from MESOB Center.')}
         </p>
       </div>
 
       {loading && !announcements.length && (
         <div className="text-center py-8 text-slate-500">
-          {lang === 'am' ? 'ማስታወቂያዎችን በመጫን ላይ...' : 'Loading announcements...'}
+          {(t['cust_loading_announcements'] || 'Loading announcements...')}
         </div>
       )}
 
@@ -3422,10 +3410,10 @@ function CustomerAnnouncements() {
               </svg>
             </div>
             <p className="font-semibold text-slate-700 text-sm">
-              {lang === 'am' ? 'በአሁኑ ጊዜ ምንም ማስታወቂያ የለም' : 'No announcements at this time'}
+              {(t['cust_no_announcements_at_this_time'] || 'No announcements at this time')}
             </p>
             <p className="text-xs text-slate-500 mt-1">
-              {lang === 'am' ? 'ከመሶብ ማዕከል ይፋዊ ዝመናዎች እና ማሳሰቢያዎች እዚህ ይታያሉ።' : 'Official updates and notices from MESOB Center will appear here.'}
+              {(t['cust_official_updates_and_notices_from_mesob_'] || 'Official updates and notices from MESOB Center will appear here.')}
             </p>
           </div>
         ) : (

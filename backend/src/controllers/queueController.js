@@ -24,7 +24,8 @@ export const postJoinQueue = async (req, res) => {
 
     if (!result.success) {
       console.error('❌ Join queue failed:', result.message);
-      return res.status(400).json(result);
+      const statusCode = result.code === 'EMAIL_VERIFICATION_REQUIRED' ? 403 : 400;
+      return res.status(statusCode).json(result);
     }
 
     console.log('✅ Join queue successful');

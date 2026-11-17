@@ -1,20 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import { useAuth, ROLE_ROUTES, ROLE_LABELS } from '../context/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
 
-const ROLE_LABELS_AM = {
-  super_admin: 'ዋና አስተዳዳሪ',
-  mesob_manager: 'የመሶብ ስራ አስኪያጅ',
-  institution_manager: 'የተቋም ስራ አስኪያጅ',
-  employee: 'ሰራተኛ',
-  technician: 'ቴክኒሻን',
-  customer: 'ዳሽቦርድ',
-};
-
 export default function Header() {
-  const { isDark, toggleTheme, lang, t } = useApp();
+  const { isDark, toggleTheme, t } = useApp();
+  const { t: i18nT } = useTranslation();
   const { user, isLoggedIn, logout } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -31,11 +24,11 @@ export default function Header() {
 
   // FDRE Mesob Center header navigation items matching https://mesobcenter.et/
   const navLinks = [
-    { href: '/', type: 'link', label: t.nav_home || 'Home', id: 'home' },
-    { href: '/#organizations', type: 'scroll', label: t.nav_organizations || 'Organizations', id: 'organizations' },
-    { href: '/#news', type: 'scroll', label: t.nav_news || (lang === 'am' ? 'ዜና' : 'News'), id: 'news' },
-    { href: '/#contact', type: 'scroll', label: t.nav_contact || 'Contact', id: 'contact' },
-    { href: '/about-us', type: 'link', label: t.nav_about || 'About Us', id: 'about' },
+    { href: '/', type: 'link', label: t.nav_home || i18nT('nav.home', 'Home'), id: 'home' },
+    { href: '/#organizations', type: 'scroll', label: t.nav_organizations || i18nT('nav.organizations', 'Organizations'), id: 'organizations' },
+    { href: '/#news', type: 'scroll', label: t.nav_news || i18nT('nav.news', 'News'), id: 'news' },
+    { href: '/#contact', type: 'scroll', label: t.nav_contact || i18nT('nav.contact', 'Contact'), id: 'contact' },
+    { href: '/about-us', type: 'link', label: t.nav_about || i18nT('nav.about', 'About Us'), id: 'about' },
   ];
 
   // Check if a link is active based on current path
@@ -46,6 +39,11 @@ export default function Header() {
       return location.hash === link.href.replace('/', '');
     }
     return false;
+  };
+
+  const getRoleLabel = (role) => {
+    if (!role) return '';
+    return i18nT(`roles.${role}`, { defaultValue: ROLE_LABELS[role] || 'Dashboard' });
   };
 
   // FDRE Mesob Center signature gradient: #314ea1 (FDRE Blue) -> #1e3a8a (Deep Navy) -> #f4b51a (FDRE Gold)
@@ -100,12 +98,12 @@ export default function Header() {
                   to={ROLE_ROUTES[user.role] || '/dashboard'}
                   className="font-medium text-xs xl:text-sm transition-all duration-200 px-3 py-1.5 rounded-lg bg-[#f4b51a] text-slate-900 font-bold hover:bg-[#e0a415] shadow-sm flex items-center gap-1.5"
                 >
-                  <span>{lang === 'am' ? (ROLE_LABELS_AM[user.role] || 'ዳሽቦርድ') : (ROLE_LABELS[user.role] || 'Dashboard')}</span>
+                  <span>{getRoleLabel(user.role)}</span>
                   <span>→</span>
                 </Link>
                 <button
                   onClick={logout}
-                  title={lang === 'am' ? 'ውጣ' : 'Sign out'}
+                  title={t['auth.signOut'] || t.logout || 'Sign out'}
                   className="font-medium text-xs xl:text-sm transition-all duration-200 px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-rose-500/80 text-white hover:text-white border border-white/20"
                 >
                   {t.logout || 'Logout'}
@@ -127,7 +125,7 @@ export default function Header() {
             {/* ── Theme Toggle ── */}
             <button
               onClick={toggleTheme}
-              title={isDark ? (lang === 'am' ? 'ወደ ብርሃን ሁነታ ቀይር' : 'Switch to Light Mode') : (lang === 'am' ? 'ወደ ጨለማ ሁነታ ቀይር' : 'Switch to Dark Mode')}
+              title={isDark ? (t['common.switchToLight'] || 'Switch to Light Mode') : (t['common.switchToDark'] || 'Switch to Dark Mode')}
               className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 text-white hover:bg-white/30 hover:text-[#f4b51a] transition-all duration-200 shadow-sm"
               aria-label="Toggle theme"
             >
@@ -215,14 +213,14 @@ export default function Header() {
                   onClick={() => setMobileOpen(false)}
                   className="font-medium px-3 py-2 rounded-lg bg-[#f4b51a] text-slate-900 font-bold flex items-center justify-between"
                 >
-                  <span>{lang === 'am' ? (ROLE_LABELS_AM[user.role] || 'ዳሽቦርድ') : (ROLE_LABELS[user.role] || 'Dashboard')}</span>
+                  <span>{getRoleLabel(user.role)}</span>
                   <span>→</span>
                 </Link>
                 <button
                   onClick={() => { logout(); setMobileOpen(false); }}
                   className="text-left font-medium px-3 py-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/40 text-rose-200 transition"
                 >
-                  {t.logout || (lang === 'am' ? 'ውጣ' : 'Logout')} ({user.name.split(' ')[0]})
+                  {t.logout || 'Logout'} ({user.name.split(' ')[0]})
                 </button>
               </div>
             ) : (
@@ -240,7 +238,7 @@ export default function Header() {
               onClick={toggleTheme}
               className="text-left font-medium px-3 py-2 rounded-lg hover:bg-white/20 text-white hover:text-[#f4b51a] transition flex items-center gap-2"
             >
-              {isDark ? (lang === 'am' ? '☀️ የብርሃን ሁነታ' : '☀️ Light Mode') : (lang === 'am' ? '🌙 የጨለማ ሁነታ' : '🌙 Dark Mode')}
+              {isDark ? (t['common.lightModeWithIcon'] || '☀️ Light Mode') : (t['common.darkModeWithIcon'] || '🌙 Dark Mode')}
             </button>
 
             {/* Mobile language picker */}
@@ -253,4 +251,3 @@ export default function Header() {
     </header>
   );
 }
-

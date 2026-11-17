@@ -203,11 +203,11 @@ export default function PopularServices() {
   };
 
   return (
-    <section id="popular-services" className="popular-services">
+    <section id="popular-services" className="popular-services py-16 sm:py-20 lg:py-24 border-b border-gray-100 dark:border-gray-800 relative">
       <div className="max-w-7xl mx-auto px-6">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">{t.pop_title}</h2>
-          <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">{t.pop_subtitle}</p>
+        <div className="text-center mb-12 sm:mb-14">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-3 tracking-tight leading-tight">{t.pop_title}</h2>
+          <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto font-normal">{t.pop_subtitle}</p>
         </div>
 
         {/* Search */}
@@ -218,7 +218,7 @@ export default function PopularServices() {
               placeholder={t.pop_search}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-6 py-4 pl-12 border border-gray-300 bg-white text-gray-900 placeholder-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 rounded-full focus:outline-none focus:border-blue-600 text-lg shadow-sm"
+              className="w-full px-6 py-3.5 pl-12 border border-gray-300 bg-white text-gray-900 placeholder-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 rounded-full focus:outline-none focus:ring-2 focus:ring-[#314ea1] text-base shadow-sm"
             />
             <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"></i>
           </div>
@@ -247,7 +247,7 @@ export default function PopularServices() {
 
               <button
                 onClick={() => handleServiceClick(service)}
-                className="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center font-medium py-3 rounded-xl transition-colors"
+                className="block w-full bg-[#314ea1] hover:bg-[#1e3a8a] text-white text-center font-semibold py-3 rounded-xl transition-all shadow-xs hover:shadow"
               >
                 {t.pop_apply}
               </button>
@@ -259,7 +259,7 @@ export default function PopularServices() {
         <div className="text-center mt-12">
           <button
             onClick={() => navigate('/online-services')}
-            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="inline-flex items-center gap-2 px-8 py-3.5 sm:py-4 bg-[#314ea1] hover:bg-[#1e3a8a] text-white text-base sm:text-lg font-semibold rounded-xl transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 cursor-pointer"
           >
             <i className="fas fa-th-large"></i>
             {lang === 'am' ? 'ሁሉንም አገልግሎቶች ይመልከቱ' : 'View All Services'}

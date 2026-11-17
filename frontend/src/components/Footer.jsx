@@ -53,7 +53,7 @@ const SOCIAL_LINKS = [
 ];
 
 export default function Footer() {
-  const { t, lang } = useApp();
+  const { t } = useApp();
 
   return (
     <footer style={{ background: '#0d1a3a' }} className="text-white">
@@ -73,18 +73,13 @@ export default function Footer() {
 
         {/* Bilingual name */}
         <div className="flex flex-col items-center gap-1">
-          <p className="text-white/70 text-sm font-medium tracking-wide">
+          <p className="text-white/85 text-base sm:text-lg font-semibold tracking-wide">
             {t.footer_bilingual}
           </p>
         </div>
 
-        {/* Main title */}
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-wide text-white">
-          {lang === 'am' ? 'የሃዋሳ መሶብ አገልግሎት' : 'HAWASSA MESOB SERVICE'}
-        </h2>
-
         {/* Tagline */}
-        <p className="text-white/65 text-base">
+        <p className="text-white/70 text-sm sm:text-base">
           {t.footer_tagline}
         </p>
 

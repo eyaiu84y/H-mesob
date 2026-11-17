@@ -345,10 +345,10 @@ export const getApplications = async (filters, currentUser) => {
 
     // Role-based filtering
     const userRole = (currentUser.role || '').toUpperCase();
-    if (userRole === 'CITIZEN' || userRole === 'CUSTOMER') {
+    if (userRole === 'CUSTOMER') {
       // Customers see only their applications
       query = query.eq('citizen_id', currentUser.id);
-    } else if (['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(userRole)) {
+    } else if (['EMPLOYEE', 'TECHNICIAN', 'INSTITUTION_MANAGER'].includes(userRole)) {
       // Institution staff see only their institution's applications
       query = query.eq('institution_id', currentUser.institution_id);
     }
@@ -467,14 +467,14 @@ export const getApplicationById = async (applicationId, currentUser) => {
 
     // Authorization check
     const userRole = (currentUser.role || '').toUpperCase();
-    if ((userRole === 'CITIZEN' || userRole === 'CUSTOMER') && application.citizen_id !== currentUser.id) {
+    if (userRole === 'CUSTOMER' && application.citizen_id !== currentUser.id) {
       return {
         success: false,
         message: 'You do not have permission to view this application.'
       };
     }
 
-    if (['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(userRole) 
+    if (['EMPLOYEE', 'TECHNICIAN', 'INSTITUTION_MANAGER'].includes(userRole) 
         && application.institution_id !== currentUser.institution_id) {
       return {
         success: false,
@@ -736,7 +736,7 @@ export const resubmitApplication = async (applicationId, newDocuments = [], note
 
     // Check ownership
     const userRole = (currentUser.role || '').toUpperCase();
-    if ((userRole === 'CITIZEN' || userRole === 'CUSTOMER') && application.citizen_id !== currentUser.id) {
+    if (userRole === 'CUSTOMER' && application.citizen_id !== currentUser.id) {
       return {
         success: false,
         message: 'You can only resubmit your own applications.'

@@ -20,9 +20,9 @@ export const createMaintenanceReport = async (reportData, currentUser) => {
     }
 
     // Institution authorization check
-    // EMPLOYEE, TECHNICIAN, and ICT_STAFF can only create reports for their own institution
+    // EMPLOYEE, TECHNICIAN, and INSTITUTION_MANAGER can only create reports for their own institution
     const userRole = (currentUser.role || '').toUpperCase();
-    if (['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(userRole)) {
+    if (['EMPLOYEE', 'TECHNICIAN', 'INSTITUTION_MANAGER'].includes(userRole)) {
       if (currentUser.institution_id !== institutionId) {
         return {
           success: false,
@@ -233,9 +233,9 @@ export const getMaintenanceReports = async (filters, currentUser) => {
       .order('created_at', { ascending: false });
 
     // Role-based filtering
-    if (userRole === 'CITIZEN' || userRole === 'CUSTOMER') {
+    if (userRole === 'CUSTOMER') {
       // Customers cannot access maintenance reports
-      console.log('❌ Access denied - CUSTOMER/CITIZEN role');
+      console.log('❌ Access denied - CUSTOMER role');
       return {
         success: false,
         message: 'Access denied. Customers cannot view maintenance reports.'
@@ -244,9 +244,9 @@ export const getMaintenanceReports = async (filters, currentUser) => {
       // Employees see reports they created in their institution
       console.log('Filtering for EMPLOYEE - institution:', currentUser.institution_id);
       query = query.eq('institution_id', currentUser.institution_id);
-    } else if (userRole === 'TECHNICIAN' || userRole === 'ICT_STAFF') {
+    } else if (userRole === 'TECHNICIAN') {
       // Technicians see all reports in their institution
-      console.log('Filtering for TECHNICIAN/ICT_STAFF - institution:', currentUser.institution_id);
+      console.log('Filtering for TECHNICIAN - institution:', currentUser.institution_id);
       query = query.eq('institution_id', currentUser.institution_id);
     } else if (userRole === 'INSTITUTION_MANAGER') {
       // Institution managers see all reports in their institution
@@ -372,7 +372,7 @@ export const getMaintenanceReportById = async (reportId, currentUser) => {
 
     // Authorization check
     const userRole = (currentUser.role || '').toUpperCase();
-    if (['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF', 'INSTITUTION_MANAGER'].includes(userRole)
+    if (['EMPLOYEE', 'TECHNICIAN', 'INSTITUTION_MANAGER'].includes(userRole)
         && report.institution_id !== currentUser.institution_id
         && report.reported_by !== currentUser.id) {
       return {
@@ -396,9 +396,9 @@ export const getMaintenanceReportById = async (reportId, currentUser) => {
 };
 
 /**
- * Assign maintenance report to ICT staff
+ * Assign maintenance report to Technician
  * @param {string} reportId - Report ID
- * @param {string} ictStaffId - ICT staff ID
+ * @param {string} technicianId - Technician ID
  * @param {Object} currentUser - Current authenticated user
  * @returns {Promise<Object>} Updated report
  */
@@ -701,9 +701,9 @@ export const assignMaintenanceReport = async (reportId, technicianId, currentUse
       };
     }
 
-    // Role check: Only TECHNICIAN (or legacy ICT_STAFF)
+    // Role check: Only TECHNICIAN
     const targetRole = (targetUser.role || '').toUpperCase();
-    if (!['TECHNICIAN', 'ICT_STAFF'].includes(targetRole)) {
+    if (targetRole !== 'TECHNICIAN') {
       return {
         success: false,
         message: `Assignment rejected: Cannot assign maintenance task to user with role '${targetRole}'. Tasks can only be assigned to authorized TECHNICIANS.`
@@ -1057,7 +1057,7 @@ export const resolveMaintenanceReport = async (reportId, resolutionNotes, curren
     }
 
     const userRole = (currentUser.role || '').toUpperCase();
-    if (['TECHNICIAN', 'ICT_STAFF'].includes(userRole) && report.assigned_to !== currentUser.id) {
+    if (userRole === 'TECHNICIAN' && report.assigned_to !== currentUser.id) {
       return {
         success: false,
         message: 'You can only resolve maintenance reports assigned to you.'
@@ -1165,7 +1165,7 @@ export const updateReportStatus = async (reportId, status, currentUser) => {
     }
 
     const userRole = (currentUser.role || '').toUpperCase();
-    if (['TECHNICIAN', 'ICT_STAFF'].includes(userRole) && report.assigned_to !== currentUser.id) {
+    if (userRole === 'TECHNICIAN' && report.assigned_to !== currentUser.id) {
       return { success: false, message: 'You can only update reports assigned to you.' };
     }
 
@@ -1243,7 +1243,7 @@ export const updateReportStatus = async (reportId, status, currentUser) => {
 };
 
 /**
- * Get my maintenance tasks (for ICT staff)
+ * Get my maintenance tasks (for Technicians)
  * @param {Object} currentUser - Current authenticated user
  * @returns {Promise<Object>} List of tasks
  */
@@ -1289,7 +1289,7 @@ export const getMyTasks = async (currentUser) => {
       };
     }
 
-    console.log('✅ Fetched tasks for ICT staff:', {
+    console.log('✅ Fetched tasks for Technicians:', {
       count: data?.length || 0,
       withAttachments: data?.filter(t => t.maintenance_reports?.maintenance_attachments?.length > 0).length || 0
     });
@@ -1349,7 +1349,7 @@ export const getTaskById = async (taskId, currentUser) => {
 
     // Authorization: only assigned Technician or managers can view
     const userRole = (currentUser.role || '').toUpperCase();
-    if (['TECHNICIAN', 'ICT_STAFF'].includes(userRole) && task.assigned_to !== currentUser.id) {
+    if (userRole === 'TECHNICIAN' && task.assigned_to !== currentUser.id) {
       return {
         success: false,
         message: 'You do not have permission to view this task.'
@@ -1404,7 +1404,7 @@ export const updateTaskStatus = async (taskId, status, currentUser) => {
 
     // Authorization
     const userRole = (currentUser.role || '').toUpperCase();
-    if (['TECHNICIAN', 'ICT_STAFF'].includes(userRole) && task.assigned_to !== currentUser.id) {
+    if (userRole === 'TECHNICIAN' && task.assigned_to !== currentUser.id) {
       return {
         success: false,
         message: 'You can only update your own tasks.'
@@ -1504,7 +1504,7 @@ export const resolveTask = async (taskId, resolutionNotes, currentUser) => {
 
     // Authorization
     const userRole = (currentUser.role || '').toUpperCase();
-    if (['TECHNICIAN', 'ICT_STAFF'].includes(userRole) && task.assigned_to !== currentUser.id) {
+    if (userRole === 'TECHNICIAN' && task.assigned_to !== currentUser.id) {
       return {
         success: false,
         message: 'You can only resolve your own tasks.'

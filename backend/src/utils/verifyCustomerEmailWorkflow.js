@@ -33,7 +33,7 @@ import {
   dispatchApplicationActionRequiredNotifications,
   dispatchApplicationDecisionNotifications,
   dispatchApplicationCompletedNotifications,
-  getCitizenContactProfile
+  getCustomerContactProfile
 } from '../services/customerNotificationOrchestrator.js';
 import fs from 'fs';
 import path from 'path';
@@ -91,14 +91,14 @@ async function runVerification() {
   const { data: dbCustomers, error: dbErr } = await supabase
     .from('users')
     .select('id, full_name, email, role, metadata, created_at')
-    .eq('role', 'CITIZEN')
+    .eq('role', 'CUSTOMER')
     .limit(10);
 
   if (dbCustomers && dbCustomers.length > 0) {
     realCustomer = dbCustomers.find(c => isValidEmail(c.email) && c.metadata?.email_verification?.verified !== false) || dbCustomers[0];
   }
 
-  const profileLookup = realCustomer ? await getCitizenContactProfile(realCustomer.id) : null;
+  const profileLookup = realCustomer ? await getCustomerContactProfile(realCustomer.id) : null;
   const dbSourceVerified = Boolean(
     profileLookup &&
     realCustomer &&
@@ -110,15 +110,15 @@ async function runVerification() {
     6,
     'Send notifications to customer email resolved directly from database as source of truth',
     dbSourceVerified,
-    `Resolved citizen ID ${realCustomer?.id?.slice(0, 8)}... (${realCustomer?.full_name}) to database email: ${maskEmail(profileLookup?.email)}`
+    `Resolved customer ID ${realCustomer?.id?.slice(0, 8)}... (${realCustomer?.full_name}) to database email: ${maskEmail(profileLookup?.email)}`
   );
 
   // Test recipient resolved directly from verified database customer (strictly NEVER GMAIL_USER)
   const testRecipient = (realCustomer && realCustomer.email !== gmailUser) ? realCustomer : {
-    id: 'test-citizen-uuid',
+    id: 'test-customer-uuid',
     email: 'customer.mesob.test@gmail.com',
     full_name: 'Verified Customer',
-    role: 'CITIZEN',
+    role: 'CUSTOMER',
     metadata: { email_verification: { verified: true } }
   };
 
@@ -296,23 +296,23 @@ async function runVerification() {
 
   // 9.B Unverified user
   const unverifiedResult = await sendEmail({
-    to: 'unverified.citizen@gmail.com',
+    to: 'unverified.customer@gmail.com',
     subject: 'Unverified test',
     html: '<p>Test</p>',
     recipientUser: {
       id: 'unverified-uuid',
-      role: 'CITIZEN',
+      role: 'CUSTOMER',
       metadata: { email_verification: { verified: false } }
     }
   });
   const handledUnverified = unverifiedResult.skipped === true && unverifiedResult.reason === 'UNVERIFIED_EMAIL';
 
-  // 9.C Non-blocking orchestrator with non-existent citizen
+  // 9.C Non-blocking orchestrator with non-existent customer
   let orchestratorSafe = true;
   try {
     await dispatchApplicationSubmittedNotifications({
       application: { id: 'dummy-app', application_number: 'APP-999' },
-      citizenId: 'non-existent-uuid',
+      customerId: 'non-existent-uuid',
       serviceName: 'Test Service'
     });
   } catch (e) {

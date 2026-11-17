@@ -1,5 +1,15 @@
 import { supabase } from '../config/supabase.js';
 
+// High-speed in-memory cache for catalog latency optimization
+let institutionsCache = null;
+let institutionsCacheTime = 0;
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds
+
+export const invalidateInstitutionCache = () => {
+  institutionsCache = null;
+  institutionsCacheTime = 0;
+};
+
 /**
  * Get all institutions
  * @param {Object} filters - Filter options
@@ -7,6 +17,17 @@ import { supabase } from '../config/supabase.js';
  */
 export const getAllInstitutions = async (filters = {}) => {
   try {
+    const isDefaultFilter = !filters.status;
+    const isCacheFresh = institutionsCache && (Date.now() - institutionsCacheTime < CACHE_TTL_MS);
+
+    if (isDefaultFilter && isCacheFresh) {
+      return {
+        success: true,
+        data: institutionsCache,
+        cached: true,
+      };
+    }
+
     let query = supabase
       .from('institutions')
       .select(`
@@ -39,6 +60,11 @@ export const getAllInstitutions = async (filters = {}) => {
         success: false,
         message: 'Failed to fetch institutions.'
       };
+    }
+
+    if (isDefaultFilter && data) {
+      institutionsCache = data;
+      institutionsCacheTime = Date.now();
     }
 
     return {

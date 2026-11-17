@@ -15,8 +15,8 @@
 export function toBackendRole(frontendRole) {
   if (!frontendRole) return null;
   const role = frontendRole.toLowerCase();
-  if (role === 'citizen' || role === 'customer') return 'CUSTOMER';
-  if (role === 'ict_staff' || role === 'technician') return 'TECHNICIAN';
+  if (role === 'customer') return 'CUSTOMER';
+  if (role === 'technician') return 'TECHNICIAN';
   return frontendRole.toUpperCase();
 }
 
@@ -28,8 +28,8 @@ export function toBackendRole(frontendRole) {
 export function toFrontendRole(backendRole) {
   if (!backendRole) return null;
   const role = backendRole.toUpperCase();
-  if (role === 'CITIZEN' || role === 'CUSTOMER') return 'customer';
-  if (role === 'ICT_STAFF' || role === 'TECHNICIAN') return 'technician';
+  if (role === 'CUSTOMER') return 'customer';
+  if (role === 'TECHNICIAN') return 'technician';
   return backendRole.toLowerCase();
 }
 
@@ -66,7 +66,15 @@ export function transformUserFromBackend(backendUser) {
     status: status,
     metadata: backendUser.metadata || null,
     mustChangePassword: backendUser.must_change_password === true || backendUser.metadata?.must_change_password === true || false,
-    emailVerified: backendUser.email_verified === true || backendUser.metadata?.email_verification?.verified === true || false,
+    emailVerified: (() => {
+      const roleUpper = String(backendUser.role || '').toUpperCase();
+      const internalRoles = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN'];
+      if (internalRoles.includes(roleUpper)) return true;
+      if (backendUser.email_verified === true) return true;
+      if (backendUser.metadata?.email_verification?.verified === true) return true;
+      if (backendUser.metadata?.email_verification?.verified === false) return false;
+      return false; // customers are unverified by default until confirmed
+    })(),
     phoneVerified: backendUser.phone_verified === true || backendUser.metadata?.phone_verification?.verified === true || false,
   };
 }

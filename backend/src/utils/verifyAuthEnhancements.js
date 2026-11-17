@@ -130,7 +130,7 @@ async function runTests() {
   // ────────────────────────────────────────────────────────────────
   // Test 3: Customer can register using a valid Gmail address
   // ────────────────────────────────────────────────────────────────
-  let customerEmail = `citizen.${timestamp}@gmail.com`;
+  let customerEmail = `customer.${timestamp}@gmail.com`;
   let customerPassword = 'Customer@2026!';
   let customerToken = '';
   let verificationCode = '';
@@ -140,7 +140,7 @@ async function runTests() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        firstName: 'Citizen',
+        firstName: 'Customer',
         lastName: 'Mesob',
         email: customerEmail,
         password: customerPassword,
@@ -151,7 +151,7 @@ async function runTests() {
     customerToken = data.data?.accessToken;
     verificationCode = data.data?.verificationCode;
 
-    const passed = data.success && data.data?.user?.email === customerEmail && ['CUSTOMER', 'CITIZEN'].includes(data.data?.user?.role);
+    const passed = data.success && data.data?.user?.email === customerEmail && data.data?.user?.role === 'CUSTOMER';
     recordTest(3, 'Customer can register using a valid Gmail address (@gmail.com)', passed,
       `Created customer with role: ${data.data?.user?.role}`
     );
@@ -208,7 +208,7 @@ async function runTests() {
     });
     const data = await res.json();
     const assignedRole = data.data?.user?.role;
-    const passed = data.success && (assignedRole === 'CUSTOMER' || assignedRole === 'CITIZEN') && assignedRole !== 'SUPER_ADMIN';
+    const passed = data.success && assignedRole === 'CUSTOMER' && assignedRole !== 'SUPER_ADMIN';
 
     recordTest(5, 'A customer cannot assign themselves another role', passed,
       `Submitted SUPER_ADMIN role -> Server assigned role: ${assignedRole}`

@@ -6,6 +6,7 @@ import { useMaintenance } from '../../context/MaintenanceContext';
 import { useQueue } from '../../context/QueueContext';
 import { useApplications } from '../../context/ApplicationContext';
 import { useApp } from '../../context/AppContext';
+import { getLocalizedStatus, getLocalizedPriority, getLocalizedRole, getInstitutionName, getServiceName } from '../../utils/localizedContent';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import ThemeToggle from '../../components/ThemeToggle';
 import MesobFeedbackOverview from '../../components/dashboard/MesobFeedbackOverview';
@@ -15,27 +16,40 @@ import SidebarNavIcon from '../../components/dashboard/SidebarNavIcon';
 import { getYouTubeVideoId } from '../../utils/formatters';
 
 // ─── Navigation sections ──────────────────────────────────────────
-function getSections(t) {
-  return [
-    t.dashboard,
-    t.central_approvals || 'Central Approvals',
-    t.institution_monitoring,
-    t.queue_monitoring,
-    t.application_monitoring,
-    t.maintenance_oversight,
-    t.feedback_overview,
-    t.reports,
-    t.analytics,
-    t.announcements,
-    t.my_profile,
-  ];
-}
+const SECTIONS = [
+  'Dashboard',
+  'Central Approvals',
+  'Institution Monitoring',
+  'Queue Monitoring',
+  'Application Monitoring',
+  'Maintenance Oversight',
+  'Feedback Overview',
+  'Reports',
+  'Analytics',
+  'Announcements',
+  'My Profile',
+];
+
+const SECTION_KEYS = {
+  'Dashboard': 'dashboard',
+  'Central Approvals': 'central_approvals',
+  'Institution Monitoring': 'institution_monitoring',
+  'Queue Monitoring': 'queue_monitoring',
+  'Application Monitoring': 'application_monitoring',
+  'Maintenance Oversight': 'maintenance_oversight',
+  'Feedback Overview': 'feedback_overview',
+  'Reports': 'reports',
+  'Analytics': 'analytics',
+  'Announcements': 'announcements',
+  'My Profile': 'my_profile',
+};
 
 // No mock data - ready for backend integration
 // Queue, applications, and maintenance data will come from API
 
 // ─── Badge helpers ────────────────────────────────────────────────
 function PriorityBadge({ priority }) {
+  const { lang } = useApp();
   const norm = String(priority || '').toUpperCase();
   const cls = {
     CRITICAL: 'bg-rose-50 text-rose-800 border-rose-200',
@@ -44,10 +58,11 @@ function PriorityBadge({ priority }) {
     NORMAL: 'bg-slate-100 text-slate-700 border-slate-200',
     LOW: 'bg-slate-100 text-slate-700 border-slate-200'
   }[norm] || 'bg-slate-100 text-slate-700 border-slate-200';
-  return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${cls}`}>{priority}</span>;
+  return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${cls}`}>{getLocalizedPriority(priority, lang)}</span>;
 }
 
 function StatusBadge({ status }) {
+  const { lang } = useApp();
   const norm = String(status || '').toUpperCase().replace(/[\s-]/g, '_');
   const cls = {
     NORMAL: 'bg-emerald-50 text-emerald-800 border-emerald-200',
@@ -64,11 +79,12 @@ function StatusBadge({ status }) {
     APPROVED: 'bg-emerald-50 text-emerald-800 border-emerald-200',
     RESOLVED: 'bg-emerald-50 text-emerald-800 border-emerald-200',
   }[norm] || 'bg-slate-100 text-slate-700 border-slate-200';
-  return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${cls}`}>{status}</span>;
+  return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${cls}`}>{getLocalizedStatus(status, lang)}</span>;
 }
 
 // ─── SECTION: Dashboard Overview ─────────────────────────────────
 function SectionDashboard({ setActiveSection }) {
+  const { t, lang } = useApp();
   const { institutions } = useServices();
   const { reports } = useMaintenance();
   const { myTickets } = useQueue();
@@ -88,15 +104,15 @@ function SectionDashboard({ setActiveSection }) {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#f4b51a] border border-[#f4b51a]/30 text-xs font-semibold mb-2.5 backdrop-blur-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>City-Wide Public Service Hub</span>
+              <span>{lang === 'am' ? 'የከተማ አቀፍ የህዝብ አገልግሎት ማዕከል' : 'City-Wide Public Service Hub'}</span>
               <span>•</span>
-              <span className="text-blue-100 font-normal">Hawassa MESOB</span>
+              <span className="text-blue-100 font-normal">{lang === 'am' ? 'ሀዋሳ መሶብ' : 'Hawassa MESOB'}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-              Service Operations Oversight
+              {lang === 'am' ? 'የአገልግሎት ስራዎች ቁጥጥር' : 'Service Operations Oversight'}
             </h2>
             <p className="text-blue-100 text-sm mt-1 max-w-xl">
-              Monitor real-time customer traffic, institutional throughput, service queues, and facility maintenance across Hawassa MESOB Center.
+              {lang === 'am' ? 'የደንበኞችን እንቅስቃሴ፣ የተቋማትን የስራ አፈፃፀም፣ የአገልግሎት ሰልፎችን እና የጥገና ስራዎችን በሀዋሳ መሶብ ማዕከል ይከታተሉ።' : 'Monitor real-time customer traffic, institutional throughput, service queues, and facility maintenance across Hawassa MESOB Center.'}
             </p>
           </div>
 
@@ -1730,8 +1746,8 @@ function SectionMyProfile({ user }) {
 // ─── Main MesobManagerDashboard ───────────────────────────────────
 export default function MesobManagerDashboard() {
   const { user, logout } = useAuth();
-  const { t } = useApp();
-  const [activeSection, setActiveSection] = useState(t.dashboard);
+  const { t, lang } = useApp();
+  const [activeSection, setActiveSection] = useState(t.dashboard || 'Dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedApprovalEntityId, setSelectedApprovalEntityId] = useState(null);
 
@@ -1753,10 +1769,13 @@ export default function MesobManagerDashboard() {
 
   function renderSection() {
     switch (activeSection) {
-      case t.dashboard:                                return <SectionDashboard setActiveSection={navigate} />;
-      case t.central_approvals || 'Central Approvals':
+      case 'Dashboard':
+      case t.dashboard:
+      case 'ዳሽቦርድ':
+        return <SectionDashboard setActiveSection={navigate} />;
       case 'Central Approvals':
       case 'Approvals':
+      case t.central_approvals:
         return (
           <ApprovalsManagement
             isManagerView={true}
@@ -1764,16 +1783,36 @@ export default function MesobManagerDashboard() {
             onClearInitialRequest={() => setSelectedApprovalEntityId(null)}
           />
         );
-      case t.institution_monitoring:                   return <SectionInstitutionMonitoring />;
-      case t.queue_monitoring:       return <SectionQueueMonitoring />;
-      case t.application_monitoring: return <SectionApplicationMonitoring />;
-      case t.maintenance_oversight:  return <SectionMaintenanceOversight />;
-      case t.feedback_overview:      return <MesobFeedbackOverview />;
-      case t.reports:                return <SectionReports />;
-      case t.analytics:              return <SectionAnalytics />;
-      case t.announcements:          return <SectionAnnouncements />;
-      case t.my_profile:             return <SectionMyProfile user={user} />;
-      default:                       return <SectionDashboard setActiveSection={navigate} />;
+      case 'Institution Monitoring':
+      case t.institution_monitoring:
+        return <SectionInstitutionMonitoring />;
+      case 'Queue Monitoring':
+      case t.queue_monitoring:
+        return <SectionQueueMonitoring />;
+      case 'Application Monitoring':
+      case t.application_monitoring:
+        return <SectionApplicationMonitoring />;
+      case 'Maintenance Oversight':
+      case t.maintenance_oversight:
+        return <SectionMaintenanceOversight />;
+      case 'Feedback Overview':
+      case 'Service Feedback':
+      case t.feedback_overview:
+        return <MesobFeedbackOverview />;
+      case 'Reports':
+      case t.reports:
+        return <SectionReports />;
+      case 'Analytics':
+      case t.analytics:
+        return <SectionAnalytics />;
+      case 'Announcements':
+      case t.announcements:
+        return <SectionAnnouncements />;
+      case 'My Profile':
+      case t.my_profile:
+        return <SectionMyProfile user={user} />;
+      default:
+        return <SectionDashboard setActiveSection={navigate} />;
     }
   }
 
@@ -1788,19 +1827,20 @@ export default function MesobManagerDashboard() {
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a8a] to-[#0f172a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-sm border border-slate-700/60">M</div>
               <div>
                 <p className="font-bold text-white text-sm tracking-tight">MESOB Center</p>
-                <p className="text-xs text-slate-400 font-medium">MESOB Manager</p>
+                <p className="text-xs text-slate-400 font-medium">{t.mesob_manager_portal || (lang === 'am' ? 'የመሶብ ስራ አስኪያጅ መግቢያ' : 'MESOB Manager')}</p>
               </div>
             </div>
           </div>
 
           <nav className="flex-1 p-3.5 space-y-1 overflow-y-auto">
-            {getSections(t).map((section, idx) => {
+            {SECTIONS.map((section, idx) => {
+              const label = t[SECTION_KEYS[section]] || section;
               const isActive = activeSection === section;
               return (
                 <button key={idx} onClick={() => navigate(section)}
                   className={`sidebar-link w-full text-left${isActive ? ' active' : ''} cursor-pointer`}>
                   <SidebarNavIcon section={section} className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="truncate">{section}</span>
+                  <span className="truncate">{label}</span>
                 </button>
               );
             })}
@@ -1827,14 +1867,16 @@ export default function MesobManagerDashboard() {
                 </svg>
               </button>
               <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-                {activeSection === t.dashboard ? t.mesob_manager_dashboard : activeSection}
+                {activeSection === t.dashboard || activeSection === 'Dashboard' || activeSection === 'ዳሽቦርድ'
+                  ? (t.mesob_manager_dashboard || 'MESOB Manager Dashboard')
+                  : (t[SECTION_KEYS[activeSection]] || (typeof activeSection === 'string' ? activeSection : 'Dashboard'))}
               </h1>
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
               <ThemeToggle />
               <NotificationBell onNavigate={(section, notification) => navigate(section, notification)} />
-              <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold">MESOB Manager</span>
+              <span className="badge bg-blue-50 text-[#1e3a8a] border border-blue-200 font-semibold">{getLocalizedRole(user?.role || 'mesob_manager', lang)}</span>
               <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200 hidden sm:flex">
                 <div className="w-8 h-8 rounded-full bg-blue-100 text-[#1e3a8a] font-bold text-xs flex items-center justify-center border border-blue-200/80">
                   {initials}

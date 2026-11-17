@@ -1,5 +1,17 @@
 import { supabase } from '../config/supabase.js';
 
+// High-speed in-memory cache for catalog latency optimization
+let allServicesCache = null;
+let allServicesCacheTime = 0;
+const servicesByInstCache = new Map();
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds
+
+export const invalidateServicesCache = () => {
+  allServicesCache = null;
+  allServicesCacheTime = 0;
+  servicesByInstCache.clear();
+};
+
 /**
  * Get services by institution
  * @param {string} institutionId - Institution ID
@@ -7,6 +19,15 @@ import { supabase } from '../config/supabase.js';
  */
 export const getServicesByInstitution = async (institutionId) => {
   try {
+    const cachedEntry = servicesByInstCache.get(institutionId);
+    if (cachedEntry && (Date.now() - cachedEntry.time < CACHE_TTL_MS)) {
+      return {
+        success: true,
+        data: cachedEntry.data,
+        cached: true
+      };
+    }
+
     const { data, error } = await supabase
       .from('services')
       .select(`
@@ -19,7 +40,16 @@ export const getServicesByInstitution = async (institutionId) => {
         processing_time,
         service_fee,
         is_active,
-        created_at
+        created_at,
+        service_requirements (
+          id,
+          document_name_en,
+          document_name_am,
+          description_en,
+          description_am,
+          is_mandatory,
+          display_order
+        )
       `)
       .eq('institution_id', institutionId)
       .eq('is_active', true)
@@ -44,8 +74,20 @@ export const getServicesByInstitution = async (institutionId) => {
       processing_time: service.processing_time,
       fee_amount: service.service_fee,
       status: service.is_active ? 'ACTIVE' : 'INACTIVE',
-      created_at: service.created_at
+      created_at: service.created_at,
+      service_requirements: service.service_requirements || [],
+      required_documents_en: (service.service_requirements || []).map(r => r.document_name_en).filter(Boolean),
+      required_documents_am: (service.service_requirements || []).map(r => r.document_name_am).filter(Boolean),
+      requirements_en: (service.service_requirements || []).map(r => r.document_name_en).filter(Boolean),
+      requirements_am: (service.service_requirements || []).map(r => r.document_name_am).filter(Boolean),
+      docs_en: (service.service_requirements || []).map(r => r.document_name_en).filter(Boolean),
+      docs_am: (service.service_requirements || []).map(r => r.document_name_am).filter(Boolean)
     }));
+
+    servicesByInstCache.set(institutionId, {
+      data: mappedData,
+      time: Date.now()
+    });
 
     return {
       success: true,
@@ -68,6 +110,17 @@ export const getServicesByInstitution = async (institutionId) => {
  */
 export const getAllServices = async (filters = {}) => {
   try {
+    const isDefaultFilter = !filters.institutionId && filters.status === undefined;
+    const isCacheFresh = allServicesCache && (Date.now() - allServicesCacheTime < CACHE_TTL_MS);
+
+    if (isDefaultFilter && isCacheFresh) {
+      return {
+        success: true,
+        data: allServicesCache,
+        cached: true
+      };
+    }
+
     let query = supabase
       .from('services')
       .select(`
@@ -90,6 +143,15 @@ export const getAllServices = async (filters = {}) => {
           name_en,
           name_am,
           code
+        ),
+        service_requirements (
+          id,
+          document_name_en,
+          document_name_am,
+          description_en,
+          description_am,
+          is_mandatory,
+          display_order
         )
       `)
       .order('title_en', { ascending: true });
@@ -136,8 +198,20 @@ export const getAllServices = async (filters = {}) => {
       name_am: service.title_am,
       description: service.description_en,
       fee_amount: service.service_fee,
-      status: service.is_active ? 'ACTIVE' : 'INACTIVE'
+      status: service.is_active ? 'ACTIVE' : 'INACTIVE',
+      service_requirements: service.service_requirements || [],
+      required_documents_en: (service.service_requirements || []).map(r => r.document_name_en).filter(Boolean),
+      required_documents_am: (service.service_requirements || []).map(r => r.document_name_am).filter(Boolean),
+      requirements_en: (service.service_requirements || []).map(r => r.document_name_en).filter(Boolean),
+      requirements_am: (service.service_requirements || []).map(r => r.document_name_am).filter(Boolean),
+      docs_en: (service.service_requirements || []).map(r => r.document_name_en).filter(Boolean),
+      docs_am: (service.service_requirements || []).map(r => r.document_name_am).filter(Boolean)
     }));
+
+    if (isDefaultFilter && data) {
+      allServicesCache = mappedData;
+      allServicesCacheTime = Date.now();
+    }
 
     return {
       success: true,
@@ -181,6 +255,15 @@ export const getServiceById = async (serviceId) => {
           name_am,
           code,
           logo_url
+        ),
+        service_requirements (
+          id,
+          document_name_en,
+          document_name_am,
+          description_en,
+          description_am,
+          is_mandatory,
+          display_order
         )
       `)
       .eq('id', serviceId)
@@ -214,7 +297,14 @@ export const getServiceById = async (serviceId) => {
       created_at: service.created_at,
       updated_at: service.updated_at,
       institutions: service.institutions,
-      requirements_count: requirementsCount || 0
+      requirements_count: requirementsCount || 0,
+      service_requirements: service.service_requirements || [],
+      required_documents_en: (service.service_requirements || []).map(r => r.document_name_en).filter(Boolean),
+      required_documents_am: (service.service_requirements || []).map(r => r.document_name_am).filter(Boolean),
+      requirements_en: (service.service_requirements || []).map(r => r.document_name_en).filter(Boolean),
+      requirements_am: (service.service_requirements || []).map(r => r.document_name_am).filter(Boolean),
+      docs_en: (service.service_requirements || []).map(r => r.document_name_en).filter(Boolean),
+      docs_am: (service.service_requirements || []).map(r => r.document_name_am).filter(Boolean)
     };
 
     return {
@@ -301,6 +391,7 @@ export const createService = async (serviceData, currentUser) => {
 
     // Log audit
     await logAudit(currentUser.id, 'SERVICE_CREATE', `Created service: ${newService.name}`);
+    invalidateServicesCache();
 
     return {
       success: true,
@@ -381,6 +472,7 @@ export const updateService = async (serviceId, updates, currentUser) => {
 
     // Log audit
     await logAudit(currentUser.id, 'SERVICE_UPDATE', `Updated service: ${existingService.name}`);
+    invalidateServicesCache();
 
     return {
       success: true,
@@ -438,6 +530,7 @@ export const deleteService = async (serviceId, currentUser) => {
 
     // Log audit
     await logAudit(currentUser.id, 'SERVICE_DELETE', `Deleted service: ${service.name}`);
+    invalidateServicesCache();
 
     return {
       success: true,
@@ -564,6 +657,7 @@ export const createRequirement = async (serviceId, requirementData, currentUser)
     }
 
     await logAudit(currentUser.id, 'REQUIREMENT_CREATE', `Created requirement for service ${serviceId}`);
+    invalidateServicesCache();
 
     return {
       success: true,
@@ -611,6 +705,7 @@ export const updateRequirement = async (requirementId, updates, currentUser) => 
     }
 
     await logAudit(currentUser.id, 'REQUIREMENT_UPDATE', `Updated requirement ${requirementId}`);
+    invalidateServicesCache();
 
     return {
       success: true,
@@ -649,6 +744,7 @@ export const deleteRequirement = async (requirementId, currentUser) => {
     }
 
     await logAudit(currentUser.id, 'REQUIREMENT_DELETE', `Deleted requirement ${requirementId}`);
+    invalidateServicesCache();
 
     return {
       success: true,

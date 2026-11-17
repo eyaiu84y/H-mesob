@@ -11,7 +11,7 @@ const router = express.Router();
  */
 router.post('/join', 
   authenticate,
-  authorize('CUSTOMER', 'CITIZEN'),
+  authorize('CUSTOMER'),
   requireVerifiedCustomer,
   postJoinQueue
 );
@@ -61,11 +61,11 @@ router.post('/:id/call-next',
 /**
  * @route   PATCH /api/queues/:id/status
  * @desc    Update queue status
- * @access  Private (EMPLOYEE, INSTITUTION_MANAGER, SUPER_ADMIN, MESOB_MANAGER)
+ * @access  Private (EMPLOYEE, INSTITUTION_MANAGER, SUPER_ADMIN, MESOB_MANAGER, CUSTOMER)
  */
 router.patch('/:id/status', 
   authenticate,
-  authorize('EMPLOYEE', 'INSTITUTION_MANAGER', 'SUPER_ADMIN', 'MESOB_MANAGER'),
+  authorize('EMPLOYEE', 'INSTITUTION_MANAGER', 'SUPER_ADMIN', 'MESOB_MANAGER', 'CUSTOMER'),
   patchQueueStatus
 );
 

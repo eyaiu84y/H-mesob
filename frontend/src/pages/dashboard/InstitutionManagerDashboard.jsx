@@ -5,6 +5,8 @@ import { useAnnouncements } from '../../context/AnnouncementContext';
 import { useApplications } from '../../context/ApplicationContext';
 import { useMaintenance } from '../../context/MaintenanceContext';
 import { useQueue } from '../../context/QueueContext';
+import { useApp } from '../../context/AppContext';
+import { getLocalizedStatus, getLocalizedPriority, getLocalizedRole, getInstitutionName, getServiceName } from '../../utils/localizedContent';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import ThemeToggle from '../../components/ThemeToggle';
 import { createTaskAssignmentNotification } from '../../utils/sharedData';
@@ -27,21 +29,39 @@ const SECTIONS = [
   'My Profile',
 ];
 
+const SECTION_KEYS = {
+  'Dashboard': 'dashboard',
+  'Queue Management': 'queue_management',
+  'Applications': 'applications',
+  'Maintenance': 'maintenance',
+  'Task Assignment': 'task_assignment',
+  'Service Feedback': 'service_feedback',
+  'Staff Management': 'staff_management',
+  'Reports': 'reports',
+  'Announcements': 'announcements',
+  'My Profile': 'my_profile',
+};
+
 // No mock data - ready for backend integration
 // Queue, applications, and maintenance data will come from API
 // Technicians loaded dynamically from AuthContext based on institution
 
 // ─── Badge helpers ────────────────────────────────────────────────
 function PriorityBadge({ priority }) {
+  const { lang } = useApp();
   const cls = {
     High: 'badge bg-rose-50 text-rose-800 border border-rose-200',
+    CRITICAL: 'badge bg-rose-50 text-rose-800 border border-rose-200',
     Medium: 'badge bg-amber-50 text-amber-800 border border-amber-200',
-    Normal: 'badge bg-slate-100 text-slate-700 border border-slate-200'
+    HIGH: 'badge bg-amber-50 text-amber-800 border border-amber-200',
+    Normal: 'badge bg-slate-100 text-slate-700 border border-slate-200',
+    NORMAL: 'badge bg-slate-100 text-slate-700 border border-slate-200'
   }[priority] || 'badge bg-slate-100 text-slate-700 border border-slate-200';
-  return <span className={cls}>{priority}</span>;
+  return <span className={cls}>{getLocalizedPriority(priority, lang)}</span>;
 }
 
 function StatusBadge({ status }) {
+  const { lang } = useApp();
   const cls = {
     Pending: 'badge bg-amber-50 text-amber-800 border border-amber-200',
     Waiting: 'badge bg-amber-50 text-amber-800 border border-amber-200',
@@ -61,11 +81,12 @@ function StatusBadge({ status }) {
     'Waiting Parts': 'badge bg-amber-50 text-amber-800 border border-amber-200 font-semibold',
     'On Hold': 'badge bg-purple-50 text-purple-800 border border-purple-200 font-semibold',
   }[status] || 'badge bg-slate-100 text-slate-700 border border-slate-200';
-  return <span className={cls}>{status}</span>;
+  return <span className={cls}>{getLocalizedStatus(status, lang)}</span>;
 }
 
 // ─── SECTION: Dashboard Overview ─────────────────────────────────
 function SectionDashboard({ setActiveSection, userInstitution }) {
+  const { t, lang } = useApp();
   const { announcements } = useAnnouncements();
   const { reports } = useMaintenance();
   const { myTickets } = useQueue();
@@ -119,15 +140,15 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#f4b51a] border border-[#f4b51a]/30 text-xs font-semibold mb-2.5 backdrop-blur-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Assigned Institution Portal</span>
+              <span>{lang === 'am' ? 'የተመደበ ተቋም ፖርታል' : 'Assigned Institution Portal'}</span>
               <span>•</span>
-              <span className="text-blue-100 font-normal">MESOB Partner Agency</span>
+              <span className="text-blue-100 font-normal">{lang === 'am' ? 'የመሶብ አጋር ተቋም' : 'MESOB Partner Agency'}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-              {userInstitution || 'Institutional Operations'}
+              {userInstitution ? getInstitutionName(userInstitution, lang) : (lang === 'am' ? 'የተቋም ስራዎች እና ቁጥጥር' : 'Institutional Operations')}
             </h2>
             <p className="text-blue-100 text-sm mt-1 max-w-xl">
-              Oversee departmental queues, review customer service applications, approve documents, and coordinate staff operations.
+              {lang === 'am' ? 'የክፍል ሰልፎችን ይቆጣጠሩ፣ የደንበኞች አገልግሎት ማመልከቻዎችን ይገምግሙ፣ ሰነዶችን ያጽድቁ እና የሰራተኞችን ስራዎች ያስተባብሩ።' : 'Oversee departmental queues, review customer service applications, approve documents, and coordinate staff operations.'}
             </p>
           </div>
 
@@ -139,7 +160,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>Review Approvals</span>
+              <span>{t.pending_approvals || (lang === 'am' ? 'ማጽደቆችን ይገምግሙ' : 'Review Approvals')}</span>
             </button>
             <button
               onClick={() => setActiveSection('Queue Management')}
@@ -148,7 +169,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
               <svg className="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
               </svg>
-              <span>Queue Status</span>
+              <span>{t.queue_management || (lang === 'am' ? 'የሰልፍ ሁኔታ' : 'Queue Status')}</span>
             </button>
           </div>
         </div>
@@ -161,7 +182,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
           className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-amber-500 shadow-xs p-5 hover:border-amber-400 hover:shadow-sm transition-all text-left cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-amber-800 transition-colors">Queue Status</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-amber-800 transition-colors">{t.queue_management || 'Queue Status'}</span>
             <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100 group-hover:bg-amber-100 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>
             </div>
@@ -170,7 +191,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
           <p className="text-xs text-amber-800 font-medium mt-1.5 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              <span>Active counter tickets</span>
+              <span>{lang === 'am' ? 'ንቁ የመስኮት ተራ ቁጥሮች' : 'Active counter tickets'}</span>
             </span>
             <span>→</span>
           </p>
@@ -181,7 +202,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
           className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-blue-500 shadow-xs p-5 hover:border-blue-400 hover:shadow-sm transition-all text-left cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-blue-800 transition-colors">Applications</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-blue-800 transition-colors">{t.applications || 'Applications'}</span>
             <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:bg-blue-100 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             </div>
@@ -190,7 +211,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
           <p className="text-xs text-slate-500 mt-1.5 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-              <span>Pending & under review</span>
+              <span>{lang === 'am' ? 'በመጠባበቅ እና በግምገማ ላይ' : 'Pending & under review'}</span>
             </span>
             <span>→</span>
           </p>
@@ -201,7 +222,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
           className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-purple-500 shadow-xs p-5 hover:border-purple-400 hover:shadow-sm transition-all text-left cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-purple-800 transition-colors">Maintenance</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-purple-800 transition-colors">{t.maintenance || 'Maintenance'}</span>
             <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-100 group-hover:bg-purple-100 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
             </div>
@@ -210,7 +231,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
           <p className="text-xs text-slate-500 mt-1.5 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-              <span>Facility reports</span>
+              <span>{lang === 'am' ? 'የተቋሙ ጥገና ሪፖርቶች' : 'Facility reports'}</span>
             </span>
             <span>→</span>
           </p>
@@ -221,7 +242,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
           className="bg-white rounded-2xl border border-slate-200/90 border-t-3 border-t-emerald-500 shadow-xs p-5 hover:border-emerald-400 hover:shadow-sm transition-all text-left cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-emerald-800 transition-colors">Announcements</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-emerald-800 transition-colors">{t.announcements || 'Announcements'}</span>
             <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-100 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
             </div>
@@ -230,7 +251,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
           <p className="text-xs text-slate-500 mt-1.5 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>Unread bulletins</span>
+              <span>{lang === 'am' ? 'ያልተነበቡ ማስታወቂያዎች' : 'Unread bulletins'}</span>
             </span>
             <span>→</span>
           </p>
@@ -240,7 +261,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
       {/* Queue overview */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <h2 className="font-semibold text-slate-900">Queue Overview</h2>
+          <h2 className="font-semibold text-slate-900">{t.queue_management || 'Queue Overview'}</h2>
           <button onClick={() => setActiveSection('Queue Management')} className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold transition">View all</button>
         </div>
         {activeQueue > 0 ? (
@@ -265,7 +286,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
       {/* Applications overview */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <h2 className="font-semibold text-slate-900">Applications Overview</h2>
+          <h2 className="font-semibold text-slate-900">{t.applications_overview || 'Applications Overview'}</h2>
           <button onClick={() => setActiveSection('Applications')} className="text-sm text-[#314ea1] hover:text-[#1e3a8a] font-semibold transition">View all</button>
         </div>
         {activeApps > 0 ? (
@@ -296,6 +317,7 @@ function SectionDashboard({ setActiveSection, userInstitution }) {
 
 // ─── SECTION: Queue Management ────────────────────────────────────
 function SectionQueueManagement({ userInstitution }) {
+  const { t, lang } = useApp();
   const { myTickets, loading } = useQueue();
   const { user } = useAuth();
   
@@ -323,21 +345,21 @@ function SectionQueueManagement({ userInstitution }) {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-bold text-slate-900 mb-1">Queue Management</h2>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">{t.queue_management || 'Queue Management'}</h2>
         <p className="text-sm text-slate-500">Monitor the service queue for {userInstitution || 'your institution'}.</p>
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="stat-card">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Waiting</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">{t.waiting || 'Waiting'}</p>
           <p className="text-2xl font-bold text-amber-600">{waitingCount}</p>
         </div>
         <div className="stat-card">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Processing</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">{t.in_progress || 'Processing'}</p>
           <p className="text-2xl font-bold text-[#1e3a8a]">{processingCount}</p>
         </div>
         <div className="stat-card">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Completed Today</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">{lang === 'am' ? 'ዛሬ የተጠናቀቁ' : 'Completed Today'}</p>
           <p className="text-2xl font-bold text-emerald-600">{completedTodayCount}</p>
         </div>
       </div>
@@ -371,10 +393,10 @@ function SectionQueueManagement({ userInstitution }) {
               };
               
               const statusLabels = {
-                waiting: 'Waiting',
-                called: 'Being Served',
-                completed: 'Completed',
-                cancelled: 'Cancelled'
+                waiting: getLocalizedStatus('waiting', lang),
+                called: getLocalizedStatus('called', lang),
+                completed: getLocalizedStatus('completed', lang),
+                cancelled: getLocalizedStatus('cancelled', lang)
               };
               
               return (
@@ -416,6 +438,7 @@ function SectionQueueManagement({ userInstitution }) {
 
 // ─── SECTION: Applications ────────────────────────────────────────
 function SectionApplications({ userInstitution }) {
+  const { t, lang } = useApp();
   const { applications } = useApplications();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -432,8 +455,8 @@ function SectionApplications({ userInstitution }) {
     const q = searchQuery.toLowerCase();
     return (
       (app.applicationNumber && app.applicationNumber.toLowerCase().includes(q)) ||
-      ((app.customerName || app.citizenName) && (app.customerName || app.citizenName).toLowerCase().includes(q)) ||
-      ((app.customerEmail || app.citizenEmail) && (app.customerEmail || app.citizenEmail).toLowerCase().includes(q)) ||
+      (app.customerName && app.customerName.toLowerCase().includes(q)) ||
+      (app.customerEmail && app.customerEmail.toLowerCase().includes(q)) ||
       (app.service && app.service.toLowerCase().includes(q)) ||
       (app.status && app.status.toLowerCase().includes(q))
     );
@@ -451,13 +474,13 @@ function SectionApplications({ userInstitution }) {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Applications
+            {t.back_to_applications || 'Back to Applications'}
           </button>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 sm:p-8">
           <div className="border-b border-slate-100 pb-5 mb-6">
-            <h2 className="text-xl font-bold text-slate-900">Application Details</h2>
+            <h2 className="text-xl font-bold text-slate-900">{t.application_details || 'Application Details'}</h2>
             <p className="text-sm text-slate-500 mt-1">Application #{selectedApp.applicationNumber || selectedApp.id}</p>
           </div>
 
@@ -491,15 +514,15 @@ function SectionApplications({ userInstitution }) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
                 <label className="text-xs text-slate-500">Name</label>
-                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.customerName || selectedApp.citizenName || selectedApp.applicationData?.fullName || 'N/A'}</p>
+                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.customerName || selectedApp.applicationData?.fullName || 'N/A'}</p>
               </div>
               <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
                 <label className="text-xs text-slate-500">Email</label>
-                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.customerEmail || selectedApp.citizenEmail || selectedApp.applicationData?.email || 'N/A'}</p>
+                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.customerEmail || selectedApp.applicationData?.email || 'N/A'}</p>
               </div>
               <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
                 <label className="text-xs text-slate-500">Phone</label>
-                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.customerPhone || selectedApp.citizenPhone || selectedApp.applicationData?.phone || selectedApp.phone || 'N/A'}</p>
+                <p className="mt-0.5 font-semibold text-slate-900">{selectedApp.customerPhone || selectedApp.applicationData?.phone || selectedApp.phone || 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -567,8 +590,8 @@ function SectionApplications({ userInstitution }) {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-bold text-slate-900 mb-1">Applications</h2>
-        <p className="text-sm text-slate-500">Monitor applications for {userInstitution || 'your institution'}.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">{t.applications || 'Applications'}</h2>
+        <p className="text-sm text-slate-500">{lang === 'am' ? 'ለተቋምዎ የቀረቡ ማመልከቻዎችን ይከታተሉ' : 'Monitor applications for your institution.'}</p>
       </div>
 
       {/* Search bar */}
@@ -578,7 +601,7 @@ function SectionApplications({ userInstitution }) {
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search applications..."
+            placeholder={t.search_applications || 'Search applications...'}
             className="w-full px-4 py-2.5 pl-10 rounded-xl border border-slate-300 bg-white text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-[#314ea1]/20 focus:border-[#314ea1] outline-none transition text-sm"
           />
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
@@ -600,19 +623,19 @@ function SectionApplications({ userInstitution }) {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Application ID</th>
-                  <th>Customer</th>
-                  <th>Service</th>
-                  <th>Status</th>
-                  <th>Submitted</th>
-                  <th>Actions</th>
+                  <th>{t.application_id || 'Application ID'}</th>
+                  <th>{t.customer || 'Customer'}</th>
+                  <th>{t.service || 'Service'}</th>
+                  <th>{t.status || 'Status'}</th>
+                  <th>{t.submitted || 'Submitted'}</th>
+                  <th>{t.actions || 'Actions'}</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredApplications.map(app => (
                   <tr key={app.id}>
                     <td className="font-semibold text-slate-900">{app.applicationNumber || app.id}</td>
-                    <td>{app.customerName || app.citizenName || app.customerEmail || app.citizenEmail}</td>
+                    <td>{app.customerName || app.customerEmail}</td>
                     <td>{app.service}</td>
                     <td>
                       <StatusBadge status={app.status} />
@@ -650,6 +673,7 @@ function SectionApplications({ userInstitution }) {
 
 // ─── SECTION: Maintenance ─────────────────────────────────────────
 function SectionMaintenance({ userInstitution }) {
+  const { t, lang } = useApp();
   const { createNotification } = useNotifications();
   const {
     reports: allReports,
@@ -711,7 +735,7 @@ function SectionMaintenance({ userInstitution }) {
           const users = Array.isArray(response.data) ? response.data : [];
           setTechnicianList(
             users
-              .filter(u => ['TECHNICIAN', 'ICT_STAFF'].includes(String(u.role).toUpperCase()))
+              .filter(u => String(u.role).toUpperCase() === 'TECHNICIAN')
               .filter(u => !u.institution_id || !user?.institution_id || String(u.institution_id) === String(user?.institution_id))
               .map(u => ({
                 ...u,
@@ -913,7 +937,7 @@ function SectionMaintenance({ userInstitution }) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
-          <h3 className="font-semibold text-gray-900 mb-5">Assign Technician</h3>
+          <h3 className="font-semibold text-slate-900 mb-5">{t.assign_technician || 'Assign Technician'}</h3>
           
           <div className="mb-5 p-4 bg-gray-50 rounded-xl text-sm">
             <div className="flex justify-between mb-2">
@@ -1564,6 +1588,7 @@ function SectionMaintenance({ userInstitution }) {
 
 // ─── SECTION: Task Assignment ─────────────────────────────────────
 function SectionTaskAssignment({ userInstitution }) {
+  const { t, lang } = useApp();
   const { reports: allReports, assignReport } = useMaintenance();
 
   const institutionReports = (allReports || [])
@@ -1600,7 +1625,7 @@ function SectionTaskAssignment({ userInstitution }) {
 
           setTechnicianList(
             users
-              .filter(user => ['TECHNICIAN', 'ICT_STAFF'].includes(String(user.role).toUpperCase()))
+              .filter(user => String(user.role).toUpperCase() === 'TECHNICIAN')
               .map(user => ({
                 ...user,
                 name: user.full_name || user.name || 'Unnamed Technician',
@@ -1958,6 +1983,7 @@ function SectionTaskAssignment({ userInstitution }) {
 
 // ─── SECTION: Reports ─────────────────────────────────────────────
 function SectionReports({ userInstitution }) {
+  const { t, lang } = useApp();
   const { myTickets } = useQueue();
   const { reports: maintenanceReports } = useMaintenance();
   const { applications } = useApplications();
@@ -2013,45 +2039,45 @@ function SectionReports({ userInstitution }) {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">Reports</h2>
-        <p className="text-sm text-slate-500 font-normal">Operational summary for {userInstitution || 'your institution'}.</p>
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">{t.reports || 'Reports'}</h2>
+        <p className="text-sm text-slate-500 font-normal">{lang === 'am' ? 'የተቋምዎ የስራ አፈፃፀም ማጠቃለያ' : 'Operational summary for your institution.'}</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Queue Completed Today</p>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{lang === 'am' ? 'ዛሬ የተጠናቀቁ ሰልፎች' : 'Queue Completed Today'}</p>
           <p className="text-3xl font-extrabold text-emerald-600">{qCompleted}</p>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Active Queue</p>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t.queue_management || 'Active Queue'}</p>
           <p className="text-3xl font-extrabold text-[#1e3a8a]">{queueActive}</p>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Maintenance Completed</p>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{lang === 'am' ? 'የተጠናቀቁ ጥገናዎች' : 'Maintenance Completed'}</p>
           <p className="text-3xl font-extrabold text-emerald-600">{maintDone}</p>
         </div>
       </div>
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6">
-        <h3 className="font-bold text-slate-900 mb-4">Application Status Breakdown</h3>
+        <h3 className="font-bold text-slate-900 mb-4">{lang === 'am' ? 'የማመልከቻ ሁኔታ ዝርዝር' : 'Application Status Breakdown'}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-50/70 border border-emerald-200/70">
-            <span className="text-xs font-bold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full">Completed</span>
+            <span className="text-xs font-bold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full">{t.completed || 'Completed'}</span>
             <span className="text-2xl font-bold text-slate-900">{completed}</span>
           </div>
           <div className="flex items-center justify-between p-4 rounded-xl bg-amber-50/70 border border-amber-200/70">
-            <span className="text-xs font-bold px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full">Pending</span>
+            <span className="text-xs font-bold px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full">{t.pending || 'Pending'}</span>
             <span className="text-2xl font-bold text-slate-900">{pending}</span>
           </div>
           <div className="flex items-center justify-between p-4 rounded-xl bg-blue-50/70 border border-blue-200/70">
-            <span className="text-xs font-bold px-2.5 py-1 bg-blue-100 text-[#1e3a8a] rounded-full">In Progress</span>
+            <span className="text-xs font-bold px-2.5 py-1 bg-blue-100 text-[#1e3a8a] rounded-full">{t.in_progress || 'In Progress'}</span>
             <span className="text-2xl font-bold text-slate-900">{inProg}</span>
           </div>
         </div>
       </div>
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-slate-100"><h3 className="font-bold text-slate-900">Maintenance Task Summary</h3></div>
+        <div className="px-6 py-4 border-b border-slate-100"><h3 className="font-bold text-slate-900">{lang === 'am' ? 'የጥገና ስራዎች ማጠቃለያ' : 'Maintenance Task Summary'}</h3></div>
         <div className="table-container border-0 rounded-none">
           <table className="data-table">
-            <thead><tr><th>Report Number</th><th>Problem Type</th><th>Priority</th><th>Assigned To</th><th>Status</th><th>Submitted</th></tr></thead>
+            <thead><tr><th>{t.report_number || 'Report Number'}</th><th>{t.problem_type || 'Problem Type'}</th><th>{t.priority || 'Priority'}</th><th>{t.assigned_to || 'Assigned To'}</th><th>{t.status || 'Status'}</th><th>{t.submitted || 'Submitted'}</th></tr></thead>
             <tbody>
               {!maintenanceReports || maintenanceReports.length === 0 ? (
                 <tr>
@@ -2095,6 +2121,7 @@ function SectionReports({ userInstitution }) {
 // Institution Managers can view staff in their institution
 // User creation restricted to Super Admin only
 function SectionStaffManagement({ userInstitution }) {
+  const { t, lang } = useApp();
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -2113,9 +2140,9 @@ function SectionStaffManagement({ userInstitution }) {
         if (!cancelled && response.success) {
           const users = Array.isArray(response.data) ? response.data : [];
           
-          // Filter to only show EMPLOYEE and TECHNICIAN / ICT_STAFF roles
+          // Filter to only show EMPLOYEE and TECHNICIAN roles
           const institutionStaff = users.filter(u => 
-            ['EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'].includes(String(u.role).toUpperCase())
+            ['EMPLOYEE', 'TECHNICIAN'].includes(String(u.role).toUpperCase())
           );
           
           setStaff(institutionStaff);
@@ -2143,8 +2170,7 @@ function SectionStaffManagement({ userInstitution }) {
       (s.email && s.email.toLowerCase().includes(q)) ||
       (s.employee_id && s.employee_id.toLowerCase().includes(q));
     
-    const matchR = !filterRole || String(s.role).toUpperCase() === filterRole.toUpperCase() ||
-      (filterRole === 'TECHNICIAN' && String(s.role).toUpperCase() === 'ICT_STAFF');
+    const matchR = !filterRole || String(s.role).toUpperCase() === filterRole.toUpperCase();
     const matchS = !filterStatus || String(s.status).toUpperCase() === filterStatus.toUpperCase();
     
     return matchQ && matchR && matchS;
@@ -2152,27 +2178,18 @@ function SectionStaffManagement({ userInstitution }) {
 
   // Helper to display role
   function displayRole(role) {
-    const roleMap = {
-      'EMPLOYEE': 'Employee',
-      'TECHNICIAN': 'Technician',
-      'ICT_STAFF': 'Technician'
-    };
-    return roleMap[String(role).toUpperCase()] || role;
+    return getLocalizedRole(role, lang);
   }
 
   // Helper to display status
   function displayStatus(status) {
-    const upperStatus = String(status).toUpperCase();
-    if (upperStatus === 'ACTIVE') return 'Active';
-    if (upperStatus === 'INACTIVE') return 'Inactive';
-    if (upperStatus === 'SUSPENDED') return 'Suspended';
-    return status;
+    return getLocalizedStatus(status, lang);
   }
 
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">Staff Management</h2>
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">{t.staff_management || 'Staff Management'}</h2>
         <p className="text-sm text-slate-500 font-normal">View employees and technicians in {userInstitution || 'your institution'}.</p>
       </div>
 
@@ -2550,11 +2567,12 @@ function SectionAnnouncements({ userInstitution }) {
 
 // ─── SECTION: My Profile ──────────────────────────────────────────
 function SectionMyProfile({ user, userInstitution }) {
+  const { t, lang } = useApp();
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">My Profile</h2>
-        <p className="text-sm text-slate-500 font-normal">Your account information.</p>
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">{t.my_profile || 'My Profile'}</h2>
+        <p className="text-sm text-slate-500 font-normal">{lang === 'am' ? 'የመለያዎ መረጃ' : 'Your account information.'}</p>
       </div>
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 mb-6 max-w-lg">
         <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
@@ -2564,14 +2582,14 @@ function SectionMyProfile({ user, userInstitution }) {
           <div>
             <p className="font-bold text-slate-900 text-base">{user?.name}</p>
             <p className="text-sm text-slate-500">{user?.email}</p>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-[#1e3a8a] border border-blue-200 mt-1">Institution Manager</span>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-[#1e3a8a] border border-blue-200 mt-1">{t['roles.INSTITUTION_MANAGER'] || 'Institution Manager'}</span>
           </div>
         </div>
         <div className="space-y-4 text-sm">
-          <div className="flex justify-between"><span className="text-slate-500">Full Name</span><span className="font-semibold text-slate-900">{user?.name}</span></div>
-          <div className="flex justify-between"><span className="text-slate-500">Email</span><span className="font-semibold text-slate-900">{user?.email}</span></div>
-          <div className="flex justify-between"><span className="text-slate-500">Role</span><span className="font-semibold text-slate-900">Institution Manager</span></div>
-          <div className="flex justify-between"><span className="text-slate-500">Institution</span><span className="font-semibold text-slate-900">{userInstitution || 'Not Assigned'}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">{t.full_name || 'Full Name'}</span><span className="font-semibold text-slate-900">{user?.name}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">{t.email || 'Email'}</span><span className="font-semibold text-slate-900">{user?.email}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">{t.role || 'Role'}</span><span className="font-semibold text-slate-900">{getLocalizedRole('INSTITUTION_MANAGER', lang)}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">{t.institution || 'Institution'}</span><span className="font-semibold text-slate-900">{userInstitution ? getInstitutionName(userInstitution, lang) : (t.not_assigned || 'Not Assigned')}</span></div>
         </div>
       </div>
       <div className="p-4 bg-[#314ea1]/5 border border-[#314ea1]/20 rounded-xl text-xs font-medium text-[#1e3a8a]">
@@ -2584,6 +2602,7 @@ function SectionMyProfile({ user, userInstitution }) {
 // ─── Main InstitutionManagerDashboard ─────────────────────────────
 export default function InstitutionManagerDashboard() {
   const { user, logout } = useAuth();
+  const { t, lang } = useApp();
   const [activeSection, setActiveSection] = useState('Dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -2630,7 +2649,7 @@ export default function InstitutionManagerDashboard() {
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a8a] to-[#0f172a] text-[#f4b51a] flex items-center justify-center font-bold text-lg shadow-sm border border-slate-700/60">I</div>
               <div>
                 <p className="font-bold text-white text-sm tracking-tight">MESOB Center</p>
-                <p className="text-xs text-slate-400 font-medium">Institution Manager</p>
+                <p className="text-xs text-slate-400 font-medium">{t.institution_manager_portal || (lang === 'am' ? 'የተቋም አስተዳዳሪ መግቢያ' : 'Institution Manager')}</p>
               </div>
             </div>
           </div>
@@ -2642,7 +2661,7 @@ export default function InstitutionManagerDashboard() {
                 <button key={section} onClick={() => navigate(section)}
                   className={`sidebar-link w-full text-left${isActive ? ' active' : ''} cursor-pointer`}>
                   <SidebarNavIcon section={section} className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="truncate">{section}</span>
+                  <span className="truncate">{t[SECTION_KEYS[section]] || section}</span>
                 </button>
               );
             })}
@@ -2654,7 +2673,7 @@ export default function InstitutionManagerDashboard() {
               <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
               </svg>
-              <span>Logout</span>
+              <span>{t.logout || 'Logout'}</span>
             </button>
           </div>
         </aside>
@@ -2669,14 +2688,14 @@ export default function InstitutionManagerDashboard() {
                 </svg>
               </button>
               <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-                {activeSection === 'Dashboard' ? 'Institution Manager Dashboard' : activeSection}
+                {activeSection === 'Dashboard' ? (t.institution_manager_dashboard || 'Institution Manager Dashboard') : (t[SECTION_KEYS[activeSection]] || activeSection)}
               </h1>
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
               <ThemeToggle />
               <NotificationBell onNavigate={(section) => navigate(section)} />
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-[#1e3a8a] border border-blue-200">Institution Manager</span>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-[#1e3a8a] border border-blue-200">{getLocalizedRole(user?.role || 'institution_manager', lang)}</span>
               <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200 hidden sm:flex">
                 <div className="w-8 h-8 rounded-full bg-blue-100 text-[#1e3a8a] font-bold text-xs flex items-center justify-center border border-blue-200/80">
                   {initials}

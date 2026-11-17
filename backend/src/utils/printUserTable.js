@@ -28,7 +28,7 @@ async function printTables() {
 
   for (const u of users) {
     const roleUpper = (u.role || '').toUpperCase();
-    const isStaff = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN', 'ICT_STAFF'].includes(roleUpper);
+    const isStaff = ['SUPER_ADMIN', 'MESOB_MANAGER', 'INSTITUTION_MANAGER', 'EMPLOYEE', 'TECHNICIAN'].includes(roleUpper);
     const row = {
       name: u.full_name || '—',
       email: u.email,
@@ -48,7 +48,7 @@ async function printTables() {
     console.log(`| ${idx + 1} | ${s.name} | \`${s.email}\` | ${s.role} | ${s.status} | ${s.institution} | ${s.date} |`);
   });
 
-  console.log('\n### External Customers / Citizens (' + customers.length + ')');
+  console.log('\n### External Customers (' + customers.length + ')');
   console.log('| # | Full Name | Email | Role | Status | Created |');
   console.log('|---|---|---|---|---|---|');
   customers.forEach((c, idx) => {
